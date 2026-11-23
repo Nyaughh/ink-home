@@ -1957,6 +1957,9 @@ public class MainActivity extends Activity {
             });
             int n = store.readingApps().size();
             g.add("Apps that count as reading", String.valueOf(n), () -> { sub = "reading"; render(); });
+        });
+
+        group(body, "Controls", g -> {
             g.add("Clean screen after reading", store.cleanOnHome() ? "On" : "Off", () -> { store.setCleanOnHome(!store.cleanOnHome()); render(); });
             g.add("Page buttons", store.pageKeysReversed() ? "Reversed" : "Normal", () -> { store.setPageKeysReversed(!store.pageKeysReversed()); render(); });
         });
@@ -2271,7 +2274,8 @@ public class MainActivity extends Activity {
         wrap.addView(bar, new LinearLayout.LayoutParams(-1, -2));
 
         List<Integer> starts = new ArrayList<>();
-        int[] page = {0};
+        final String pageKey = "list:" + screen + ":" + sub;
+        int[] page = {pages.getOrDefault(pageKey, 0)};
         Runnable[] draw = new Runnable[1];
         draw[0] = () -> {
             int viewport = sv.getHeight();
@@ -2292,11 +2296,11 @@ public class MainActivity extends Activity {
                 bar.addView(next);
             }
         };
-        pageNext = () -> { if (page[0] < starts.size() - 1) { page[0]++; draw[0].run(); } };
-        pagePrev = () -> { if (page[0] > 0) { page[0]--; draw[0].run(); } };
+        pageNext = () -> { if (page[0] < starts.size() - 1) { page[0]++; pages.put(pageKey, page[0]); draw[0].run(); } };
+        pagePrev = () -> { if (page[0] > 0) { page[0]--; pages.put(pageKey, page[0]); draw[0].run(); } };
         jumper = v -> {
             int top = topIn(v, body);
-            for (int i = starts.size() - 1; i >= 0; i--) if (starts.get(i) <= top) { page[0] = i; draw[0].run(); return; }
+            for (int i = starts.size() - 1; i >= 0; i--) if (starts.get(i) <= top) { page[0] = i; pages.put(pageKey, i); draw[0].run(); return; }
         };
         int[] lastSize = {-1, -1};
         Runnable compute = () -> {
