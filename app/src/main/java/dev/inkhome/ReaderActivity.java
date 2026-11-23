@@ -163,8 +163,8 @@ public class ReaderActivity extends Activity {
     }
 
     private int marginPx() { return ink.dp(store.readerMargin()); }
-    private int headerPx() { return ink.dp(34); }
-    private int footerPx() { return ink.dp(30); }
+    private int headerPx() { return ink.dp(20); }
+    private int footerPx() { return ink.dp(20); }
     private int textWidth() { return Math.max(100, pageView.getWidth() - 2 * marginPx()); }
     private int textHeight() { return Math.max(100, pageView.getHeight() - headerPx() - footerPx()); }
 
@@ -273,20 +273,9 @@ public class ReaderActivity extends Activity {
         store.setReaderPosition(file.getAbsolutePath(), chapter, offsetOfPage(), p);
     }
 
-    private void jumpToFraction(float f) {
-        float[] loc = book.locate(f);
-        chapter = (int) loc[0];
-        pendingOffset = 0;
-        loadChapter();
-        // Land inside the chapter once it's laid out.
-        final float within = loc[1];
-        ui.postDelayed(() -> {
-            if (!loading && pageStarts.size() > 1) { page = Math.round(within * (pageStarts.size() - 1)); showPage(true); }
-        }, 400);
-    }
-
     // ================================================================== drawing
 
+    /** Just the page: no header or footer while reading. Tap the middle for controls. */
     final class PageView extends View {
         private final TextPaint small = new TextPaint(TextPaint.ANTI_ALIAS_FLAG);
         private float downX, downY;
@@ -294,7 +283,7 @@ public class ReaderActivity extends Activity {
         PageView(Context c) {
             super(c);
             small.setColor(0xFF6A6A6A);
-            small.setTextSize(ink.dp(12));
+            small.setTextSize(ink.dp(13));
             small.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         }
 
@@ -313,17 +302,6 @@ public class ReaderActivity extends Activity {
                 c.drawText(s, (w - small.measureText(s)) / 2f, getHeight() / 2f, small);
                 return;
             }
-            // Header: chapter title and the time.
-            String time = android.text.format.DateFormat.getTimeFormat(getContext()).format(new Date());
-            float tw = small.measureText(time);
-            String ct = book.chapterTitle(chapter);
-            if (ct.isEmpty()) ct = book.title;
-            CharSequence ctFit = TextUtils.ellipsize(ct, small, w - 2 * m - tw - ink.dp(16), TextUtils.TruncateAt.END);
-            float hy = ink.dp(22);
-            c.drawText(ctFit, 0, ctFit.length(), m, hy, small);
-            c.drawText(time, w - m - tw, hy, small);
-
-            // Text: only this page's lines.
             int first = pageStarts.get(page);
             int last = page + 1 < pageStarts.size() ? pageStarts.get(page + 1) - 1 : layout.getLineCount() - 1;
             int top = layout.getLineTop(first), bottom = layout.getLineBottom(last);
@@ -332,21 +310,6 @@ public class ReaderActivity extends Activity {
             c.clipRect(0, top, textWidth(), bottom);
             layout.draw(c);
             c.restore();
-
-            // Footer: page in chapter and whole-book progress.
-            int pct = Math.round(book.progress(chapter, chapterFraction()) * 100);
-            String left = "Page " + (page + 1) + " of " + pageStarts.size();
-            String right = pct + "%";
-            float fy = getHeight() - ink.dp(11);
-            c.drawText(left, m, fy, small);
-            c.drawText(right, w - m - small.measureText(right), fy, small);
-            // A hairline progress track across the bottom.
-            android.graphics.Paint bar = new android.graphics.Paint();
-            bar.setColor(0xFFD0D0D0);
-            float by = getHeight() - ink.dp(26);
-            c.drawRect(m, by, w - m, by + 2, bar);
-            bar.setColor(0xFF222222);
-            c.drawRect(m, by, m + (w - 2 * m) * pct / 100f, by + 2, bar);
         }
 
         @Override public boolean onTouchEvent(MotionEvent e) {
@@ -358,7 +321,7 @@ public class ReaderActivity extends Activity {
                 return true;
             }
             float x = e.getX(), y = e.getY(), w = getWidth(), h = getHeight();
-            boolean center = x > w * 0.3f && x < w * 0.7f && y > h * 0.25f && y < h * 0.75f;
+            boolean center = x > w * 0.3f && x < w * 0.7f && y > h * 0.2f && y < h * 0.8f;
             if (center) showMenu();
             else if (x < w * 0.3f) prevPage();
             else nextPage();
@@ -366,7 +329,32 @@ public class ReaderActivity extends Activity {
         }
     }
 
-    // ================================================================== menu
+    /** Progress bar in pure black and white: outlined track, solid fill. */
+    final class BwBar extends View {
+        private final float f;
+        private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+        BwBar(Context c, float fraction) {
+            super(c);
+            f = Math.max(0f, Math.min(1f, fraction));
+        }
+
+        @Override protected void onMeasure(int w, int h) {
+            setMeasuredDimension(MeasureSpec.getSize(w), ink.dp(10));
+        }
+
+        @Override protected void onDraw(Canvas c) {
+            float s = Math.max(2, ink.dp(1.5f)), r = getHeight() / 2f;
+            p.setColor(Color.BLACK);
+            p.setStyle(android.graphics.Paint.Style.STROKE);
+            p.setStrokeWidth(s);
+            c.drawRoundRect(s / 2, s / 2, getWidth() - s / 2, getHeight() - s / 2, r, r, p);
+            p.setStyle(android.graphics.Paint.Style.FILL);
+            if (f > 0) c.drawRoundRect(0, 0, Math.max(getHeight(), getWidth() * f), getHeight(), r, r, p);
+        }
+    }
+
+    // ================================================================== controls
 
     private void hideMenu() {
         if (menu != null) root.removeView(menu);
@@ -374,6 +362,7 @@ public class ReaderActivity extends Activity {
         ui.postDelayed(this::fullRefresh, 60);
     }
 
+    /** One tap shows: back and settings at the top; chapter picker, chevrons and progress at the bottom. */
     private void showMenu() {
         if (book == null) return;
         hideMenu();
@@ -382,18 +371,13 @@ public class ReaderActivity extends Activity {
 
         LinearLayout top = ink.row();
         top.setBackgroundColor(Color.WHITE);
-        top.setPadding(ink.dp(12), ink.dp(12), ink.dp(16), ink.dp(12));
+        top.setPadding(ink.dp(10), ink.dp(10), ink.dp(10), ink.dp(10));
         top.setClickable(true);
-        ImageView back = ink.icon("back", 26);
-        back.setPadding(ink.dp(6), ink.dp(6), ink.dp(6), ink.dp(6));
-        back.setBackground(ink.pressable());
-        back.setOnClickListener(v -> finish());
-        top.addView(back, new LinearLayout.LayoutParams(ink.dp(40), ink.dp(40)));
-        LinearLayout titles = ink.col();
-        titles.setPadding(ink.dp(10), 0, 0, 0);
-        titles.addView(ink.oneLine(ink.medium(book.title.isEmpty() ? Library.titleFromName(file.getName()) : book.title, 17)));
-        if (!book.author.isEmpty()) titles.addView(ink.oneLine(ink.muted(book.author, 13)));
-        top.addView(titles, ink.weight(1));
+        top.addView(barIcon("back", this::finish));
+        TextView title = ink.oneLine(ink.medium(book.title.isEmpty() ? Library.titleFromName(file.getName()) : book.title, 16));
+        title.setPadding(ink.dp(8), 0, ink.dp(8), 0);
+        top.addView(title, ink.weight(1));
+        top.addView(barIcon("settings", this::showTextSettings));
         LinearLayout topWrap = ink.col();
         topWrap.addView(top);
         topWrap.addView(ink.hair());
@@ -402,22 +386,38 @@ public class ReaderActivity extends Activity {
         LinearLayout bottom = ink.col();
         bottom.setBackgroundColor(Color.WHITE);
         bottom.setClickable(true);
-        bottom.setPadding(ink.dp(18), ink.dp(14), ink.dp(18), ink.dp(14));
-        int pct = Math.round(book.progress(chapter, chapterFraction()) * 100);
-        LinearLayout info = ink.row();
-        String ct = book.chapterTitle(chapter);
-        info.addView(ink.oneLine(ink.muted(ct.isEmpty() ? "Chapter " + (chapter + 1) + " of " + book.spine.size() : ct, 14)), ink.weight(1));
-        info.addView(ink.medium(pct + "%", 15));
-        bottom.addView(info);
-        bottom.addView(ink.progress(pct / 100f, 4), ink.m(-1, -2, 0, 10, 0, 12));
+        bottom.setPadding(ink.dp(10), ink.dp(10), ink.dp(10), ink.dp(16));
 
-        LinearLayout jumps = ink.row();
-        jumps.addView(menuButton("back", "Chapter", () -> { if (chapter > 0) { chapter--; pendingOffset = 0; hideMenu(); loadChapter(); } }), ink.weight(1));
-        jumps.addView(menuButton("list", "Contents", this::showContents), ink.weight(1));
-        jumps.addView(menuButton("search", "Go to %", this::goToPercent), ink.weight(1));
-        jumps.addView(menuButton("settings", "Text", this::showTextSettings), ink.weight(1));
-        jumps.addView(menuButton("chevron", "Chapter", () -> { if (chapter < book.spine.size() - 1) { chapter++; pendingOffset = 0; hideMenu(); loadChapter(); } }), ink.weight(1));
-        bottom.addView(jumps);
+        LinearLayout chapters = ink.row();
+        ImageView prev = barIcon("back", () -> { if (chapter > 0) { chapter--; pendingOffset = 0; hideMenu(); loadChapter(); } });
+        prev.setAlpha(chapter > 0 ? 1f : 0.3f);
+        chapters.addView(prev);
+        // The chapter name, centred, opens the chapter list on the current chapter.
+        LinearLayout picker = ink.row();
+        picker.setGravity(Gravity.CENTER);
+        picker.setPadding(ink.dp(10), ink.dp(8), ink.dp(10), ink.dp(8));
+        picker.setBackground(ink.card(8, true));
+        TextView name = ink.oneLine(ink.medium(chapterName(chapter), 15));
+        name.setGravity(Gravity.CENTER);
+        picker.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
+        picker.addView(ink.icon("down", 16), ink.m(ink.dp(16), ink.dp(16), 6, 0, 0, 0));
+        picker.setOnClickListener(v -> showChapters());
+        chapters.addView(picker, ink.m(0, -2, 8, 0, 8, 0));
+        ((LinearLayout.LayoutParams) picker.getLayoutParams()).weight = 1;
+        ImageView next = barIcon("chevron", () -> { if (chapter < book.spine.size() - 1) { chapter++; pendingOffset = 0; hideMenu(); loadChapter(); } });
+        next.setAlpha(chapter < book.spine.size() - 1 ? 1f : 0.3f);
+        chapters.addView(next);
+        bottom.addView(chapters);
+
+        int pct = Math.round(book.progress(chapter, chapterFraction()) * 100);
+        LinearLayout prog = ink.row();
+        prog.setPadding(ink.dp(8), ink.dp(16), ink.dp(8), 0);
+        prog.addView(new BwBar(this, pct / 100f), new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView pc = ink.medium(pct + "%", 15);
+        pc.setPadding(ink.dp(12), 0, 0, 0);
+        prog.addView(pc);
+        bottom.addView(prog);
+
         LinearLayout bottomWrap = ink.col();
         bottomWrap.addView(ink.hair());
         bottomWrap.addView(bottom);
@@ -427,44 +427,47 @@ public class ReaderActivity extends Activity {
         root.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
     }
 
-    private View menuButton(String icon, String label, Runnable r) {
-        LinearLayout b = ink.col();
-        b.setGravity(Gravity.CENTER_HORIZONTAL);
-        b.setPadding(0, ink.dp(8), 0, ink.dp(8));
+    private ImageView barIcon(String icon, Runnable r) {
+        ImageView b = ink.icon(icon, 24);
+        b.setPadding(ink.dp(10), ink.dp(10), ink.dp(10), ink.dp(10));
         b.setBackground(ink.pressable());
-        b.addView(ink.icon(icon, 22));
-        TextView t = ink.center(ink.text(label, 12, Ink.REGULAR, Ink.TEXT));
-        t.setPadding(0, ink.dp(6), 0, 0);
-        b.addView(t, new LinearLayout.LayoutParams(-1, -2));
+        b.setLayoutParams(new LinearLayout.LayoutParams(ink.dp(44), ink.dp(44)));
         b.setOnClickListener(v -> r.run());
         return b;
     }
 
-    private void showContents() {
-        if (book.toc.isEmpty()) { android.widget.Toast.makeText(this, "This book has no contents list", android.widget.Toast.LENGTH_SHORT).show(); return; }
-        String[] items = new String[book.toc.size()];
+    /** Contents entry for a chapter, or "Chapter n" when the book has no contents list. */
+    private String chapterName(int ch) {
+        String t = book.chapterTitle(ch);
+        return t.isEmpty() ? "Chapter " + (ch + 1) + " of " + book.spine.size() : t;
+    }
+
+    /** The chapter list, opened scrolled to the current chapter with it selected. */
+    private void showChapters() {
+        final List<Integer> targets = new ArrayList<>();
+        List<String> names = new ArrayList<>();
         int current = 0;
-        for (int i = 0; i < items.length; i++) {
-            items[i] = book.toc.get(i).title;
-            if (book.toc.get(i).chapter <= chapter) current = i;
+        if (!book.toc.isEmpty()) {
+            for (Epub.TocEntry t : book.toc) {
+                if (t.chapter <= chapter) current = names.size();
+                names.add(t.title);
+                targets.add(t.chapter);
+            }
+        } else {
+            for (int i = 0; i < book.spine.size(); i++) { names.add("Chapter " + (i + 1)); targets.add(i); }
+            current = chapter;
         }
-        AlertDialog d = new AlertDialog.Builder(this).setTitle("Contents")
-                .setSingleChoiceItems(items, current, (di, w) -> {
+        AlertDialog d = new AlertDialog.Builder(this)
+                .setSingleChoiceItems(names.toArray(new String[0]), current, (di, w) -> {
                     di.dismiss();
-                    chapter = book.toc.get(w).chapter;
+                    chapter = targets.get(w);
                     pendingOffset = 0;
                     hideMenu();
                     loadChapter();
-                }).setNegativeButton("Close", null).create();
+                }).create();
         show(d);
-    }
-
-    private void goToPercent() {
-        String[] items = new String[11];
-        for (int i = 0; i <= 10; i++) items[i] = (i * 10) + "%";
-        show(new AlertDialog.Builder(this).setTitle("Go to")
-                .setItems(items, (di, w) -> { hideMenu(); jumpToFraction(w / 10f); })
-                .setNegativeButton("Close", null).create());
+        final int sel = current;
+        if (d.getListView() != null) d.getListView().post(() -> d.getListView().setSelection(Math.max(0, sel - 3)));
     }
 
     /** Text settings: size, spacing, margins, typeface, justification and refresh rate. */

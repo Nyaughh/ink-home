@@ -895,21 +895,55 @@ public class MainActivity extends Activity {
         LinearLayout box = ink.col();
         box.setTag("list");
         LinearLayout head = ink.row();
-        head.setPadding(0, ink.dp(16), 0, ink.dp(2));
-        head.addView(ink.heading("Your books"), ink.weight(1));
-        TextView all = ink.text("All " + books.size() + "  ›", 13, Ink.MEDIUM, Ink.TEXT2);
-        all.setPadding(ink.dp(12), 0, 0, ink.dp(8));
-        all.setOnClickListener(v -> { libTab = "all"; go(Screen.LIBRARY); });
-        head.addView(all);
+        head.setPadding(0, ink.dp(12), 0, ink.dp(4));
+        TextView heading = ink.heading("Your books");
+        heading.setPadding(ink.dp(2), 0, 0, 0);
+        head.addView(heading, ink.weight(1));
+        ImageView prev = smallChevron("back");
+        TextView count = ink.faint("", 13);
+        count.setPadding(ink.dp(10), 0, ink.dp(10), 0);
+        ImageView next = smallChevron("chevron");
+        head.addView(prev);
+        head.addView(count);
+        head.addView(next);
         box.addView(head);
         LinearLayout rows = ink.col();
         box.addView(rows, new LinearLayout.LayoutParams(-1, 0, 1f));
         final int rowH = ink.dp(46);
-        // Fill exactly the rows that fit, before the first frame is drawn.
+        // Fill exactly the rows that fit, before the first frame is drawn; ‹ › and the page keys page through the rest.
         firstFrame(rows, () -> {
-            int n = Math.min(list.size(), Math.max(0, rows.getHeight() / rowH));
-            for (int i = 0; i < n; i++) {
-                Library.Book bk = list.get(i);
+            int per = Math.max(1, rows.getHeight() / rowH);
+            int total = Math.max(1, (list.size() + per - 1) / per);
+            Runnable[] draw = new Runnable[1];
+            draw[0] = () -> {
+                int pg = Math.max(0, Math.min(pages.getOrDefault("home", 0), total - 1));
+                pages.put("home", pg);
+                rows.removeAllViews();
+                for (int i = pg * per; i < Math.min(list.size(), (pg + 1) * per); i++) rows.addView(homeBookRow(list.get(i)), new LinearLayout.LayoutParams(-1, rowH));
+                count.setText((pg + 1) + " / " + total);
+                prev.setAlpha(pg > 0 ? 1f : 0.3f);
+                next.setAlpha(pg < total - 1 ? 1f : 0.3f);
+            };
+            pageNext = () -> { int p = pages.getOrDefault("home", 0); if (p < total - 1) { pages.put("home", p + 1); draw[0].run(); } };
+            pagePrev = () -> { int p = pages.getOrDefault("home", 0); if (p > 0) { pages.put("home", p - 1); draw[0].run(); } };
+            prev.setOnClickListener(v -> pagePrev.run());
+            next.setOnClickListener(v -> pageNext.run());
+            draw[0].run();
+        });
+        return box;
+    }
+
+    private ImageView smallChevron(String icon) {
+        ImageView b = ink.icon(icon, 18);
+        b.setPadding(ink.dp(7), ink.dp(7), ink.dp(7), ink.dp(7));
+        b.setBackground(ink.card(7, true));
+        b.setLayoutParams(new LinearLayout.LayoutParams(ink.dp(32), ink.dp(32)));
+        return b;
+    }
+
+    private View homeBookRow(Library.Book bk) {
+        {
+            {
                 LinearLayout r = ink.row();
                 r.setBackground(ink.listRow(40));
                 r.addView(ink.cover(Covers.get(this, bk, store.realCovers())), ink.m(ink.dp(28), ink.dp(40), 0, 0, 12, 0));
@@ -923,10 +957,9 @@ public class MainActivity extends Activity {
                 if (bk.progress >= 0 && !bk.finished) r.addView(ink.progress(bk.progress, 3), ink.m(ink.dp(44), -2, 10, 0, 0, 0));
                 r.setOnClickListener(v -> openBook(bk));
                 r.setOnLongClickListener(v -> { bookMenu(bk); return true; });
-                rows.addView(r, new LinearLayout.LayoutParams(-1, rowH));
+                return r;
             }
-        });
-        return box;
+        }
     }
 
     /** Same layout as a book, with an empty cover outline, for when there's nothing to show yet. */
@@ -1222,9 +1255,9 @@ public class MainActivity extends Activity {
                 cell.addView(ink.cover(Covers.get(this, b, store.realCovers())), new LinearLayout.LayoutParams(ink.dp(112), ink.dp(160)));
                 View bar = b.progress >= 0 || b.finished ? ink.progress(b.finished ? 1f : b.progress, 3) : new View(this);
                 cell.addView(bar, ink.m(ink.dp(112), ink.dp(3), 0, 6, 0, 0));
-                TextView t = ink.lines(ink.text(b.title, 13, Ink.MEDIUM, Ink.TEXT), 2);
-                t.setPadding(0, ink.dp(7), 0, 0);
-                cell.addView(t, new LinearLayout.LayoutParams(ink.dp(116), -2));
+                TextView t = ink.center(ink.lines(ink.text(b.title, 13, Ink.MEDIUM, Ink.TEXT), 2));
+                t.setPadding(ink.dp(4), ink.dp(7), ink.dp(4), 0);
+                cell.addView(t, new LinearLayout.LayoutParams(-1, -2));
                 cell.setOnClickListener(v -> openBook(b));
                 cell.setOnLongClickListener(v -> { bookMenu(b); return true; });
                 return cell;
@@ -1444,7 +1477,7 @@ public class MainActivity extends Activity {
         List<String> labels = new ArrayList<>();
         List<String> pkgs = new ArrayList<>();
         if (booksKind) {
-            labels.add("Ink Home reader (EPUB and TXT; others open in NeoReader)");
+            labels.add("Ink Home reader");
             pkgs.add(Store.BUILT_IN);
         }
         for (ResolveInfo ri : readers) {
