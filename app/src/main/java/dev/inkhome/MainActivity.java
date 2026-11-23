@@ -2148,11 +2148,19 @@ public class MainActivity extends Activity {
             LinearLayout how = ink.col();
             how.setPadding(ink.dp(18), 0, 0, 0);
             how.addView(ink.medium(ready ? "Picture ready" : mode.equals("custom") ? "Pick a picture below" : "Making picture…", 16));
-            TextView t = ink.muted("Set it once: Boox Library › Storage › Pictures › Ink Home, long-press “Ink Home sleep” and choose Set as screensaver. "
-                    + "Ink Home keeps that file up to date.", 14);
+            // Boox copies the picture when it's set, so Ink Home can't apply or refresh it itself.
+            TextView t = ink.muted("To use it: in Boox, open Storage › Pictures › Ink Home, long-press “Ink Home sleep” and choose Set as screensaver. "
+                    + "Boox keeps its own copy, so set it again whenever you make a new picture.", 14);
             t.setLineSpacing(0, 1.2f);
             t.setPadding(0, ink.dp(8), 0, 0);
             how.addView(t);
+            if (ready) {
+                TextView open = ink.pill("Open Boox", false);
+                open.setOnClickListener(v -> { App a = findApp(BOOX_HOME); if (a != null) launch(a); });
+                LinearLayout or = ink.row();
+                or.addView(open);
+                how.addView(or, ink.m(-1, -2, 0, 12, 0, 0));
+            }
             prev.addView(how, ink.weight(1));
             body.addView(prev, ink.m(-1, -2, 0, 20, 0, 0));
         } else {

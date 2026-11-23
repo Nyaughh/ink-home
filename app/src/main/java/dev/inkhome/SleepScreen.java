@@ -28,8 +28,8 @@ import java.util.Locale;
 
 /**
  * Sleep pictures: a 758×1024 greyscale PNG in Pictures/Ink Home, made from the current book or
- * from any picture the user picks. The picked sleep picture is a file, so Ink Home rewrites that
- * same file whenever it changes and the sleep screen follows along.
+ * from any picture the user picks. Boox copies a picture when it's set as the screensaver, so
+ * the user sets this file in Boox (Storage › Pictures › Ink Home) after each new picture.
  */
 final class SleepScreen {
 
