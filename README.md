@@ -12,8 +12,13 @@ A calm, reading-first home screen for e-ink Android tablets.
   Finished and Collections; search, sort and type filters.
 - **Reading time**: minutes per day and per book, streaks, a weekly chart and a
   monthly calendar. An optional daily goal.
-- **Any reader**: open books in NeoReader, Lithium, KOReader or another app;
-  its screen time still counts.
+- **Built-in reader**: EPUB and TXT laid out natively (no WebView), with page
+  turns by tap, swipe or page keys, contents, font, size, spacing, margins and
+  justification, a full refresh every few pages, and your place kept across
+  text changes. Or open books in NeoReader, KOReader or another app; their
+  time still counts, and KOReader's progress shows too.
+- **Home**: the book you're reading, then all your other books, whatever app
+  you read them in.
 - **Made for e-ink**: black and white, no animation, pages instead of
   scrolling (scrolling is a setting), hardware page buttons, and a true full
   refresh through the Onyx firmware to clear ghosting.

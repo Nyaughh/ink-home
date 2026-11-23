@@ -51,6 +51,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ReaderActivity"
+            android:exported="false"
+            android:label="Ink Home reader"
+            android:taskAffinity="dev.inkhome.reader"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize"
+            android:windowSoftInputMode="stateAlwaysHidden" />
+
         <receiver
             android:name=".Updater$Result"
             android:exported="false" />

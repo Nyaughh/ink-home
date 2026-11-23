@@ -119,12 +119,15 @@ final class Stats {
         UsageEvents.Event e = new UsageEvents.Event();
         String openPkg = null;
         long openAt = 0;
+        String self = c.getPackageName();
         while (ev.hasNextEvent()) {
             ev.getNextEvent(e);
             int type = e.getEventType();
             if (type == UsageEvents.Event.ACTIVITY_RESUMED) {
                 if (openPkg != null) out.add(new long[]{openAt, e.getTimeStamp()});
-                openPkg = pkgs.contains(e.getPackageName()) ? e.getPackageName() : null;
+                // Ink Home's own reader counts too; the launcher screens around it don't.
+                boolean ownReader = self.equals(e.getPackageName()) && e.getClassName() != null && e.getClassName().endsWith("ReaderActivity");
+                openPkg = pkgs.contains(e.getPackageName()) || ownReader ? e.getPackageName() : null;
                 openAt = e.getTimeStamp();
             } else if (type == UsageEvents.Event.ACTIVITY_PAUSED || type == UsageEvents.Event.ACTIVITY_STOPPED) {
                 if (openPkg != null && openPkg.equals(e.getPackageName())) {

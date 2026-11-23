@@ -44,11 +44,14 @@ final class Store {
     }
 
     /** Apps whose screen time counts as reading. NeoReader is always included. */
+    /** The built-in reader's id in the reader settings. */
+    static final String BUILT_IN = "inkhome";
+
     Set<String> readingApps() {
         Set<String> s = new HashSet<>(list("readingApps"));
         s.add("com.onyx.kreader");
         String b = bookReader(), pdf = pdfReader();
-        if (!b.isEmpty() && !b.equals("ask")) s.add(b);
+        if (!b.isEmpty() && !b.equals("ask") && !b.equals(BUILT_IN)) s.add(b);
         if (!pdf.isEmpty() && !pdf.equals("ask")) s.add(pdf);
         return s;
     }
@@ -95,6 +98,46 @@ final class Store {
         } catch (Exception ignored) { }
         p.edit().putString("collections", o.toString()).apply();
     }
+
+    // ---------------------------------------------------------------- built-in reader
+
+    /** {chapter, character offset} where the built-in reader left this book. */
+    int[] readerPosition(String path) {
+        JSONObject o = map("readpos").optJSONObject(path);
+        return o == null ? new int[]{0, 0} : new int[]{o.optInt("c", 0), o.optInt("o", 0)};
+    }
+
+    /** Whole-book progress (0..1) and last-read time from the built-in reader, or null. */
+    double[] readerProgress(String path) {
+        JSONObject o = map("readpos").optJSONObject(path);
+        return o == null ? null : new double[]{o.optDouble("p", 0), o.optLong("t", 0)};
+    }
+
+    void setReaderPosition(String path, int chapter, int offset, float progress) {
+        JSONObject all = map("readpos");
+        try {
+            JSONObject o = new JSONObject();
+            o.put("c", chapter);
+            o.put("o", offset);
+            o.put("p", progress);
+            o.put("t", System.currentTimeMillis());
+            all.put(path, o);
+        } catch (Exception ignored) { }
+        p.edit().putString("readpos", all.toString()).apply();
+    }
+
+    int readerFontSize() { return p.getInt("rFont", 19); }
+    void setReaderFontSize(int v) { p.edit().putInt("rFont", v).apply(); }
+    float readerLineSpacing() { return p.getFloat("rSpacing", 1.35f); }
+    void setReaderLineSpacing(float v) { p.edit().putFloat("rSpacing", v).apply(); }
+    int readerMargin() { return p.getInt("rMargin", 24); }
+    void setReaderMargin(int v) { p.edit().putInt("rMargin", v).apply(); }
+    boolean readerSerif() { return p.getBoolean("rSerif", true); }
+    void setReaderSerif(boolean v) { p.edit().putBoolean("rSerif", v).apply(); }
+    boolean readerJustify() { return p.getBoolean("rJustify", true); }
+    void setReaderJustify(boolean v) { p.edit().putBoolean("rJustify", v).apply(); }
+    int readerRefreshEvery() { return p.getInt("rRefresh", 8); }
+    void setReaderRefreshEvery(int v) { p.edit().putInt("rRefresh", v).apply(); }
 
     // EPUB title/author cache: key -> "title\u0001author"
     String meta(String key) { return p.getString("meta:" + key, null); }

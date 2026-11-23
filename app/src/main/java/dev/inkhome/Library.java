@@ -126,6 +126,15 @@ final class Library {
         mergeNeoReader(c, byPath);
 
         for (Book b : books) {
+            mergeKoreader(b);
+            // Ink Home's own reader.
+            double[] rp = store.readerProgress(b.path);
+            if (rp != null && (long) rp[1] >= b.lastRead) {
+                b.progress = (float) rp[0];
+                b.lastRead = (long) rp[1];
+                b.pages = "";
+                b.finished = rp[0] >= 0.995;
+            }
             String meta = store.meta(b.key());
             if (meta != null) {
                 String[] parts = meta.split("\u0001", -1);
@@ -171,6 +180,31 @@ final class Library {
         } catch (Exception e) {
             Log.i(TAG, "NeoReader library not readable: " + e);
         }
+    }
+
+    /**
+     * KOReader keeps progress in a folder next to the book ("Book.sdr/metadata.epub.lua").
+     * Reading percent_finished and the summary status from it shows KOReader books' progress too.
+     */
+    private static void mergeKoreader(Book b) {
+        File parent = b.file.getParentFile();
+        if (parent == null) return;
+        String name = b.file.getName();
+        int dot = name.lastIndexOf('.');
+        File sdr = new File(parent, (dot > 0 ? name.substring(0, dot) : name) + ".sdr");
+        File[] metas = sdr.isDirectory() ? sdr.listFiles((d, n) -> n.startsWith("metadata.") && n.endsWith(".lua")) : null;
+        if (metas == null || metas.length == 0) return;
+        File meta = metas[0];
+        if (meta.lastModified() < b.lastRead) return;
+        try {
+            String lua = new String(java.nio.file.Files.readAllBytes(meta.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            java.util.regex.Matcher pf = java.util.regex.Pattern.compile("\\[\"percent_finished\"\\]\\s*=\\s*([0-9.eE-]+)").matcher(lua);
+            if (pf.find()) b.progress = Math.max(0f, Math.min(1f, Float.parseFloat(pf.group(1))));
+            java.util.regex.Matcher st = java.util.regex.Pattern.compile("\\[\"status\"\\]\\s*=\\s*\"(\\w+)\"").matcher(lua);
+            if (st.find()) b.finished = st.group(1).equals("complete");
+            b.lastRead = Math.max(b.lastRead, meta.lastModified());
+            b.pages = "";
+        } catch (Exception ignored) { }
     }
 
     private static void walk(File dir, int depth, List<Book> out, boolean isRoot) {
