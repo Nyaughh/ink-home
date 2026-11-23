@@ -156,6 +156,8 @@ public class MainActivity extends Activity {
         overlay = new FrameLayout(this);
         overlay.setVisibility(View.GONE);
         shell.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
+        // Hide the system bar before the first layout, so the screen height never changes under the user.
+        applySystemBar();
         setContentView(shell);
 
         try {
@@ -171,6 +173,9 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         applySystemBar();
+        // Apps installed while another app was open (e.g. from Aurora Store) send their
+        // broadcast while Ink Home isn't listening, so refresh the list every time we return.
+        loadApps();
         IntentFilter f = new IntentFilter();
         f.addAction(Intent.ACTION_TIME_TICK);
         f.addAction(Intent.ACTION_TIME_CHANGED);
@@ -506,6 +511,7 @@ public class MainActivity extends Activity {
     // ================================================================== status bar & quick panel
 
     private void applySystemBar() {
+        getWindow().getDecorView(); // makes sure the window exists, even before setContentView
         WindowInsetsController c = getWindow().getInsetsController();
         if (c == null) return;
         if (store.statusBar()) {
@@ -1722,7 +1728,7 @@ public class MainActivity extends Activity {
         return out;
     }
 
-    private String displayLabel(App a) { return a.key.equals(BOOX_HOME) ? "Boox Library" : a.label; }
+    private String displayLabel(App a) { return a.label; }
 
     private ImageView appIcon(App a, int sizeDp) {
         Drawable d = iconCache.get(a.key);
@@ -1980,7 +1986,7 @@ public class MainActivity extends Activity {
         group(body, "System", g -> {
             g.add("Hidden apps", String.valueOf(store.hidden().size()), () -> { sub = "hidden"; render(); });
             g.add("Default home app", isDefaultHome() ? "Ink Home" : "Choose", this::openHomeSettings);
-            g.add("Boox Library", "", () -> { App a = findApp(BOOX_HOME); if (a != null) launch(a); });
+            g.add("Onyx Launcher", "", () -> { App a = findApp(BOOX_HOME); if (a != null) launch(a); });
             g.add("Android settings", "", () -> start(new Intent(Settings.ACTION_SETTINGS)));
         });
 
@@ -2271,7 +2277,9 @@ public class MainActivity extends Activity {
         frame.addView(mask, mp);
         wrap.addView(frame, new LinearLayout.LayoutParams(-1, 0, 1f));
         LinearLayout bar = ink.row();
-        wrap.addView(bar, new LinearLayout.LayoutParams(-1, -2));
+        // Fixed height from the start: if the bar appeared later, every page would have to be recounted.
+        bar.setPadding(ink.dp(PAD), ink.dp(6), ink.dp(PAD), ink.dp(8));
+        wrap.addView(bar, new LinearLayout.LayoutParams(-1, ink.dp(50)));
 
         List<Integer> starts = new ArrayList<>();
         final String pageKey = "list:" + screen + ":" + sub;
@@ -2286,7 +2294,6 @@ public class MainActivity extends Activity {
             mask.setLayoutParams(mp);
             bar.removeAllViews();
             if (starts.size() > 1) {
-                bar.setPadding(ink.dp(PAD), ink.dp(6), ink.dp(PAD), ink.dp(8));
                 ImageView prev = ink.iconButton("back", () -> pagePrev.run());
                 ImageView next = ink.iconButton("chevron", () -> pageNext.run());
                 prev.setAlpha(page[0] > 0 ? 1f : 0.3f);
