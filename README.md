@@ -2,7 +2,7 @@
 
 A calm, reading-first home screen for e-ink Android tablets.
 
-**[Website](https://nyaughh.github.io/ink-home/)** · **[Download](https://github.com/Nyaughh/ink-home/releases/latest/download/ink-home.apk)** for Android 11 and newer
+**[Website](https://inkhome.lh3k.dev)** · **[Download](https://github.com/Nyaughh/ink-home/releases/latest/download/ink-home.apk)** for Android 11 and newer
 
 ![Ink Home showing the current book, its progress and favorite apps](docs/shots/home.png)
 

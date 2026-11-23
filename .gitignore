@@ -8,3 +8,6 @@ keystore.properties
 .idea/
 *.iml
 .DS_Store
+
+.vercel
+.env*
