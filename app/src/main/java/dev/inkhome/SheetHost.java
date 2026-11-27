@@ -215,6 +215,10 @@ final class SheetHost {
             });
         }
         d.show();
+        if (settings.subtleMotion()) {
+            panel.setAlpha(0);
+            panel.animate().alpha(1).setDuration(120).start();
+        }
     }
 
     void notice(String text, Runnable undo, Runnable onExpire) {

@@ -32,6 +32,21 @@ public final class Palette {
     private static final Palette NIGHT = new Palette(
             Night.PAPER, Night.INK, Night.INK2, Night.INK3, Night.RULE,
             Night.STRONG, Night.FILL, Night.INVERSE, Night.ON_INVERSE, Night.ACCENT, Night.ON_ACCENT);
+    public static Palette of(DisplayClass display, boolean night, int accentIndex) {
+        Palette base = of(display, night);
+        if (display == DisplayClass.MONO_EINK) return base;
+        int accent;
+        switch (accentIndex) {
+            case 1: accent = Accent.COBALT; break;
+            case 2: accent = Accent.FOREST; break;
+            case 3: accent = Accent.OCHRE; break;
+            default: return base;
+        }
+        int onAccent = accent == Accent.OCHRE ? Mono.INK : Mono.PAPER;
+        return new Palette(base.paper, base.ink, base.ink2, base.ink3, base.rule, base.strong,
+                base.fill, base.inverse, base.onInverse, accent, onAccent);
+    }
+
     public static Palette of(DisplayClass display, boolean night) {
         if (display == DisplayClass.EMISSIVE) return night ? NIGHT : PAPER;
         Palette day = display == DisplayClass.COLOR_EINK ? COLOR : MONO;

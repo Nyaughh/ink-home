@@ -31,16 +31,31 @@ final class SettingsScreen implements Screen {
     }
 
     @Override public void build(MainActivity host) {
-        if ("hidden".equals(host.sub) || "reading".equals(host.sub)) { new AppPickerScreen().build(host); return; }
-        if ("sleep".equals(host.sub)) { new SleepSettingsScreen().build(host); return; }
-        if ("wallpaper".equals(host.sub)) { new WallpaperScreen().build(host); return; }
-        LinearLayout col = host.page();
-        String category = host.sub;
+        LinearLayout page = host.page();
+        boolean expanded = host.ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.EXPANDED;
+        if (!expanded) {
+            pane(host, page, host.sub, false);
+            return;
+        }
+        page.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout categories = host.ink.col();
+        page.addView(categories, new LinearLayout.LayoutParams(0, -1, 2));
+        pane(host, categories, null, true);
+        page.addView(host.ink.hair(), host.ink.folio.hairline, -1);
+        LinearLayout detail = host.ink.col();
+        page.addView(detail, new LinearLayout.LayoutParams(0, -1, 3));
+        pane(host, detail, host.sub == null ? APPEARANCE : host.sub, true);
+    }
+
+    private void pane(MainActivity host, LinearLayout col, String category, boolean expanded) {
+        if ("hidden".equals(category) || "reading".equals(category)) { new AppPickerScreen().build(host, col); return; }
+        if ("sleep".equals(category)) { new SleepSettingsScreen().build(host, col); return; }
+        if ("wallpaper".equals(category)) { new WallpaperScreen().build(host, col); return; }
         col.addView(host.header(category == null ? "Settings" : SetupScreen.FROM_HOME.equals(category) ? SETUP : category, null,
-                category == null ? null : host::onBackPressed));
+                category == null || (expanded && parent(category) == null && !SetupScreen.FROM_HOME.equals(category)) ? null : host::onBackPressed));
         LinearLayout body = host.ink.col();
         body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), host.ink.dp(8));
-        MainActivity.Rows g = host.new Rows();
+        MainActivity.Rows g = host.new Rows(expanded || host.ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.COMPACT);
         if (category == null) {
             category(host, g, APPEARANCE, "Text " + Math.round(host.store.textScale() * 100) + "% · Interface " + Math.round(host.store.uiScale() * 100) + "%");
             category(host, g, DISPLAY, SetupScreen.displayName(host) + " · " + (host.store.listScroll() ? "Scroll" : "Pages"));
@@ -76,11 +91,16 @@ final class SettingsScreen implements Screen {
             body.addView(row);
         }
         if (category == null || ABOUT.equals(category)) version(host, body);
-        col.addView(host.scrollable(body), new LinearLayout.LayoutParams(-1, 0, 1f));
+        col.addView(host.scrollable(body, "list:SETTINGS:" + category), new LinearLayout.LayoutParams(-1, 0, 1f));
     }
 
     private void category(MainActivity host, MainActivity.Rows g, String name, String summary) {
-        g.add(name, summary, () -> open(host, name));
+        String selected = host.sub == null ? APPEARANCE : host.sub;
+        String parent = parent(selected);
+        boolean active = host.ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.EXPANDED
+                && name.equals(parent == null ? selected : parent);
+        g.add(active ? "●  " + name : name, summary, () -> open(host, name));
+        if (active) g.views.get(g.views.size() - 1).setSelected(true);
     }
 
     private static String freeSpace(MainActivity host) {
@@ -111,11 +131,19 @@ final class SettingsScreen implements Screen {
                 i -> { host.store.setClock(clocks[i]); host.render(); });
         boolean systemTheme = !host.store.hasThemeOverride();
         boolean eink = host.ink.folio.displayClass.isEink();
-        g.segments("Theme", eink ? new String[]{"Paper", "Night"} : new String[]{"Paper", "Night", "System"},
+        g.segments("Theme", eink ? new String[]{"Paper", "Night"} : new String[]{"Paper", "Night", "Follow system"},
                 !eink && systemTheme ? 2 : host.ink.folio.night ? 1 : 0, i -> {
                     host.store.setNight(i == 2 ? null : i == 1);
                     host.recreate();
                 });
+        if (host.ink.folio.displayClass != dev.inkhome.folio.core.DisplayClass.MONO_EINK) {
+            String[] accents = {"Vermilion", "Cobalt", "Forest", "Ochre"};
+            int accent = DisplayProbe.accentIndex(host);
+            g.add("Accent", accents[accent], () -> host.choose("Accent", accents, accent, i -> {
+                DisplayProbe.setAccentIndex(host, i);
+                host.recreate();
+            }));
+        }
         g.add("Wallpaper", host.store.wallpaper().isEmpty() ? "None" : new File(host.store.wallpaper()).getName(), () -> open(host, "wallpaper"));
     }
 
@@ -123,6 +151,10 @@ final class SettingsScreen implements Screen {
         g.add("Display type", SetupScreen.displayName(host), () -> SetupScreen.chooseDisplay(host));
         g.segments("Long lists", new String[]{"Pages", "Scroll"}, host.store.listScroll() ? 1 : 0,
                 i -> { host.store.setListScroll(i == 1); host.render(); });
+        if (!host.ink.folio.displayClass.isEink()) {
+            g.segments("Motion", new String[]{"Off", "Subtle"}, host.store.prefersMotion() ? 1 : 0,
+                    i -> host.store.setMotion(i == 1));
+        }
         int[] intervals = {0, 1, 4, 8, 16};
         if (host.ink.folio.displayClass.isEink()) {
             g.add("Strong clean now", "Flashes the screen", host::strongClean);
@@ -298,7 +330,8 @@ final class SettingsScreen implements Screen {
                     if (++taps < 5) return;
                     taps = 0;
                     dev.inkhome.lab.InkLab.open(host, host.store.uiScale(), host.store.textScale(),
-                            host.books.isEmpty() ? null : Covers.get(host, host.books.get(0), host.store.realCovers()));
+                            host.books.isEmpty() ? null : Covers.get(host, host.books.get(0), host.store.realCovers()),
+                            () -> SetupScreen.chooseDisplay(host));
                 }
             });
         }

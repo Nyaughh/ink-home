@@ -7,7 +7,10 @@ import java.util.Set;
 final class AppPickerScreen implements Screen {
     @Override
     public void build(MainActivity host) {
-        LinearLayout col = host.page();
+        build(host, host.page());
+    }
+
+    void build(MainActivity host, LinearLayout col) {
         boolean hiddenMode = "hidden".equals(host.sub);
         col.addView(host.header(hiddenMode ? "Hidden apps" : "Reading apps", null, host::onBackPressed));
         LinearLayout list = host.ink.col();

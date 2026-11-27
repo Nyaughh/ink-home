@@ -45,6 +45,36 @@ public class FoundationTest {
         }
     }
 
+    @Test public void displayDetectionDistinguishesReadersFromOtherDevicesByTheSameMaker() {
+        assertEquals(DisplayClass.MONO_EINK, DisplayClass.detect("Onyx", "C69", true));
+        assertEquals(DisplayClass.COLOR_EINK, DisplayClass.detect("Onyx", "Note Air4 C", false));
+        assertEquals(DisplayClass.MONO_EINK, DisplayClass.detect("Hisense", "HLTE556N", false));
+        assertEquals(DisplayClass.COLOR_EINK, DisplayClass.detect("Hisense", "A5 Pro CC", false));
+        assertEquals(DisplayClass.EMISSIVE, DisplayClass.detect("Hisense", "Infinity H40", false));
+        assertEquals(DisplayClass.MONO_EINK, DisplayClass.detect("Barnes & Noble", "BNRV1000", false));
+        assertEquals(DisplayClass.EMISSIVE, DisplayClass.detect("Barnes & Noble", "Nook Tablet", false));
+        assertEquals(DisplayClass.MONO_EINK, DisplayClass.detect("Xiaomi", "InkPalm 5", false));
+        assertEquals(DisplayClass.EMISSIVE, DisplayClass.detect("Xiaomi", "Redmi Note", false));
+        assertEquals(DisplayClass.MONO_EINK, DisplayClass.detect("Unknown", "Unknown", true));
+    }
+
+    @Test public void alternativeAccentsPreserveInkAndPaper() {
+        for (boolean night : new boolean[]{false, true}) {
+            for (DisplayClass display : DisplayClass.values()) {
+                Palette base = Palette.of(display, night);
+                for (int i = 1; i <= 3; i++) {
+                    Palette p = Palette.of(display, night, i);
+                    assertEquals(base.ink, p.ink);
+                    assertEquals(base.rule, p.rule);
+                    assertEquals(base.paper, p.paper);
+                    if (display == DisplayClass.MONO_EINK) assertEquals(base.ink, p.accent);
+                    else assertNotEquals(base.accent, p.accent);
+                }
+            }
+        }
+        assertEquals(Tokens.Mono.INK, Palette.of(DisplayClass.COLOR_EINK, false, 3).onAccent);
+    }
+
     @Test public void accentIsReservedForColourSurfaces() {
         Palette color = Palette.of(DisplayClass.COLOR_EINK, false);
         assertEquals(Tokens.ColorEink.ACCENT, color.accent);

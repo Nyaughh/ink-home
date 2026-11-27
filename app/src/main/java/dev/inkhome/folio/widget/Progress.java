@@ -23,8 +23,9 @@ public final class Progress extends LinearLayout {
                 int top = (getHeight() - f.hairline) / 2;
                 paint.setColor(f.palette.rule);
                 canvas.drawRect(0, top, getWidth(), top + f.hairline, paint);
-                paint.setColor(f.palette.accent);
-                canvas.drawRect(0, 0, Math.round(getWidth() * percent / 100f), getHeight(), paint);
+                int fillWidth = Math.round(getWidth() * percent / 100f);
+                paint.setColor(f.progressInk(fillWidth, getHeight()));
+                canvas.drawRect(0, 0, fillWidth, getHeight(), paint);
             }
         };
         addView(track, new LayoutParams(0, f.u(thickness), 1));

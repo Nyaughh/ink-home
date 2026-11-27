@@ -15,7 +15,6 @@ import dev.inkhome.folio.core.Capabilities;
 import dev.inkhome.folio.core.DisplayClass;
 
 import java.io.File;
-import java.util.Locale;
 
 public final class DisplayProbe {
     private DisplayProbe() {}
@@ -37,19 +36,12 @@ public final class DisplayProbe {
         } catch (ReflectiveOperationException | SecurityException ignored) { return false; }
     }
 
-    private static boolean colorInkModel(String model) {
-        return model.contains("color") || model.contains("colour") || model.contains("kaleido")
-                || model.contains("tab ultra c") || model.contains("note air3 c");
+    private static final class Hardware {
+        static final DisplayClass DISPLAY = DisplayClass.detect(Build.MANUFACTURER, Build.MODEL, hasEpdControl());
     }
 
-    private static DisplayClass hardwareClass() {
-        String maker = Build.MANUFACTURER.toLowerCase(Locale.ROOT);
-        String model = Build.MODEL.toLowerCase(Locale.ROOT);
-        boolean eink = hasEpdControl() || maker.contains("onyx") || maker.contains("bigme")
-                || maker.contains("boyue") || maker.contains("meebook") || maker.contains("tolino")
-                || maker.contains("pocketbook") || maker.contains("supernote");
-        if (!eink) return DisplayClass.EMISSIVE;
-        return colorInkModel(model) ? DisplayClass.COLOR_EINK : DisplayClass.MONO_EINK;
+    public static DisplayClass hardwareClass() {
+        return Hardware.DISPLAY;
     }
 
     public static DisplayClass displayClass(Context context) {
@@ -58,6 +50,20 @@ public final class DisplayProbe {
             if (candidate.name().equals(override)) return candidate;
         }
         return hardwareClass();
+    }
+
+    static boolean isGalleryPanel() {
+        String model = Build.MODEL.toLowerCase(java.util.Locale.ROOT);
+        return model.contains("galy") || model.contains("gallery");
+    }
+
+    public static int accentIndex(Context context) {
+        int index = preferences(context).getInt("accentIndex", 0);
+        return index >= 0 && index <= 3 ? index : 0;
+    }
+
+    public static void setAccentIndex(Context context, int index) {
+        preferences(context).edit().putInt("accentIndex", index).apply();
     }
 
     public static boolean smoothText(Context context) {

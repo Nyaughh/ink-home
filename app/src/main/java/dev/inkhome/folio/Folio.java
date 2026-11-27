@@ -14,6 +14,7 @@ public final class Folio {
     public final DisplayClass displayClass;
     public final Palette palette;
     public final boolean night;
+    public final int accentIndex;
     public final float uiScale, textScale;
     public final int hairline, rule;
     private final float density;
@@ -24,7 +25,8 @@ public final class Folio {
         this.uiScale = uiScale;
         displayClass = DisplayProbe.displayClass(context);
         night = DisplayProbe.night(context);
-        palette = Palette.of(displayClass, night);
+        accentIndex = DisplayProbe.accentIndex(context);
+        palette = Palette.of(displayClass, night, accentIndex);
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();
         density = metrics.density;
         hairline = WindowClass.hairline(density);
@@ -33,6 +35,17 @@ public final class Folio {
     }
 
     public int u(float units) { return Math.round(units * density * uiScale); }
+
+    public int solidInk(float width, float height) {
+        int minimum = u(Tokens.Shape.ACCENT_MIN_THICKNESS);
+        return Math.min(width, height) >= minimum ? palette.accent : palette.ink;
+    }
+
+    /** Gallery colour updates are slow enough that live progress stays in black and white. */
+    public int progressInk(float width, float height) {
+        return displayClass == DisplayClass.COLOR_EINK && DisplayProbe.isGalleryPanel()
+                ? palette.ink : solidInk(width, height);
+    }
 
     public WindowClass windowClass() {
         return WindowClass.fromWidth(context.getResources().getConfiguration().screenWidthDp / uiScale);

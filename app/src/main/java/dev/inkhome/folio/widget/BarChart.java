@@ -64,7 +64,7 @@ public final class BarChart extends View {
             paint.setAntiAlias(false);
             if (minutes[i] > 0) {
                 boolean met = goal == 0 || minutes[i] >= goal;
-                paint.setColor(met ? folio.palette.accent : folio.palette.ink);
+                paint.setColor(goal > 0 && met ? folio.solidInk(right - left, baseline - top) : folio.palette.ink);
                 c.drawRect(left, top, right, baseline, paint);
                 if (!met) {
                     paint.setColor(folio.palette.paper);

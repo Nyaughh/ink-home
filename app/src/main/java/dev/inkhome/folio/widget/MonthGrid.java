@@ -36,11 +36,12 @@ public final class MonthGrid {
                 LocalDate date = month.atDay(index + 1);
                 int count = minutes[index];
                 boolean met = count >= threshold;
-                int color = met ? f.palette.onInverse : f.palette.ink;
+                boolean useAccent = met && goal > 0;
+                int color = useAccent ? f.palette.onAccent : met ? f.palette.onInverse : f.palette.ink;
                 LinearLayout labels = DataWidgets.column(f);
                 labels.setGravity(Gravity.CENTER);
                 labels.setMinimumHeight(f.u(40));
-                labels.setBackground(DataWidgets.shape(f, met ? f.palette.inverse : f.palette.paper,
+                labels.setBackground(DataWidgets.shape(f, useAccent ? f.palette.accent : met ? f.palette.inverse : f.palette.paper,
                         count > 0 && !met ? f.hairline : 0, false));
                 cell.addView(labels, -1, -2);
                 labels.addView(Type.text(f, String.valueOf(index + 1), TypeScale.LABEL, color));

@@ -41,8 +41,8 @@ public final class InkLab {
     private final TextView result;
     private boolean compareWindow = true;
 
-    public static void open(Activity host, float uiScale, float textScale, Bitmap cover) {
-        new InkLab(host, uiScale, textScale, cover).show();
+    public static void open(Activity host, float uiScale, float textScale, Bitmap cover, Runnable chooseDisplay) {
+        new InkLab(host, uiScale, textScale, cover).show(chooseDisplay);
     }
 
     private InkLab(Activity host, float uiScale, float textScale, Bitmap cover) {
@@ -83,12 +83,17 @@ public final class InkLab {
         return view;
     }
 
-    private void show() {
+    private void show(Runnable chooseDisplay) {
         Dialog dialog = new Dialog(host, android.R.style.Theme_Material_Light_NoActionBar_Fullscreen);
         LinearLayout page = column();
         page.setPadding(u(12), u(8), u(12), u(8));
         LinearLayout header = new LinearLayout(host);
         header.addView(label("Ink lab", 23, 700), new LinearLayout.LayoutParams(0, -2, 1));
+        header.addView(dev.inkhome.folio.widget.Button.create(folio, "Display type",
+                dev.inkhome.folio.widget.Button.Style.SECONDARY, view -> {
+                    dialog.dismiss();
+                    chooseDisplay.run();
+                }));
         Button close = new Button(host);
         close.setText("Close");
         close.setAllCaps(false);

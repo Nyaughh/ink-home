@@ -254,9 +254,19 @@ final class Store {
     }
     void setSleepFileMode(String v) { p.edit().putString("sleepFile", v).apply(); }
 
-    /** Long lists (settings, apps…): false = pages with chevron buttons (default), true = scroll. */
-    boolean listScroll() { return p.getBoolean("listScroll", false); }
+    boolean listScroll() {
+        if (p.contains("listScroll")) return p.getBoolean("listScroll", false);
+        return !dev.inkhome.folio.DisplayProbe.displayClass(context).isEink();
+    }
     void setListScroll(boolean v) { p.edit().putBoolean("listScroll", v).apply(); }
+
+    boolean subtleMotion() {
+        return prefersMotion()
+                && !dev.inkhome.folio.DisplayProbe.displayClass(context).isEink()
+                && android.animation.ValueAnimator.areAnimatorsEnabled();
+    }
+    boolean prefersMotion() { return p.getBoolean("subtleMotion", false); }
+    void setMotion(boolean enabled) { p.edit().putBoolean("subtleMotion", enabled).apply(); }
 
     boolean autoUpdate() { return p.getBoolean("autoUpdate", true); }
     void setAutoUpdate(boolean v) { p.edit().putBoolean("autoUpdate", v).apply(); }

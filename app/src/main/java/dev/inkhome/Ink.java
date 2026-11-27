@@ -222,8 +222,9 @@ final class Ink {
             c.drawRect(0, 0, getWidth(), h, p);
             p.setColor(LINE);
             c.drawRect(0, h - folio.hairline, getWidth(), h, p);
-            p.setColor(folio.palette.accent);
-            c.drawRect(0, 0, Math.round(getWidth() * f), h, p);
+            int width = Math.round(getWidth() * f);
+            p.setColor(folio.progressInk(width, h));
+            c.drawRect(0, 0, width, h, p);
         }
     }
 }

@@ -19,10 +19,12 @@ final class LibraryScreen implements Screen {
     public void build(MainActivity host) {
         if (host.libSearch != null) { new SearchScreen().build(host); return; }
 
+        boolean expanded = host.ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.EXPANDED;
+        if (!expanded) host.libraryDetail = null;
         LinearLayout col = host.page();
         ImageView search = host.ink.iconButton("search", () -> { host.libSearch = ""; host.pages.put("lib", 0); host.render(); });
         ImageView view = host.ink.iconButton(host.store.libraryGrid() ? "list" : "grid", () -> { host.store.setLibraryGrid(!host.store.libraryGrid()); host.pages.put("lib", 0); host.render(); });
-        Runnable back = host.libCollection != null ? () -> { host.libCollection = null; host.render(); } : null;
+        Runnable back = host.libCollection != null ? () -> { host.libraryDetail = null; host.libCollection = null; host.render(); } : null;
         boolean collections = host.libCollection == null && host.libTab.equals("collections");
         ImageView options = host.ink.iconButton(collections ? "plus" : "filter", () -> {
             if (collections) host.newCollection(); else host.libraryOptions();
@@ -43,7 +45,7 @@ final class LibraryScreen implements Screen {
         if (host.libCollection == null) {
             String[] keys = {"reading", "all", "finished", "collections"};
             body.addView(host.tabs(new String[]{"Reading", "All", "Finished", "Collections"}, Arrays.asList(keys).indexOf(host.libTab),
-                    i -> { host.libTab = keys[i]; host.pages.put("lib", 0); host.render(); }));
+                    i -> { host.libraryDetail = null; host.libTab = keys[i]; host.pages.put("lib", 0); host.render(); }));
         }
         if (!host.hasFileAccess()) {
             body.addView(host.note("Allow file access", "Ink Home needs it to list your books.", host::requestFileAccess), host.ink.m(-1, -2, 0, 16, 0, 0));
@@ -71,6 +73,13 @@ final class LibraryScreen implements Screen {
         if (filters.getChildCount() > 0) body.addView(filters, host.ink.m(-1, -2, 0, 8, 0, 4));
 
         List<Library.Book> list = host.filterBooks(false);
+        Library.Book detail = null;
+        if (host.libraryDetail != null) {
+            for (Library.Book book : list) {
+                if (host.libraryDetail.equals(book.path)) { detail = book; break; }
+            }
+            if (detail == null && host.booksLoaded) host.libraryDetail = null;
+        }
         if (list.isEmpty()) {
             String msg;
             if (!host.booksLoaded) msg = "Looking for books…";
@@ -85,6 +94,22 @@ final class LibraryScreen implements Screen {
             return;
         }
         host.coverPage = host.store.libraryGrid();
+        if (detail != null) {
+            LinearLayout panes = host.ink.row();
+            body.addView(panes, new LinearLayout.LayoutParams(-1, 0, 1));
+            LinearLayout info = host.ink.col();
+            LinearLayout.LayoutParams bounds = new LinearLayout.LayoutParams(0, -1, 2);
+            bounds.leftMargin = host.ink.dp(host.ink.folio.windowClass().gutter);
+            panes.addView(info, bounds);
+            View close = host.ink.iconButton("close", () -> { host.libraryDetail = null; host.render(); });
+            close.setContentDescription("Close book details");
+            info.addView(host.header("Book details", null, null, close));
+            info.addView(host.scrollable(host.bookInformation(detail, true), "detail:" + detail.path),
+                    new LinearLayout.LayoutParams(-1, 0, 1));
+            // The most recently bound pager owns the hardware keys.
+            panes.addView(host.bookPages(list, host.store.libraryGrid()), 0, new LinearLayout.LayoutParams(0, -1, 3));
+            return;
+        }
         body.addView(host.bookPages(list, host.store.libraryGrid()), new LinearLayout.LayoutParams(-1, 0, 1f));
     }
 }

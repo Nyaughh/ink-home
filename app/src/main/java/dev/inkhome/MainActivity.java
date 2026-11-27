@@ -119,6 +119,7 @@ public class MainActivity extends Activity {
 
     private Screen screen = Screen.HOME;
     String libTab = "reading";
+    String libraryDetail;
     String libCollection = null;
     String libSearch = null;
     String sub = null;
@@ -241,6 +242,11 @@ public class MainActivity extends Activity {
     public void onConfigurationChanged(android.content.res.Configuration config) {
         super.onConfigurationChanged(config);
         if (content == null) return;
+        if (ink.folio.night != dev.inkhome.folio.DisplayProbe.night(this)) {
+            // Recreate the persistent shell surfaces as well as the current screen.
+            recreate();
+            return;
+        }
         boolean menu = menuOpen;
         boolean panel = panelOpen;
         ink = new Ink(this, store.textScale(), store.uiScale());
@@ -256,6 +262,7 @@ public class MainActivity extends Activity {
         super.onSaveInstanceState(state);
         state.putString("screen", screen.name());
         state.putString("libraryTab", libTab);
+        state.putString("libraryDetail", libraryDetail);
         state.putString("collection", libCollection);
         state.putString("search", libSearch);
         state.putString("subpage", sub);
@@ -272,6 +279,7 @@ public class MainActivity extends Activity {
         if (state == null) return;
         screen = Screen.valueOf(state.getString("screen", Screen.HOME.name()));
         libTab = state.getString("libraryTab", libTab);
+        libraryDetail = state.getString("libraryDetail");
         libCollection = state.getString("collection");
         libSearch = state.getString("search");
         sub = state.getString("subpage");
@@ -341,6 +349,7 @@ public class MainActivity extends Activity {
             sheets.dismiss();
             pages.clear();
             libSearch = null;
+            libraryDetail = null;
             libCollection = null;
             screen = Screen.APPS;
             sub = "switcher";
@@ -354,6 +363,7 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (panelOpen) closePanel();
         else if (libSearch != null) { libSearch = null; hideKeyboard(); render(); }
+        else if (libraryDetail != null && screen == Screen.LIBRARY) { libraryDetail = null; render(); }
         else if (libCollection != null) { libCollection = null; render(); }
         else if (screen == Screen.SETTINGS && SetupScreen.FROM_HOME.equals(sub)) go(Screen.HOME);
         else if (sub != null) { sub = screen == Screen.SETTINGS ? SettingsScreen.parent(sub) : null; render(); }
@@ -516,6 +526,7 @@ public class MainActivity extends Activity {
         if (s != screen) {
             pages.clear();
             libSearch = null;
+            libraryDetail = null;
             libCollection = null;
             sub = null;
         }
@@ -532,7 +543,15 @@ public class MainActivity extends Activity {
 
     boolean coverPage;
 
+    private String renderedDestination;
+
     void render() {
+        String destination = screen + "/" + sub + "/" + libTab + "/" + libCollection + "/" + (libSearch != null);
+        if (renderedDestination != null && !destination.equals(renderedDestination) && store.subtleMotion()) {
+            android.transition.TransitionManager.beginDelayedTransition(content,
+                    new android.transition.Fade().setDuration(120));
+        }
+        renderedDestination = destination;
         coverPage = false;
         closePanelSilently();
         content.removeAllViews();
@@ -586,7 +605,7 @@ public class MainActivity extends Activity {
         refreshController.changed(overlay, Change.OVERLAY);
         panelOpen = true;
         menuOpen = true;
-        overlay.setVisibility(View.VISIBLE);
+        showOverlay();
         overlay.setOnClickListener(v -> closePanel());
 
         LinearLayout sheet = ink.col();
@@ -654,6 +673,7 @@ public class MainActivity extends Activity {
 
     LinearLayout page() {
         LinearLayout col = ink.col();
+        col.setTransitionGroup(true);
         content.addView(col, new FrameLayout.LayoutParams(-1, -1));
         return col;
     }
@@ -693,10 +713,21 @@ public class MainActivity extends Activity {
 
     private void togglePanel() { if (panelOpen) closePanel(); else openPanel(); }
 
+    private void showOverlay() {
+        overlay.animate().cancel();
+        overlay.setVisibility(View.VISIBLE);
+        if (store.subtleMotion()) {
+            overlay.setAlpha(0);
+            overlay.animate().alpha(1).setDuration(120).start();
+        } else overlay.setAlpha(1);
+    }
+
     private void closePanelSilently() {
         if (panelOpen) refreshController.changed(content, Change.OVERLAY);
         panelOpen = false;
         overlay.removeAllViews();
+        overlay.animate().cancel();
+        overlay.setAlpha(1);
         overlay.setVisibility(View.GONE);
         if (menuOpen) {
             FrameLayout.LayoutParams bounds = (FrameLayout.LayoutParams) overlay.getLayoutParams();
@@ -718,7 +749,7 @@ public class MainActivity extends Activity {
         refreshController.changed(overlay, Change.OVERLAY);
         panelOpen = true;
         overlay.removeAllViews();
-        overlay.setVisibility(View.VISIBLE);
+        showOverlay();
         overlay.setOnClickListener(v -> closePanel());
 
         LinearLayout p = ink.col();
@@ -852,6 +883,7 @@ public class MainActivity extends Activity {
         shortcuts.addView(Button.create(ink.folio, "Switcher", Button.Style.TEXT, v -> {
             pages.clear();
             libSearch = null;
+            libraryDetail = null;
             libCollection = null;
             screen = Screen.APPS;
             sub = "switcher";
@@ -999,27 +1031,37 @@ public class MainActivity extends Activity {
     private Bitmap wallpaperCache;
     private String wallpaperKey = "";
 
-    /** Home background: the chosen picture in greyscale, faded toward white so text stays crisp. */
+    private String requestedWallpaper = "";
+
+    /** Fade the chosen picture toward the current paper colour for legible text. */
     void applyWallpaper() {
         String path = store.wallpaper();
-        if (path.isEmpty() || !new File(path).exists()) { content.setBackground(null); return; }
+        if (path.isEmpty() || !new File(path).exists()) {
+            requestedWallpaper = "";
+            content.setBackground(null);
+            return;
+        }
         int w = content.getWidth(), h = content.getHeight();
         if (w == 0 || h == 0) { content.post(this::applyWallpaper); return; }
-        String key = path + store.wallpaperFade() + w + "x" + h;
+        boolean mono = ink.folio.displayClass == dev.inkhome.folio.core.DisplayClass.MONO_EINK;
+        int paper = ink.PAPER;
+        float fade = store.wallpaperFade();
+        String key = path + "|" + fade + "|" + w + "x" + h + "|" + mono + "|" + paper;
+        requestedWallpaper = key;
         if (key.equals(wallpaperKey) && wallpaperCache != null) {
             content.setBackground(new android.graphics.drawable.BitmapDrawable(getResources(), wallpaperCache));
             return;
         }
-        float fade = store.wallpaperFade();
         thumbs.execute(() -> {
-            Bitmap pic = SleepScreen.thumb(new File(path), w, h);
+            Bitmap pic = SleepScreen.thumb(new File(path), w, h, mono, paper);
             if (pic == null) return;
             Canvas cv = new Canvas(pic);
-            Paint white = new Paint();
-            white.setColor(Color.WHITE);
-            white.setAlpha(Math.round(fade * 255));
-            cv.drawRect(0, 0, w, h, white);
+            Paint veil = new Paint();
+            veil.setColor(paper);
+            veil.setAlpha(Math.round(fade * 255));
+            cv.drawRect(0, 0, w, h, veil);
             ui.post(() -> {
+                if (!key.equals(requestedWallpaper) || isDestroyed()) return;
                 wallpaperCache = pic;
                 wallpaperKey = key;
                 if (screen == Screen.HOME) content.setBackground(new android.graphics.drawable.BitmapDrawable(getResources(), pic));
@@ -1301,8 +1343,12 @@ public class MainActivity extends Activity {
     private View bookGrid(String pageKey, List<Library.Book> list) {
         dev.inkhome.folio.core.WindowClass window = ink.folio.windowClass();
         float width = getResources().getConfiguration().screenWidthDp / ink.folio.uiScale;
-        int columns = window.columns(width, 96);
-        float cellWidth = (width - 2 * window.margin - (columns - 1) * window.gutter) / columns;
+        float available = width - 2 * window.margin;
+        if ("lib".equals(pageKey) && libraryDetail != null && window == WindowClass.EXPANDED) {
+            available = (available - window.gutter) * 0.6f;
+        }
+        int columns = Math.max(1, (int) ((available + window.gutter) / (96 + window.gutter)));
+        float cellWidth = (available - (columns - 1) * window.gutter) / columns;
         int height = Math.round(cellWidth * 10 / 7) + 68;
         return cells(pageKey, null, list.size(), 96, height, i -> {
             Library.Book book = list.get(i);
@@ -1409,6 +1455,15 @@ public class MainActivity extends Activity {
     }
 
     private void showBookSheet(Library.Book b, boolean details) {
+        if (details && screen == Screen.LIBRARY && libSearch == null && ink.folio.windowClass() == WindowClass.EXPANDED) {
+            libraryDetail = b.path;
+            render();
+            return;
+        }
+        sheets.custom(details ? "Book details" : "Book actions", bookInformation(b, details));
+    }
+
+    LinearLayout bookInformation(Library.Book b, boolean details) {
         LinearLayout body = ink.col();
         body.setPadding(ink.dp(16), ink.dp(12), ink.dp(16), ink.dp(8));
         LinearLayout heading = ink.row();
@@ -1446,7 +1501,7 @@ public class MainActivity extends Activity {
                 bookSheetAction(action, b);
             }));
         }
-        sheets.custom(details ? "Book details" : "Book actions", body);
+        return body;
     }
 
     private void bookSheetAction(String action, Library.Book b) {
@@ -1813,7 +1868,10 @@ public class MainActivity extends Activity {
 
     final class Rows {
         final List<View> views = new ArrayList<>();
-        final boolean compact = ink.folio.windowClass() == WindowClass.COMPACT;
+        final boolean compact;
+
+        Rows() { this(ink.folio.windowClass() == WindowClass.COMPACT); }
+        Rows(boolean compact) { this.compact = compact; }
 
         void add(String label, String value, Runnable click) {
             LinearLayout row = ink.row();
@@ -1974,8 +2032,10 @@ public class MainActivity extends Activity {
             TextView name = ink.oneLine(ink.text(pic.getName(), TypeScale.META, on ? ink.TEXT : ink.TEXT3));
             name.setPadding(0, ink.dp(5), 0, 0);
             cell.addView(name);
+            boolean mono = ink.folio.displayClass == dev.inkhome.folio.core.DisplayClass.MONO_EINK;
+            int paper = ink.PAPER;
             thumbs.execute(() -> {
-                Bitmap bm = SleepScreen.thumb(pic, 180, 240);
+                Bitmap bm = SleepScreen.thumb(pic, 180, 240, mono, paper);
                 ui.post(() -> { if (bm != null) th.setImageBitmap(bm); });
             });
             cell.setOnClickListener(v -> pick.on(pic));
@@ -2059,13 +2119,16 @@ public class MainActivity extends Activity {
     static <T extends View> T keep(T v) { return PagedFlow.group(v); }
 
     View scrollable(LinearLayout body) {
+        return scrollable(body, "list:" + screen + ":" + sub);
+    }
+
+    View scrollable(LinearLayout body, String key) {
         if (store.listScroll()) {
             ScrollView sv = ink.scroller(body);
             bindScrollKeys(sv);
             jumper = v -> sv.scrollTo(0, PagedFlow.topIn(v, body));
             return sv;
         }
-        String key = "list:" + screen + ":" + sub;
         PagedFlow flow = new PagedFlow(ink.folio, body, pages.getOrDefault(key, 0),
                 page -> pages.put(key, page), this::pageChanged);
         jumper = flow::jumpTo;

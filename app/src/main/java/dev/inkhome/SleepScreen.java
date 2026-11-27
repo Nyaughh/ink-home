@@ -164,16 +164,17 @@ final class SleepScreen {
         return decode(file, width, height);
     }
 
-    /** Small greyscale thumbnail for the picker. */
-    static Bitmap thumb(File f, int w, int h) {
+    /** Cropped thumbnail shared by the picture picker and Home wallpaper. */
+    static Bitmap thumb(File f, int w, int h, boolean mono, int paper) {
         Bitmap b = decode(f, w, h);
         if (b == null) return null;
         Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas cv = new Canvas(out);
-        cv.drawColor(Color.WHITE);
+        cv.drawColor(paper);
         float s = Math.max((float) w / b.getWidth(), (float) h / b.getHeight());
         float bw = b.getWidth() * s, bh = b.getHeight() * s;
-        cv.drawBitmap(b, null, new RectF((w - bw) / 2f, (h - bh) / 2f, (w + bw) / 2f, (h + bh) / 2f), greyPaint());
+        cv.drawBitmap(b, null, new RectF((w - bw) / 2f, (h - bh) / 2f, (w + bw) / 2f, (h + bh) / 2f),
+                mono ? greyPaint() : new Paint(Paint.FILTER_BITMAP_FLAG));
         b.recycle();
         return out;
     }

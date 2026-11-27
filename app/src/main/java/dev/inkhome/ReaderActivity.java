@@ -135,9 +135,21 @@ public class ReaderActivity extends Activity {
     }
 
     @Override
+    public void onConfigurationChanged(android.content.res.Configuration config) {
+        super.onConfigurationChanged(config);
+        if (ink != null && ink.folio.night != dev.inkhome.folio.DisplayProbe.night(this)) recreate();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         ActivityWindow.applyOrientation(this, store);
+        if (ink.folio.displayClass != dev.inkhome.folio.DisplayProbe.displayClass(this)
+                || ink.folio.night != dev.inkhome.folio.DisplayProbe.night(this)
+                || ink.folio.accentIndex != dev.inkhome.folio.DisplayProbe.accentIndex(this)) {
+            recreate();
+            return;
+        }
         refreshController.resume();
     }
 

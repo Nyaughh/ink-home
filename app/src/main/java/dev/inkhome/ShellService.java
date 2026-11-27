@@ -71,7 +71,7 @@ public final class ShellService extends AccessibilityService {
     };
     private final SharedPreferences.OnSharedPreferenceChangeListener settings = (p, key) -> {
         if (key == null || "statusBar".equals(key) || "night".equals(key)
-                || "textScale".equals(key) || "uiScale".equals(key)) {
+                || "displayClass".equals(key) || "textScale".equals(key) || "uiScale".equals(key)) {
             removeStrip();
             updateStrip();
         }

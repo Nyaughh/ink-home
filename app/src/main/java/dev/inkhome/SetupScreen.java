@@ -19,7 +19,11 @@ final class SetupScreen {
     }
 
     static String displayName(MainActivity host) {
-        switch (host.ink.folio.displayClass) {
+        return displayName(host.ink.folio.displayClass);
+    }
+
+    private static String displayName(dev.inkhome.folio.core.DisplayClass display) {
+        switch (display) {
             case COLOR_EINK: return LABELS[2];
             case EMISSIVE: return LABELS[3];
             default: return LABELS[1];
@@ -27,7 +31,9 @@ final class SetupScreen {
     }
 
     static void chooseDisplay(MainActivity host) {
-        host.choose("Display type", LABELS, Math.max(0, Arrays.asList(PROFILES).indexOf(host.store.displayOverride())), i -> {
+        String[] choices = LABELS.clone();
+        choices[0] += " · " + displayName(dev.inkhome.folio.DisplayProbe.hardwareClass());
+        host.choose("Display type", choices, Math.max(0, Arrays.asList(PROFILES).indexOf(host.store.displayOverride())), i -> {
             host.store.confirmDisplay(PROFILES[i]);
             host.recreate();
         });
