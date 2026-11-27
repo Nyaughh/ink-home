@@ -20,6 +20,7 @@ import android.widget.TextView;
 
 import dev.inkhome.SheetGallery;
 import dev.inkhome.folio.Folio;
+import dev.inkhome.folio.epd.Epd;
 import dev.inkhome.folio.widget.FolioSwitch;
 import dev.inkhome.folio.widget.LevelBar;
 import dev.inkhome.folio.widget.Segmented;
@@ -38,6 +39,7 @@ public final class InkLab {
     private final LinearLayout content;
     private final Pattern pattern;
     private final TextView result;
+    private boolean compareWindow = true;
 
     public static void open(Activity host, float uiScale, float textScale, Bitmap cover) {
         new InkLab(host, uiScale, textScale, cover).show();
@@ -52,7 +54,7 @@ public final class InkLab {
         serif = font("Literata.ttf", Typeface.SERIF);
         content = column();
         pattern = new Pattern(cover);
-        result = label("Choose a mode to invert the specimen.", 13, 500);
+        result = label("Change the specimen, then compare the refreshes.", 13, 500);
         result.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
     }
 
@@ -101,6 +103,7 @@ public final class InkLab {
                     pattern.setVisibility(diagnostics ? View.VISIBLE : View.GONE);
                     result.setVisibility(diagnostics ? View.VISIBLE : View.GONE);
                     if (diagnostics) {
+                        addRefreshComparison();
                         addModes();
                         addProbes();
                         addSpecimens();
@@ -152,6 +155,39 @@ public final class InkLab {
         StructureGallery.add(content, sample);
         DataGallery.add(content, sample);
         SheetGallery.add(content, sample);
+    }
+
+    private void addRefreshComparison() {
+        content.addView(label("Compare refreshes", 20, 700));
+        content.addView(label("Change the specimen above to leave a visible edge. Compare any remaining ink inside and outside the strip. Firmware controls how far each request reaches.", 13, 500));
+        comparisonButton("Change specimen", () -> {
+            pattern.inverted = !pattern.inverted;
+            pattern.invalidate();
+            result.setText("Specimen changed · compare the remaining ink");
+        });
+        content.addView(new Segmented(folio, "Request area", new String[]{"Lab window", "Specimen strip"},
+                compareWindow ? 0 : 1, index -> compareWindow = index == 0));
+        comparisonButton("Gentle · GU 2", () -> report("GU", Epd.requestGentleRefresh(comparisonTarget())));
+        comparisonButton("Text · Regal 6", () -> report("Regal", Epd.requestRegalRefresh(comparisonTarget())));
+        comparisonButton("Strong · GC 98 (flashes)", () -> report("GC", Epd.requestFullClean(comparisonTarget())));
+        content.addView(label("Specimen redraw modes", 20, 700));
+    }
+
+    private void comparisonButton(String title, Runnable action) {
+        Button button = new Button(host);
+        button.setAllCaps(false);
+        button.setText(title);
+        button.setOnClickListener(v -> action.run());
+        content.addView(button);
+    }
+
+    private View comparisonTarget() {
+        return compareWindow ? pattern.getRootView() : pattern;
+    }
+
+    private void report(String mode, boolean returned) {
+        String target = compareWindow ? "lab window" : "specimen strip";
+        result.setText(mode + " · " + target + (returned ? " · refresh requested" : " · request unavailable"));
     }
 
     private void addModes() {

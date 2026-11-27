@@ -26,6 +26,7 @@ S7 on the Phase 5 build: the application overlay stayed visible in Chromium and
 NeoReader. Android Settings reported mForceHideNonSystemOverlayWindow=true
 and hid the dot; the dot returned in Chromium. Moving across edges, tucking,
 and pulling back out worked. One tap at 16:21:44.847 returned from the Onyx
-refreshScreen(98) method. The physical extent of the clean requires observation.
+refreshScreen(98) method. Aarin observed that the screen cleaned successfully
+and moving or tucking left no trail. The blackout during the clean was distracting.
 Disabling the dot removed its window and foreground service. The package and
 UID overlay modes were both verified back at default after testing.

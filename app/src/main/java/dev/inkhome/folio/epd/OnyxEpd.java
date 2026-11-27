@@ -50,9 +50,14 @@ final class OnyxEpd implements Epd {
     }
 
     static boolean requestFullClean(View target) {
+        return requestRefresh(target, 98);
+    }
+
+    // One-shot firmware request. The panel determines the actual update extent.
+    static boolean requestRefresh(View target, int mode) {
         if (REFRESH == null) return false;
         try {
-            REFRESH.invoke(target, 98);
+            REFRESH.invoke(target, mode);
             return true;
         } catch (ReflectiveOperationException | RuntimeException ignored) {
             return false;

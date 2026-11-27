@@ -124,6 +124,9 @@ final class SettingsScreen implements Screen {
         g.segments("Long lists", new String[]{"Pages", "Scroll"}, host.store.listScroll() ? 1 : 0,
                 i -> { host.store.setListScroll(i == 1); host.render(); });
         int[] intervals = {0, 1, 4, 8, 16};
+        if (host.ink.folio.displayClass.isEink()) {
+            g.add("Strong clean now", "Flashes the screen", host::strongClean);
+        }
         String refreshLabel = "Full refresh in the reader";
         g.control(refreshLabel, new Stepper(host.ink.folio, refreshLabel,
                 new String[]{"Off", "1 page", "4 pages", "8 pages", "16 pages"},
@@ -172,6 +175,8 @@ final class SettingsScreen implements Screen {
     }
 
     private void shell(MainActivity host, MainActivity.Rows g) {
+        boolean shellOn = ShellService.connected();
+        g.add("Ink shell", shellOn ? "On · Turn off" : "Off · Set up", () -> host.shellAccessSheet(shellOn));
         g.segments("Status strip", new String[]{"Ink Home", "System"}, host.store.statusBar() ? 0 : 1, i -> {
             host.store.setStatusBar(i == 0);
             host.applySystemBar();
@@ -207,6 +212,13 @@ final class SettingsScreen implements Screen {
         g.toggle("Tuck against the edge", DotService.tucked(host), tucked -> {
             DotService.setTucked(host, tucked);
             host.render();
+        });
+        if (ShellService.connected()) g.add("Dot in each app", "Show, tuck or hide", () -> {
+            String[] labels = host.apps.stream().map(host::displayLabel).toArray(String[]::new);
+            String[] packages = host.apps.stream().map(app -> app.pkg).toArray(String[]::new);
+            host.choose("Dot in each app", labels, -1, i -> host.choose(labels[i],
+                    new String[]{"Show", "Tuck", "Hide"}, ShellService.dotPolicy(host, packages[i]),
+                    mode -> ShellService.setDotPolicy(host, packages[i], mode)));
         });
         if (DotService.ballAvailable(host)) g.add("Boox Navigation Ball", "Its accessibility service is enabled", () -> {
             if (!DotService.openBallSettings(host)) host.toast("Navigation Ball settings are unavailable");

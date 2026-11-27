@@ -196,6 +196,7 @@ public class MainActivity extends Activity {
         refreshController = new RefreshController((ViewGroup) getWindow().getDecorView(), store::readerRefreshEvery);
         loadApps();
         if (!store.favoritesInitialised()) seedFavorites();
+        if (b == null) handleShellAction(getIntent());
     }
 
     @Override
@@ -307,6 +308,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (handleShellAction(intent)) return;
         if (DotService.ACTION_SETTINGS.equals(intent.getAction())) {
             sheets.dismiss();
             openSettingsPage(SettingsScreen.DOT);
@@ -317,6 +319,35 @@ public class MainActivity extends Activity {
         // Home on Home clears ghosting; otherwise it returns to the home page.
         if (screen == Screen.HOME && hasWindowFocus()) cleanScreen();
         else go(Screen.HOME);
+    }
+
+    void shellAccessSheet(boolean enabled) {
+        sheets.message("Ink shell", getString(R.string.ink_shell_description),
+                enabled ? "Turn off Ink shell" : "Open Android accessibility settings", () -> {
+                    if (enabled) {
+                        ShellService.disable();
+                        openSettingsPage(SettingsScreen.SHELL);
+                    } else start(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                });
+    }
+
+    private boolean handleShellAction(Intent intent) {
+        if (ShellService.PANEL.equals(intent.getAction())) {
+            sheets.dismiss();
+            content.post(this::openPanel);
+            return true;
+        }
+        if (ShellService.SWITCHER.equals(intent.getAction())) {
+            sheets.dismiss();
+            pages.clear();
+            libSearch = null;
+            libCollection = null;
+            screen = Screen.APPS;
+            sub = "switcher";
+            render();
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -730,7 +761,7 @@ public class MainActivity extends Activity {
             tiles.add(panelTile("bluetooth", "Bluetooth", "Device settings", false,
                     () -> panelSettings(Settings.ACTION_BLUETOOTH_SETTINGS)));
         }
-        tiles.add(panelTile("clean", "Clean screen", "Full refresh", false, () -> {
+        tiles.add(panelTile("clean", "Clean screen", "Gentle refresh", false, () -> {
             closePanel();
             ui.post(this::cleanScreen);
         }));
@@ -2084,6 +2115,15 @@ public class MainActivity extends Activity {
     // ================================================================== e-ink
 
     private void cleanScreen() {
+        View window = getWindow().getDecorView();
+        if (!ink.folio.displayClass.isEink()) return;
+        if (!dev.inkhome.folio.epd.Epd.requestGentleRefresh(window)) {
+            window.invalidate();
+            toast("Redrew the window. Strong clean is in Display & refresh.");
+        }
+    }
+
+    void strongClean() {
         refreshController.clean(true);
     }
 

@@ -12,6 +12,14 @@ public interface Epd {
     void update(View target, Intent intent);
     void clean(ViewGroup decor, boolean manual);
 
+    static boolean requestGentleRefresh(View view) {
+        return view.isAttachedToWindow() && OnyxEpd.requestRefresh(view, 2); // GU
+    }
+
+    static boolean requestRegalRefresh(View view) {
+        return view.isAttachedToWindow() && OnyxEpd.requestRefresh(view, 6);
+    }
+
     /** Requests a clean from our attached view without configuring any update mode. */
     static boolean requestFullClean(View view) {
         return view.isAttachedToWindow() && OnyxEpd.requestFullClean(view);

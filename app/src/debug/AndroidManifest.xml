@@ -1,6 +1,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <service
+            android:name="dev.inkhome.SleepProbeDream"
+            android:label="Ink Home sleep probe"
+            android:permission="android.permission.BIND_DREAM_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+        <receiver
+            android:name="dev.inkhome.lab.OwnerProbe"
+            android:label="Ink Home owner probe"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="false">
+            <meta-data android:name="android.app.device_admin" android:resource="@xml/owner_probe" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+        <service
             android:name="dev.inkhome.lab.ShellProbeService"
             android:exported="true"
             android:label="@string/shell_probe_label"
