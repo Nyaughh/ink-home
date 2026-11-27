@@ -5,7 +5,6 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
-import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.provider.OpenableColumns;
 
@@ -23,16 +22,15 @@ public class Files extends ContentProvider {
     static final String AUTHORITY = "dev.inkhome.files";
 
     static Uri uriFor(File f) {
-        return new Uri.Builder().scheme("content").authority(AUTHORITY).encodedPath("/" + Uri.encode(f.getAbsolutePath(), "/")).build();
+        return new Uri.Builder().scheme("content").authority(AUTHORITY).path(f.getAbsolutePath()).build();
     }
 
-    private static File fileFor(Uri uri) throws FileNotFoundException {
+    private File fileFor(Uri uri) throws FileNotFoundException {
         String path = uri.getPath();
         if (path == null) throw new FileNotFoundException();
         try {
             File f = new File(path).getCanonicalFile();
-            String root = Environment.getExternalStorageDirectory().getCanonicalPath();
-            if (!f.getPath().startsWith(root + "/") || !f.isFile()) throw new FileNotFoundException(path);
+            if (!f.isFile() || !BookStorage.contains(BookStorage.roots(getContext()), f)) throw new FileNotFoundException(path);
             return f;
         } catch (IOException e) {
             throw new FileNotFoundException(path);

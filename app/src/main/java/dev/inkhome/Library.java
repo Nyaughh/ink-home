@@ -3,7 +3,6 @@ package dev.inkhome;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Environment;
 import android.util.Log;
 
 import java.io.File;
@@ -112,7 +111,7 @@ final class Library {
     static List<Book> load(Context c, Store store, List<File> known) {
         List<Book> books = new ArrayList<>();
         if (known == null) {
-            walk(Environment.getExternalStorageDirectory(), 0, books, true);
+            for (File root : BookStorage.roots(c)) walk(root, 0, books, true);
         } else {
             for (File f : known) {
                 if (!f.isFile()) continue;

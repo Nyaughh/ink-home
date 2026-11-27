@@ -1455,7 +1455,14 @@ public class MainActivity extends Activity {
         store.markOpened(b.path);
         String pkg = readerPkgFor(b);
         if (pkg.equals(Store.BUILT_IN) && start(ReaderActivity.intent(this, b.file))) return;
-        if (!pkg.equals("ask") && !pkg.equals(Store.BUILT_IN) && start(viewIntent(b, pkg))) return;
+        if (!pkg.equals("ask") && !pkg.equals(Store.BUILT_IN)) {
+            Intent intent = viewIntent(b, pkg);
+            // KOReader can read the URI after its receiving activity finishes.
+            if ("org.koreader.launcher".equals(pkg)) {
+                grantUriPermission(pkg, intent.getData(), Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+            if (start(intent)) return;
+        }
         if (!start(Intent.createChooser(viewIntent(b, null), "Open with"))) toast("No app can open " + b.format() + " files");
     }
 
