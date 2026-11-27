@@ -25,7 +25,7 @@ final class HomeScreen implements Screen {
             host.homeShelf(col, reading);
         } else {
             host.coverPage = !host.books.isEmpty();
-            host.homeCover(col, reading);
+            host.homeCover(col, reading, setupShown);
         }
         // The book list (if any) takes the free space; otherwise a spacer pushes favorites down.
         if (col.findViewWithTag("list") == null) {

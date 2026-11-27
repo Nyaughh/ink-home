@@ -109,6 +109,7 @@ public class MainActivity extends Activity {
     Store store;
     Ink ink;
     private SheetHost sheets;
+    private FirstRunAccess firstRunAccess;
     final Handler ui = new Handler(Looper.getMainLooper());
     final ExecutorService io = Executors.newSingleThreadExecutor();
     final ExecutorService thumbs = Executors.newSingleThreadExecutor();
@@ -154,6 +155,7 @@ public class MainActivity extends Activity {
         }
     }
 
+
     // ================================================================== lifecycle
 
     @Override
@@ -186,6 +188,7 @@ public class MainActivity extends Activity {
         applySystemBar();
         setContentView(shell);
         sheets = new SheetHost(this, shell, dock, () -> ink);
+        firstRunAccess = new FirstRunAccess(this, sheets);
 
         refreshController = new RefreshController((ViewGroup) getWindow().getDecorView(), store::readerRefreshEvery);
         loadApps();
@@ -226,6 +229,7 @@ public class MainActivity extends Activity {
         launchedSomething = false;
         Updater.onInstallFailure = this::showUpdateNotice;
         showUpdateNotice();
+        if (screen == Screen.HOME) firstRunAccess.resume();
     }
 
     @Override
@@ -955,7 +959,7 @@ public class MainActivity extends Activity {
     }
 
     /** The cover layout starts with the current book, or the newest book before reading begins. */
-    void homeCover(LinearLayout col, List<Library.Book> reading) {
+    void homeCover(LinearLayout col, List<Library.Book> reading, boolean setupShown) {
         Library.Book b = !reading.isEmpty() ? reading.get(0) : (books.isEmpty() ? null : newest().get(0));
         if (b == null) {
             col.addView(emptyHero());
@@ -964,7 +968,8 @@ public class MainActivity extends Activity {
         boolean expanded = ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.EXPANDED;
         int heightU = Math.round(getResources().getConfiguration().screenHeightDp / ink.folio.uiScale);
         boolean wide = expanded || (heightU < 500 && ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.MEDIUM);
-        int cw = expanded ? 168 : wide ? 104 : Math.min(132, Math.max(72, (heightU - 320) / 2));
+        int cw = expanded ? 168 : wide ? 104 : Math.min(setupShown ? 100 : 116,
+                Math.max(72, (heightU - 320) / 2));
         int chh = Math.round(cw * 10f / 7);
         LinearLayout hero = ink.row();
         hero.setGravity(Gravity.TOP);

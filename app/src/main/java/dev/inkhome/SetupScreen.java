@@ -39,8 +39,14 @@ final class SetupScreen {
                 + (notificationsAllowed(host) ? 0 : 1) + (host.isDefaultHome() ? 0 : 1)
                 + (host.store.displayConfirmed() ? 0 : 1);
         if (remaining == 0) return false;
-        home.addView(host.note(SettingsScreen.SETUP, remaining == 1 ? "1 step remaining" : remaining + " steps remaining",
-                host::openHomeSetup));
+        android.widget.TextView setup = host.ink.oneLine(host.ink.medium(SettingsScreen.SETUP + " · "
+                + remaining + (remaining == 1 ? " step remaining" : " steps remaining"), 14));
+        setup.setMinimumHeight(host.ink.dp(44));
+        setup.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        setup.setPadding(host.ink.dp(12), 0, host.ink.dp(12), 0);
+        setup.setBackground(host.ink.stroke(host.ink.PAPER, 0, host.ink.LINE));
+        setup.setOnClickListener(v -> host.openHomeSetup());
+        home.addView(setup, host.ink.m(-1, -2, 0, 0, 0, 8));
         return true;
     }
 

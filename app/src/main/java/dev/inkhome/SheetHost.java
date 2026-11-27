@@ -21,6 +21,7 @@ import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import dev.inkhome.folio.widget.Button;
 import dev.inkhome.folio.core.TypeScale;
 import dev.inkhome.folio.core.WindowClass;
 
@@ -110,6 +111,21 @@ final class SheetHost {
             dismiss();
             if (run != null) run.run();
         }, null);
+    }
+
+    void accessStep(String title, String message, Runnable proceed, Runnable skip) {
+        Ink ink = style.get();
+        LinearLayout body = padded(ink.body(message));
+        body.addView(Button.create(ink.folio, "Continue", Button.Style.PRIMARY, v -> {
+            dismiss();
+            proceed.run();
+        }), ink.m(-1, -2, 0, 12, 0, 4));
+        body.addView(Button.create(ink.folio, "Skip", Button.Style.SECONDARY, v -> {
+            dismiss();
+            skip.run();
+        }));
+        body.addView(Button.create(ink.folio, "Finish later", Button.Style.TEXT, v -> dismiss()));
+        present(title, ink.scroller(body), null, null, null);
     }
 
     void custom(String title, View contents) {

@@ -20,8 +20,12 @@ final class ActivityWindow {
         activity.getWindow().setDecorFitsSystemWindows(false);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
-                    | WindowInsets.Type.systemGestures() | WindowInsets.Type.ime());
-            view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
+                    | WindowInsets.Type.ime());
+            Insets gestures = insets.getInsets(WindowInsets.Type.systemGestures());
+            // The transient notification-shade swipe reserves the top edge even when hidden.
+            // Let the status strip occupy that space while keeping side and bottom controls clear.
+            view.setPadding(Math.max(safe.left, gestures.left), safe.top,
+                    Math.max(safe.right, gestures.right), Math.max(safe.bottom, gestures.bottom));
             return WindowInsets.CONSUMED;
         });
     }
