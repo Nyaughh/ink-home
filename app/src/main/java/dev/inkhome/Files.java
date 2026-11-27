@@ -19,7 +19,7 @@ import java.util.Locale;
  */
 public class Files extends ContentProvider {
 
-    static final String AUTHORITY = "dev.inkhome.files";
+    static final String AUTHORITY = BuildConfig.APPLICATION_ID + ".files";
 
     static Uri uriFor(File f) {
         return new Uri.Builder().scheme("content").authority(AUTHORITY).path(f.getAbsolutePath()).build();

@@ -720,6 +720,8 @@ public class MainActivity extends Activity {
         if (!start(new Intent(Settings.Panel.ACTION_WIFI))) start(new Intent(Settings.ACTION_WIFI_SETTINGS));
     }
 
+    // Older Onyx firmware exposes its notification panel through this service name.
+    @android.annotation.SuppressLint("WrongConstant")
     private void openNotifications() {
         closePanel();
         if (Notifs.count() < 0) { start(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); return; }
@@ -2077,6 +2079,21 @@ public class MainActivity extends Activity {
 
         TextView about = ink.center(ink.faint("Ink Home " + Updater.installedVersion(this), 13));
         about.setPadding(0, ink.dp(8), 0, 0);
+        if (BuildConfig.DEBUG) {
+            about.setOnClickListener(new View.OnClickListener() {
+                private int taps;
+                private long previous;
+                @Override public void onClick(View view) {
+                    long now = android.os.SystemClock.elapsedRealtime();
+                    if (now - previous > 2000) taps = 0;
+                    previous = now;
+                    if (++taps < 5) return;
+                    taps = 0;
+                    dev.inkhome.lab.InkLab.open(MainActivity.this, store.uiScale(), store.textScale(),
+                            books.isEmpty() ? null : Covers.get(MainActivity.this, books.get(0), store.realCovers()));
+                }
+            });
+        }
         body.addView(about, new LinearLayout.LayoutParams(-1, -2));
 
                 col.addView(scrollable(body), new LinearLayout.LayoutParams(-1, 0, 1f));

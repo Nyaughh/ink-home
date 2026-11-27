@@ -65,6 +65,11 @@ You need JDK 17 and the Android SDK.
 ./gradlew assembleRelease
 ```
 
+For development, run `./gradlew assembleDebug test`. The debug APK installs as
+**Ink Home dev** (`dev.inkhome.dev`) alongside the release. It has its own
+preferences, file-provider authority and permissions. Open its launcher icon
+to try it while keeping your existing default Home app.
+
 Release builds are signed with the key named in the file `INKHOME_SIGNING`
 points to (or `../keys/keystore.properties`): `storeFile`, `storePassword`,
 `keyAlias` and `keyPassword`. Without it they're signed with your debug key,

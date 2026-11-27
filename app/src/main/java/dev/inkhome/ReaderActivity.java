@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Layout;
+import android.graphics.text.LineBreaker;
 import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -189,8 +190,8 @@ public class ReaderActivity extends Activity {
                         .setLineSpacing(0, spacing)
                         .setIncludePad(false)
                         .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NORMAL)
-                        .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
-                if (justify) sb.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+                        .setBreakStrategy(LineBreaker.BREAK_STRATEGY_HIGH_QUALITY);
+                if (justify) sb.setJustificationMode(LineBreaker.JUSTIFICATION_MODE_INTER_WORD);
                 sl = sb.build();
                 // A page is as many whole lines as fit; a line taller than a page gets one to itself.
                 int line = 0, n = sl.getLineCount();
