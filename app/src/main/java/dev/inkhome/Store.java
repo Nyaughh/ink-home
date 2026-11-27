@@ -18,8 +18,10 @@ import java.util.Set;
 /** Everything Ink Home remembers, in one SharedPreferences file. */
 final class Store {
     private final SharedPreferences p;
+    private final Context context;
 
     Store(Context c) {
+        context = c.getApplicationContext();
         p = c.getSharedPreferences("inkhome", Context.MODE_PRIVATE);
     }
 
@@ -154,7 +156,8 @@ final class Store {
     void setHomeLayout(String v) { p.edit().putString("homeLayout", v).apply(); }
 
     /** Scales the whole interface: spacing, icons, covers and text. */
-    float uiScale() { return p.getFloat("uiScale", 1.15f); }
+    float uiScale() { return p.contains("uiScale") ? p.getFloat("uiScale", 1.15f)
+            : dev.inkhome.folio.DisplayProbe.displayClass(context).defaultInterfaceScale(); }
     void setUiScale(float v) { p.edit().putFloat("uiScale", v).apply(); }
 
     /** Home wallpaper: absolute path of a picture, or "" for none. */

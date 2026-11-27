@@ -10,7 +10,9 @@ import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Typeface;
+import dev.inkhome.folio.DisplayProbe;
+import dev.inkhome.folio.Type;
+import dev.inkhome.folio.core.DisplayClass;
 import android.graphics.pdf.PdfRenderer;
 import android.os.ParcelFileDescriptor;
 import android.text.Layout;
@@ -38,34 +40,44 @@ import java.util.zip.ZipFile;
 
 /**
  * Book covers: pulled from the file itself (EPUB cover image, first PDF page, first comic page),
- * turned into crisp greyscale and cached; a typographic cover is drawn when a file has none.
+ * cropped and cached for the display class; a typographic cover is drawn when a file has none.
  */
 final class Covers {
 
-    static final int W = 300, H = 430;
+    static final int W = 301, H = 430;
     private static final LruCache<String, Bitmap> MEM = new LruCache<String, Bitmap>(12 * 1024 * 1024) {
         @Override protected int sizeOf(String k, Bitmap b) { return b.getByteCount(); }
     };
 
-    private static File dir(Context c) {
-        File d = new File(c.getCacheDir(), "covers");
+    private static File dir(Context c, DisplayClass display) {
+        File d = new File(c.getCacheDir(), "covers-v2/" + display.name());
         if (!d.exists()) d.mkdirs();
         return d;
     }
 
     /** Cached cover if one exists, else a generated one. Safe on the UI thread once extract() has run. */
     static Bitmap get(Context c, Library.Book b, boolean real) {
-        String k = (real ? "r" : "g") + b.key();
+        DisplayClass display = DisplayProbe.displayClass(c);
+        String k = key(display, b, real);
         Bitmap hit = MEM.get(k);
         if (hit != null) return hit;
         Bitmap bmp = null;
         if (real) {
-            File f = new File(dir(c), b.key() + ".png");
+            File f = new File(dir(c, display), b.key() + ".png");
             if (f.exists()) bmp = BitmapFactory.decodeFile(f.getAbsolutePath());
         }
-        if (bmp == null) bmp = generated(b);
-        MEM.put(k, bmp);
+        if (bmp == null) bmp = generated(c, b);
+        synchronized (MEM) {
+            // A background extraction may have published a real cover during this read.
+            hit = MEM.get(k);
+            if (hit != null) return hit;
+            MEM.put(k, bmp);
+        }
         return bmp;
+    }
+
+    private static String key(DisplayClass display, Library.Book book, boolean real) {
+        return display.name() + (real ? ":real:" : ":generated:") + book.key();
     }
 
     /** Drops in-memory covers, e.g. after titles were updated from EPUB metadata. */
@@ -73,13 +85,14 @@ final class Covers {
 
     /** True when this book still needs a cover pass. */
     static boolean pending(Context c, Library.Book b) {
-        File d = dir(c);
+        File d = dir(c, DisplayProbe.displayClass(c));
         return !new File(d, b.key() + ".png").exists() && !new File(d, b.key() + ".none").exists();
     }
 
     /** Extracts and caches the cover (and EPUB title/author). Call off the UI thread. */
     static void extract(Context c, Store store, Library.Book b) {
-        File d = dir(c);
+        DisplayClass display = DisplayProbe.displayClass(c);
+        File d = dir(c, display);
         Bitmap raw = null;
         try {
             switch (b.ext) {
@@ -96,12 +109,17 @@ final class Covers {
                 new File(d, b.key() + ".none").createNewFile();
                 return;
             }
-            Bitmap out = toCover(raw);
+            Bitmap out = toCover(raw, display);
             raw.recycle();
-            try (FileOutputStream fo = new FileOutputStream(new File(d, b.key() + ".png"))) {
-                out.compress(Bitmap.CompressFormat.PNG, 100, fo);
+            File staged = File.createTempFile("cover", ".tmp", d);
+            try {
+                try (FileOutputStream fo = new FileOutputStream(staged)) {
+                    if (!out.compress(Bitmap.CompressFormat.PNG, 100, fo)) return;
+                }
+                if (staged.renameTo(new File(d, b.key() + ".png"))) MEM.put(key(display, b, true), out);
+            } finally {
+                if (staged.exists()) staged.delete();
             }
-            MEM.put("r" + b.key(), out);
         } catch (Exception ignored) { }
     }
 
@@ -224,50 +242,51 @@ final class Covers {
         return BitmapFactory.decodeByteArray(data, 0, data.length, o);
     }
 
-    /** Center-crops to the cover shape and converts to slightly punchy greyscale for e-ink. */
-    private static Bitmap toCover(Bitmap src) {
+    /** Center-crops without stretching and compensates for the lower contrast of ink panels. */
+    private static Bitmap toCover(Bitmap src, DisplayClass display) {
         Bitmap out = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(out);
         c.drawColor(Color.WHITE);
         float scale = Math.max((float) W / src.getWidth(), (float) H / src.getHeight());
         float sw = W / scale, sh = H / scale;
         float sx = (src.getWidth() - sw) / 2f, sy = (src.getHeight() - sh) / 2f;
-        ColorMatrix grey = new ColorMatrix();
-        grey.setSaturation(0f);
-        float contrast = 1.12f, shift = (1f - contrast) * 128f;
-        ColorMatrix punch = new ColorMatrix(new float[]{
-                contrast, 0, 0, 0, shift, 0, contrast, 0, 0, shift, 0, 0, contrast, 0, shift, 0, 0, 0, 1, 0});
-        grey.postConcat(punch);
         Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
-        p.setColorFilter(new ColorMatrixColorFilter(grey));
+        if (display != DisplayClass.EMISSIVE) {
+            ColorMatrix colors = new ColorMatrix();
+            colors.setSaturation(display == DisplayClass.MONO_EINK ? 0f : 1.18f);
+            float contrast = 1.12f, shift = (1f - contrast) * 128f;
+            colors.postConcat(new ColorMatrix(new float[]{
+                    contrast, 0, 0, 0, shift,
+                    0, contrast, 0, 0, shift,
+                    0, 0, contrast, 0, shift,
+                    0, 0, 0, 1, 0}));
+            p.setColorFilter(new ColorMatrixColorFilter(colors));
+        }
         c.drawBitmap(src, new Rect(Math.round(sx), Math.round(sy), Math.round(sx + sw), Math.round(sy + sh)), new RectF(0, 0, W, H), p);
         return out;
     }
 
     /** A clean typographic cover: format band at the top, title in serif, author underneath. */
-    static Bitmap generated(Library.Book b) {
+    private static Bitmap generated(Context context, Library.Book b) {
         Bitmap out = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(out);
         c.drawColor(Color.WHITE);
-        // Quiet typographic cover: faint paper tone, small format label, serif title, grey author.
-        c.drawColor(0xFFF4F4F4);
         TextPaint label = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        label.setColor(0xFF8A8A8A);
+        label.setColor(0xFF333333);
         label.setTextSize(20);
-        label.setLetterSpacing(0.2f);
-        label.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        String kind = b.kind == Library.Kind.COMIC ? "COMIC" : b.format();
+        label.setTypeface(Type.sans(context, 600));
+        String kind = b.kind == Library.Kind.COMIC ? "Comic" : b.format();
         c.drawText(kind, 24, 52, label);
 
         TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         tp.setColor(Color.BLACK);
-        tp.setTypeface(Typeface.create(Typeface.SERIF, Typeface.BOLD));
+        tp.setTypeface(Type.reading(context, false));
         float size = b.title.length() > 40 ? 30 : b.title.length() > 20 ? 36 : 42;
         tp.setTextSize(size);
         int width = W - 48;
         StaticLayout sl = StaticLayout.Builder.obtain(b.title, 0, b.title.length(), tp, width)
                 .setAlignment(Layout.Alignment.ALIGN_NORMAL).setLineSpacing(0, 1.05f)
-                .setMaxLines(6).setEllipsize(TextUtils.TruncateAt.END).build();
+                .setMaxLines(Math.min(6, (int) (232 / tp.getFontSpacing()))).setEllipsize(TextUtils.TruncateAt.END).build();
         c.save();
         c.translate(24, 96);
         sl.draw(c);
@@ -282,7 +301,7 @@ final class Covers {
             TextPaint ap = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             ap.setColor(0xFF555555);
             ap.setTextSize(22);
-            ap.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL));
+            ap.setTypeface(Type.reading(context, true));
             CharSequence a = TextUtils.ellipsize(b.author, ap, width, TextUtils.TruncateAt.END);
             c.drawText(a, 0, a.length(), 24, ruleY + 46, ap);
         }

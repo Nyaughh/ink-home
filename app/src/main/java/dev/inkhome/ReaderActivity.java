@@ -29,7 +29,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.File;
-import java.lang.reflect.Method;
+import dev.inkhome.folio.epd.RefreshController;
+import dev.inkhome.folio.core.RefreshBudget.Change;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -46,7 +47,6 @@ import java.util.concurrent.Executors;
 public class ReaderActivity extends Activity {
 
     static final String EXTRA_PATH = "path";
-    private static final int ONYX_FULL_REFRESH = 98;
 
     private Store store;
     private Ink ink;
@@ -58,7 +58,7 @@ public class ReaderActivity extends Activity {
     private PageView pageView;
     private FrameLayout root;
     private View menu;
-    private Method onyxRefresh;
+    private RefreshController refreshController;
 
     // position
     private int chapter = 0;
@@ -69,7 +69,6 @@ public class ReaderActivity extends Activity {
     // current chapter layout
     private StaticLayout layout;
     private final List<Integer> pageStarts = new ArrayList<>();
-    private int turnsSinceRefresh = 0;
     private boolean loading = false;
 
     // ================================================================== lifecycle
@@ -85,7 +84,7 @@ public class ReaderActivity extends Activity {
             c.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
             c.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         }
-        try { onyxRefresh = View.class.getMethod("refreshScreen", int.class); } catch (Throwable t) { onyxRefresh = null; }
+        refreshController = new RefreshController((android.view.ViewGroup) getWindow().getDecorView(), store::readerRefreshEvery);
 
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.WHITE);
@@ -119,13 +118,21 @@ public class ReaderActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        refreshController.resume();
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
+        refreshController.pause();
         savePosition();
     }
 
     @Override
     protected void onDestroy() {
+        refreshController.close();
         super.onDestroy();
         work.execute(() -> { if (book != null) book.close(); });
         work.shutdown();
@@ -248,19 +255,10 @@ public class ReaderActivity extends Activity {
     }
 
     private void showPage(boolean forceFull) {
-        turnsSinceRefresh++;
+        refreshController.changed(pageView, Change.PAGE);
         pageView.invalidate();
-        int every = store.readerRefreshEvery();
-        if (forceFull || (every > 0 && turnsSinceRefresh >= every)) {
-            turnsSinceRefresh = 0;
-            ui.postDelayed(this::fullRefresh, 60);
-        }
+        if (forceFull) refreshController.cleanWhenIdle();
         savePosition();
-    }
-
-    private void fullRefresh() {
-        if (onyxRefresh == null) return;
-        try { onyxRefresh.invoke(getWindow().getDecorView(), ONYX_FULL_REFRESH); } catch (Exception ignored) { }
     }
 
     private float chapterFraction() {
@@ -358,9 +356,10 @@ public class ReaderActivity extends Activity {
     // ================================================================== controls
 
     private void hideMenu() {
-        if (menu != null) root.removeView(menu);
+        if (menu == null) return;
+        root.removeView(menu);
         menu = null;
-        ui.postDelayed(this::fullRefresh, 60);
+        refreshController.changed(pageView, Change.OVERLAY);
     }
 
     /** One tap shows: back and settings at the top; chapter picker, chevrons and progress at the bottom. */
@@ -424,6 +423,7 @@ public class ReaderActivity extends Activity {
         bottomWrap.addView(bottom);
         overlay.addView(bottomWrap, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
 
+        refreshController.changed(overlay, Change.OVERLAY);
         menu = overlay;
         root.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
     }
@@ -512,6 +512,7 @@ public class ReaderActivity extends Activity {
     }
 
     private void refreshDialogValue(TextView v, String label) {
+        refreshController.fast(v);
         if (label.equals("Text size")) v.setText(String.valueOf(store.readerFontSize()));
         else if (label.equals("Line spacing")) v.setText(String.format(Locale.ROOT, "%.2f", store.readerLineSpacing()));
         else v.setText(String.valueOf(store.readerMargin()));

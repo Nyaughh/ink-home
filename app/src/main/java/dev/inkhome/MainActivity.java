@@ -1,5 +1,7 @@
 package dev.inkhome;
 
+import dev.inkhome.folio.core.TypeScale;
+
 import android.app.Activity;
 import android.app.ActivityOptions;
 import android.app.AlertDialog;
@@ -52,7 +54,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.File;
-import java.lang.reflect.Method;
+import dev.inkhome.folio.epd.RefreshController;
+import dev.inkhome.folio.core.RefreshBudget.Change;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,7 +83,6 @@ public class MainActivity extends Activity {
     private static final String NEOREADER_PKG = "com.onyx.kreader";
     private static final String NEOREADER_CLS = "com.onyx.kreader.ui.ReaderHomeActivity";
     private static final String BOOX_HOME = "com.onyx/com.onyx.StartupActivity";
-    private static final int ONYX_FULL_REFRESH = 98;
     private static final int PAD = 22;
 
     private enum Screen { HOME, LIBRARY, STATS, APPS, SETTINGS }
@@ -117,7 +119,7 @@ public class MainActivity extends Activity {
     private boolean launchedSomething = false;
     private String statusSignature = "";
     private String sleepSignature = "";
-    private Method onyxRefresh;
+    private RefreshController refreshController;
 
     static final class App {
         final String key, label, pkg;
@@ -143,7 +145,7 @@ public class MainActivity extends Activity {
         ink = new Ink(this, store.textScale(), store.uiScale());
 
         FrameLayout shell = new FrameLayout(this);
-        shell.setBackgroundColor(Color.WHITE);
+        shell.setBackgroundColor(ink.PAPER);
         LinearLayout root = ink.col();
         statusBar = ink.row();
         root.addView(statusBar, new LinearLayout.LayoutParams(-1, -2));
@@ -160,11 +162,7 @@ public class MainActivity extends Activity {
         applySystemBar();
         setContentView(shell);
 
-        try {
-            onyxRefresh = View.class.getMethod("refreshScreen", int.class);
-        } catch (Throwable t) {
-            onyxRefresh = null;
-        }
+        refreshController = new RefreshController((ViewGroup) getWindow().getDecorView(), store::readerRefreshEvery);
         loadApps();
         if (!store.favoritesInitialised()) seedFavorites();
     }
@@ -172,6 +170,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        refreshController.resume();
         applySystemBar();
         // Apps installed while another app was open (e.g. from Aurora Store) send their
         // broadcast while Ink Home isn't listening, so refresh the list every time we return.
@@ -197,7 +196,7 @@ public class MainActivity extends Activity {
         statusSignature = "";
         render();
         refreshData(launchedSomething ? 0 : 30_000);
-        if (launchedSomething && store.cleanOnHome()) ui.postDelayed(this::cleanScreen, 300);
+        if (launchedSomething && store.cleanOnHome()) refreshController.cleanWhenIdle();
         if (store.autoUpdate() && System.currentTimeMillis() - store.lastUpdateCheck() > 12 * 3_600_000L) checkUpdates(false);
         launchedSomething = false;
     }
@@ -205,9 +204,16 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        refreshController.pause();
         try { unregisterReceiver(systemEvents); } catch (Exception ignored) { }
         try { unregisterReceiver(packageEvents); } catch (Exception ignored) { }
         Notifs.setListener(null);
+    }
+
+    @Override
+    protected void onDestroy() {
+        refreshController.close();
+        super.onDestroy();
     }
 
     @Override
@@ -375,7 +381,10 @@ public class MainActivity extends Activity {
         render();
     }
 
+    private boolean coverPage;
+
     private void render() {
+        coverPage = false;
         closePanelSilently();
         content.removeAllViews();
         content.setBackground(null);
@@ -387,6 +396,7 @@ public class MainActivity extends Activity {
             case APPS: renderApps(); break;
             case SETTINGS: renderSettings(); break;
         }
+        pageChanged();
         renderDock();
         updateStatusBar(true);
     }
@@ -410,7 +420,7 @@ public class MainActivity extends Activity {
         int today = stats == null ? 0 : stats.today();
         int goal = store.dailyGoal();
         String label = goal > 0 ? "Today " + today + " / " + goal + " min" : "Today " + Stats.hm(today);
-        TextView mid = ink.center(ink.oneLine(ink.text(label, 15, screen == Screen.STATS ? Ink.MEDIUM : Ink.REGULAR, Ink.TEXT)));
+        TextView mid = ink.center(ink.oneLine(ink.text(label, TypeScale.BODY, ink.TEXT)));
         mid.setGravity(Gravity.CENTER);
         mid.setBackground(ink.pressable());
         mid.setOnClickListener(v -> go(Screen.STATS));
@@ -426,13 +436,14 @@ public class MainActivity extends Activity {
     /** The chevron menu: every destination and the screen refresh, as a sheet above the bar. */
     private void openMenu() {
         closePanelSilently();
+        refreshController.changed(overlay, Change.OVERLAY);
         panelOpen = true;
         menuOpen = true;
         overlay.setVisibility(View.VISIBLE);
         overlay.setOnClickListener(v -> closePanel());
 
         LinearLayout sheet = ink.col();
-        sheet.setBackgroundColor(Color.WHITE);
+        sheet.setBackgroundColor(ink.PAPER);
         sheet.setClickable(true);
         sheet.setPadding(ink.dp(12), ink.dp(14), ink.dp(12), ink.dp(10));
         Object[][] items = {
@@ -456,10 +467,10 @@ public class MainActivity extends Activity {
             LinearLayout cell = ink.col();
             cell.setGravity(Gravity.CENTER_HORIZONTAL);
             cell.setPadding(0, ink.dp(12), 0, ink.dp(12));
-            cell.setBackground(on ? ink.stroke(Ink.FILL, 10, Ink.LINE) : ink.pressable());
+            cell.setBackground(on ? ink.stroke(ink.FILL, 10, ink.LINE) : ink.pressable());
             Icons d = it[0].equals("wifi") ? new Icons("wifi", wifi().connected ? wifi().level : -1) : new Icons((String) it[0]);
             cell.addView(ink.icon(d, 26));
-            TextView t = ink.center(ink.oneLine(ink.text((String) it[1], 13, on ? Ink.MEDIUM : Ink.REGULAR, Ink.TEXT)));
+            TextView t = ink.center(ink.oneLine(ink.text((String) it[1], TypeScale.META, ink.TEXT)));
             t.setPadding(0, ink.dp(8), 0, 0);
             cell.addView(t, new LinearLayout.LayoutParams(-1, -2));
             Runnable r = (Runnable) it[2];
@@ -565,6 +576,7 @@ public class MainActivity extends Activity {
     private void togglePanel() { if (panelOpen) closePanel(); else openPanel(); }
 
     private void closePanelSilently() {
+        if (panelOpen) refreshController.changed(content, Change.OVERLAY);
         panelOpen = false;
         overlay.removeAllViews();
         overlay.setVisibility(View.GONE);
@@ -580,13 +592,14 @@ public class MainActivity extends Activity {
 
     /** Quick panel: only what this tablet's hardware has (no frontlight, no Bluetooth). */
     private void openPanel() {
+        refreshController.changed(overlay, Change.OVERLAY);
         panelOpen = true;
         overlay.removeAllViews();
         overlay.setVisibility(View.VISIBLE);
         overlay.setOnClickListener(v -> closePanel());
 
         LinearLayout p = ink.col();
-        p.setBackgroundColor(Color.WHITE);
+        p.setBackgroundColor(ink.PAPER);
         p.setClickable(true);
         p.setPadding(ink.dp(PAD), ink.dp(18), ink.dp(PAD), ink.dp(8));
 
@@ -597,14 +610,14 @@ public class MainActivity extends Activity {
         LinearLayout top = ink.row();
         top.setGravity(Gravity.BOTTOM);
         LinearLayout left = ink.col();
-        left.addView(ink.text(timeText(now), 42, Ink.MEDIUM, Ink.TEXT));
+        left.addView(ink.text(timeText(now), TypeScale.DISPLAY, ink.TEXT));
         TextView date = ink.muted(new SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now), 15);
         date.setPadding(0, ink.dp(6), 0, 0);
         left.addView(date);
         top.addView(left, ink.weight(1));
         LinearLayout right = ink.col();
         right.setGravity(Gravity.END);
-        right.addView(ink.text(bat.percent + "%", 26, Ink.MEDIUM, Ink.TEXT));
+        right.addView(ink.text(bat.percent + "%", TypeScale.FIGURE, ink.TEXT));
         TextView bs = ink.muted(bat.charging ? (bat.percent >= 100 ? "Charged" : "Charging") : "On battery", 14);
         bs.setPadding(0, ink.dp(6), 0, 0);
         right.addView(bs);
@@ -630,7 +643,7 @@ public class MainActivity extends Activity {
         if (!list.isEmpty()) {
             LinearLayout nh = ink.row();
             nh.addView(ink.heading("Notifications"), ink.weight(1));
-            TextView clear = ink.text("Clear all", 13, Ink.MEDIUM, Ink.TEXT2);
+            TextView clear = ink.text("Clear all", TypeScale.META, ink.TEXT2);
             clear.setPadding(ink.dp(10), 0, 0, ink.dp(8));
             clear.setOnClickListener(v -> { Notifs.clearAll(); closePanel(); });
             nh.addView(clear);
@@ -796,8 +809,10 @@ public class MainActivity extends Activity {
         } else if (layout.equals("minimal")) {
             homeMinimal(col, reading);
         } else if (layout.equals("shelf")) {
+            coverPage = !books.isEmpty();
             homeShelf(col, reading);
         } else {
+            coverPage = !books.isEmpty();
             homeCover(col, reading);
         }
         // The book list (if any) takes the free space; otherwise a spacer pushes favorites down.
@@ -858,7 +873,7 @@ public class MainActivity extends Activity {
             n.setPadding(0, 0, 0, ink.dp(8));
             info.addView(n);
         }
-        info.addView(ink.lines(ink.text(b.title, compact ? 22 : 25, Ink.BOLD, Ink.TEXT), compact ? 3 : 4));
+        info.addView(ink.lines(ink.text(b.title, TypeScale.TITLE, ink.TEXT), compact ? 3 : 4));
         if (!b.author.isEmpty()) {
             TextView a = ink.oneLine(ink.muted(b.author, 16));
             a.setPadding(0, ink.dp(8), 0, 0);
@@ -870,7 +885,7 @@ public class MainActivity extends Activity {
         ResolveInfo reader = readerFor(b);
         if (reader != null || readerPkgFor(b).equals(Store.BUILT_IN)) {
             info.addView(app);
-            app.addView(reader != null ? greyIcon(reader.loadIcon(getPackageManager()), 20) : ink.icon("book", 20));
+            app.addView(reader != null ? appIcon(reader.loadIcon(getPackageManager()), 20) : ink.icon("book", 20));
             String rlabel = reader != null ? String.valueOf(reader.loadLabel(getPackageManager())) : "Ink Home reader";
             TextView rn = ink.oneLine(ink.medium(rlabel, 15));
             rn.setPadding(ink.dp(8), 0, 0, 0);
@@ -926,8 +941,8 @@ public class MainActivity extends Activity {
                 prev.setAlpha(pg > 0 ? 1f : 0.3f);
                 next.setAlpha(pg < total - 1 ? 1f : 0.3f);
             };
-            pageNext = () -> { int p = pages.getOrDefault("home", 0); if (p < total - 1) { pages.put("home", p + 1); draw[0].run(); } };
-            pagePrev = () -> { int p = pages.getOrDefault("home", 0); if (p > 0) { pages.put("home", p - 1); draw[0].run(); } };
+            pageNext = () -> { int p = pages.getOrDefault("home", 0); if (p < total - 1) { pages.put("home", p + 1); pageChanged(); draw[0].run(); } };
+            pagePrev = () -> { int p = pages.getOrDefault("home", 0); if (p > 0) { pages.put("home", p - 1); pageChanged(); draw[0].run(); } };
             prev.setOnClickListener(v -> pagePrev.run());
             next.setOnClickListener(v -> pageNext.run());
             draw[0].run();
@@ -950,7 +965,7 @@ public class MainActivity extends Activity {
                 r.setBackground(ink.listRow(40));
                 r.addView(ink.cover(Covers.get(this, bk, store.realCovers())), ink.m(ink.dp(28), ink.dp(40), 0, 0, 12, 0));
                 LinearLayout t = ink.col();
-                t.addView(ink.oneLine(ink.text(bk.title, 15, Ink.MEDIUM, Ink.TEXT)));
+                t.addView(ink.oneLine(ink.text(bk.title, TypeScale.BODY_LG, ink.TEXT)));
                 String meta = (bk.author.isEmpty() ? bk.format() : bk.author) + "  ·  " + bookStatus(bk);
                 TextView m = ink.oneLine(ink.muted(meta, 12));
                 m.setPadding(0, ink.dp(3), 0, 0);
@@ -977,7 +992,7 @@ public class MainActivity extends Activity {
         hero.addView(cover, new LinearLayout.LayoutParams(ink.dp(168), ink.dp(240)));
         LinearLayout info = ink.col();
         info.setPadding(ink.dp(20), ink.dp(2), 0, 0);
-        info.addView(ink.lines(ink.text(booksLoaded ? "No book yet" : "Opening your library…", 25, Ink.BOLD, Ink.TEXT), 3));
+        info.addView(ink.lines(ink.text(booksLoaded ? "No book yet" : "Opening your library…", TypeScale.TITLE, ink.TEXT), 3));
         TextView sub = ink.muted(booksLoaded ? "Copy EPUB, PDF, MOBI or CBZ files over USB or BooxDrop and they'll appear here." : "Finding books on this tablet.", 15);
         sub.setLineSpacing(0, 1.2f);
         sub.setPadding(0, ink.dp(10), 0, 0);
@@ -994,7 +1009,7 @@ public class MainActivity extends Activity {
         c.setBackground(ink.pressable());
         c.addView(ink.cover(Covers.get(this, b, store.realCovers())), new LinearLayout.LayoutParams(ink.dp(w), Math.round(ink.dp(w) * 1.43f)));
         if (b.progress >= 0) c.addView(ink.progress(b.progress, 3), ink.m(ink.dp(w), -2, 0, 6, 0, 0));
-        TextView t = ink.lines(ink.text(b.title, 12, Ink.MEDIUM, Ink.TEXT), 2);
+        TextView t = ink.lines(ink.text(b.title, TypeScale.META, ink.TEXT), 2);
         t.setPadding(0, ink.dp(6), 0, 0);
         c.addView(t, new LinearLayout.LayoutParams(ink.dp(w + 8), -2));
         c.setOnClickListener(v -> openBook(b));
@@ -1028,7 +1043,7 @@ public class MainActivity extends Activity {
 
     private void homeMinimal(LinearLayout col, List<Library.Book> reading) {
         Date now = new Date();
-        TextView clock = ink.center(ink.text(timeText(now), 72, Ink.MEDIUM, Ink.TEXT));
+        TextView clock = ink.center(ink.text(timeText(now), TypeScale.DISPLAY, ink.TEXT));
         col.addView(clock, new LinearLayout.LayoutParams(-1, -2));
         TextView date = ink.center(ink.muted(new SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now), 17));
         date.setPadding(0, ink.dp(10), 0, ink.dp(30));
@@ -1039,7 +1054,7 @@ public class MainActivity extends Activity {
         c.setPadding(ink.dp(18), ink.dp(16), ink.dp(18), ink.dp(16));
         c.setBackground(ink.card(12, true));
         c.addView(ink.faint("Continue reading", 13));
-        TextView t = ink.lines(ink.text(b.title, 22, Ink.BOLD, Ink.TEXT), 2);
+        TextView t = ink.lines(ink.text(b.title, TypeScale.TITLE, ink.TEXT), 2);
         t.setPadding(0, ink.dp(8), 0, ink.dp(8));
         c.addView(t);
         c.addView(ink.muted(bookStatus(b), 14));
@@ -1073,7 +1088,7 @@ public class MainActivity extends Activity {
             cell.setPadding(ink.dp(2), ink.dp(6), ink.dp(2), ink.dp(6));
             cell.setBackground(ink.pressable());
             if (icons) cell.addView(appIcon(a, 36));
-            TextView t = ink.center(ink.oneLine(ink.text(displayLabel(a), icons ? 13 : 15, icons ? Ink.REGULAR : Ink.MEDIUM, Ink.TEXT)));
+            TextView t = ink.center(ink.oneLine(ink.text(displayLabel(a), TypeScale.APP_NAME, ink.TEXT)));
             t.setPadding(0, icons ? ink.dp(8) : ink.dp(12), 0, icons ? 0 : ink.dp(12));
             cell.addView(t, new LinearLayout.LayoutParams(-1, -2));
             cell.setOnClickListener(v -> launch(a));
@@ -1156,6 +1171,7 @@ public class MainActivity extends Activity {
             body.addView(t);
             return;
         }
+        coverPage = store.libraryGrid();
         body.addView(bookPages(list, store.libraryGrid()), new LinearLayout.LayoutParams(-1, 0, 1f));
     }
 
@@ -1165,13 +1181,13 @@ public class MainActivity extends Activity {
         EditText q = new EditText(this);
         q.setText(libSearch);
         q.setHint("Search titles and authors");
-        q.setTextColor(Ink.TEXT);
-        q.setHintTextColor(Ink.TEXT3);
+        q.setTextColor(ink.TEXT);
+        q.setHintTextColor(ink.TEXT3);
         q.setTextSize(17 * ink.scale);
         q.setSingleLine(true);
         q.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         q.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-        q.setBackground(ink.stroke(Color.WHITE, 9, Ink.LINE));
+        q.setBackground(ink.stroke(ink.PAPER, 9, ink.LINE));
         q.setPadding(ink.dp(14), ink.dp(10), ink.dp(14), ink.dp(10));
         head.addView(q, ink.weight(1));
         TextView cancel = ink.medium("Cancel", 15);
@@ -1194,10 +1210,19 @@ public class MainActivity extends Activity {
                 results.addView(bookPages(list, false), new LinearLayout.LayoutParams(-1, 0, 1f));
             }
         };
+        Runnable filterAfterTyping = () -> {
+            if (q.isAttachedToWindow() && libSearch != null) refresh.run();
+        };
         q.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
             public void onTextChanged(CharSequence s, int a, int b, int c) { }
-            public void afterTextChanged(Editable s) { libSearch = s.toString(); pages.put("lib", 0); refresh.run(); }
+            public void afterTextChanged(Editable s) {
+                refreshController.fast(q);
+                libSearch = s.toString();
+                pages.put("lib", 0);
+                ui.removeCallbacks(filterAfterTyping);
+                ui.postDelayed(filterAfterTyping, 250);
+            }
         });
         refresh.run();
         q.requestFocus();
@@ -1257,7 +1282,7 @@ public class MainActivity extends Activity {
                 cell.addView(ink.cover(Covers.get(this, b, store.realCovers())), new LinearLayout.LayoutParams(ink.dp(112), ink.dp(160)));
                 View bar = b.progress >= 0 || b.finished ? ink.progress(b.finished ? 1f : b.progress, 3) : new View(this);
                 cell.addView(bar, ink.m(ink.dp(112), ink.dp(3), 0, 6, 0, 0));
-                TextView t = ink.center(ink.lines(ink.text(b.title, 13, Ink.MEDIUM, Ink.TEXT), 2));
+                TextView t = ink.center(ink.lines(ink.text(b.title, TypeScale.META, ink.TEXT), 2));
                 t.setPadding(ink.dp(4), ink.dp(7), ink.dp(4), 0);
                 cell.addView(t, new LinearLayout.LayoutParams(-1, -2));
                 cell.setOnClickListener(v -> openBook(b));
@@ -1272,7 +1297,7 @@ public class MainActivity extends Activity {
             r.addView(ink.cover(Covers.get(this, b, store.realCovers())), new LinearLayout.LayoutParams(ink.dp(46), ink.dp(66)));
             LinearLayout info = ink.col();
             info.setPadding(ink.dp(16), 0, 0, 0);
-            info.addView(ink.oneLine(ink.text(b.title, 16, Ink.MEDIUM, Ink.TEXT)));
+            info.addView(ink.oneLine(ink.text(b.title, TypeScale.BODY_LG, ink.TEXT)));
             String meta = (b.author.isEmpty() ? b.format() : b.author) + "  ·  " + bookStatus(b);
             TextView a = ink.oneLine(ink.muted(meta, 13));
             a.setPadding(0, ink.dp(6), 0, 0);
@@ -1544,7 +1569,7 @@ public class MainActivity extends Activity {
     private void renderOverview(LinearLayout col, Stats s) {
         int today = s.today();
         col.addView(ink.faint("Today", 14));
-        TextView big = ink.text(Stats.hm(today), 38, Ink.MEDIUM, Ink.TEXT);
+        TextView big = ink.text(Stats.hm(today), TypeScale.FIGURE, ink.TEXT);
         big.setPadding(0, ink.dp(8), 0, 0);
         col.addView(big);
         if (s.hasGoal()) {
@@ -1621,7 +1646,7 @@ public class MainActivity extends Activity {
         t.setPadding(ink.dp(16), ink.dp(14), ink.dp(12), ink.dp(14));
         t.setBackground(ink.card(12, false));
         t.addView(ink.faint(label, 13));
-        TextView v = ink.oneLine(ink.text(value, 20, Ink.MEDIUM, Ink.TEXT));
+        TextView v = ink.oneLine(ink.text(value, TypeScale.TITLE_SM, ink.TEXT));
         v.setPadding(0, ink.dp(8), 0, 0);
         t.addView(v);
         if (sub != null) {
@@ -1680,15 +1705,15 @@ public class MainActivity extends Activity {
             boolean isToday = cd.get(Calendar.YEAR) == today.get(Calendar.YEAR) && cd.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR);
             // Heat map: light grey for a little reading, darker as you approach the goal (or 30 min), black past it.
             float level = m == 0 ? 0 : Math.min(1f, m / (float) full);
-            int fill = m == 0 ? Color.WHITE : level >= 1f ? Ink.TEXT : level >= 0.5f ? 0xFF8C8C8C : 0xFFDADADA;
-            boolean dark = fill == Ink.TEXT || fill == 0xFF8C8C8C;
+            int fill = m == 0 ? Color.WHITE : level >= 1f ? ink.TEXT : level >= 0.5f ? 0xFF8C8C8C : 0xFFDADADA;
+            boolean dark = fill == ink.TEXT || fill == 0xFF8C8C8C;
             LinearLayout c = ink.col();
             c.setGravity(Gravity.CENTER);
-            c.setBackground(m > 0 ? ink.solid(fill, 8) : isToday ? ink.stroke(Color.WHITE, 8, Ink.TEXT) : null);
-            TextView num = ink.center(ink.text(String.valueOf(dom), 14, isToday ? Ink.MEDIUM : Ink.REGULAR, dark ? Color.WHITE : Ink.TEXT));
+            c.setBackground(m > 0 ? ink.solid(fill, 8) : isToday ? ink.stroke(ink.PAPER, 8, ink.TEXT) : null);
+            TextView num = ink.center(ink.text(String.valueOf(dom), TypeScale.META, dark ? Color.WHITE : ink.TEXT));
             c.addView(num, new LinearLayout.LayoutParams(-1, -2));
             if (m > 0) {
-                TextView mins = ink.center(ink.text(String.valueOf(m), 10, Ink.REGULAR, dark ? Color.WHITE : Ink.TEXT2));
+                TextView mins = ink.center(ink.text(String.valueOf(m), TypeScale.CHART, dark ? Color.WHITE : ink.TEXT2));
                 mins.setPadding(0, ink.dp(3), 0, 0);
                 c.addView(mins, new LinearLayout.LayoutParams(-1, -2));
             }
@@ -1733,26 +1758,26 @@ public class MainActivity extends Activity {
                 boolean isToday = week[i].get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR) && week[i].get(Calendar.YEAR) == today.get(Calendar.YEAR);
                 boolean strong = s.hasGoal() ? m >= s.goal : m > 0;
                 if (m > 0) {
-                    p.setColor(strong ? Ink.TEXT : 0xFF9A9A9A);
+                    p.setColor(strong ? ink.TEXT : 0xFF9A9A9A);
                     p.setStyle(Paint.Style.FILL);
                     c.drawRoundRect(x - barW / 2f, bottom - Math.max(bh, ink.dp(4)), x + barW / 2f, bottom, r, r, p);
-                    p.setColor(Ink.TEXT2);
+                    p.setColor(ink.TEXT2);
                     p.setTextSize(ink.dp(11));
-                    p.setTypeface(Ink.REGULAR);
+                    p.setTypeface(ink.REGULAR);
                     c.drawText(String.valueOf(m), x, bottom - Math.max(bh, ink.dp(4)) - ink.dp(5), p);
                 } else {
                     p.setColor(0xFFD6D6D6);
                     c.drawRoundRect(x - barW / 2f, bottom - ink.dp(2), x + barW / 2f, bottom, 1, 1, p);
                 }
-                p.setColor(isToday ? Ink.TEXT : Ink.TEXT3);
+                p.setColor(isToday ? ink.TEXT : ink.TEXT3);
                 p.setTextSize(ink.dp(12));
-                p.setTypeface(isToday ? Ink.MEDIUM : Ink.REGULAR);
+                p.setTypeface(isToday ? ink.MEDIUM : ink.REGULAR);
                 c.drawText(dn.format(week[i].getTime()), x, h - ink.dp(4), p);
             }
             if (s.hasGoal()) {
                 float gy = bottom - (bottom - top) * s.goal / (float) max;
                 Paint dash = new Paint(Paint.ANTI_ALIAS_FLAG);
-                dash.setColor(Ink.TEXT3);
+                dash.setColor(ink.TEXT3);
                 dash.setStyle(Paint.Style.STROKE);
                 dash.setStrokeWidth(Math.max(1, ink.dp(1)));
                 dash.setPathEffect(new DashPathEffect(new float[]{ink.dp(4), ink.dp(4)}, 0));
@@ -1823,11 +1848,12 @@ public class MainActivity extends Activity {
             d = a.ri.loadIcon(getPackageManager());
             iconCache.put(a.key, d);
         }
-        return greyIcon(d, sizeDp);
+        return appIcon(d, sizeDp);
     }
 
-    private ImageView greyIcon(Drawable d, int sizeDp) {
+    private ImageView appIcon(Drawable d, int sizeDp) {
         ImageView iv = ink.icon(d, sizeDp);
+        if (ink.folio.displayClass != dev.inkhome.folio.core.DisplayClass.MONO_EINK) return iv;
         ColorMatrix m = new ColorMatrix();
         m.setSaturation(0);
         iv.setColorFilter(new ColorMatrixColorFilter(m));
@@ -1877,7 +1903,7 @@ public class MainActivity extends Activity {
             LinearLayout az = ink.col();
             az.setPadding(0, 0, ink.dp(6), ink.dp(8));
             for (Map.Entry<Character, View> e : firstRow.entrySet()) {
-                TextView t = ink.center(ink.text(String.valueOf(e.getKey()), 12, Ink.MEDIUM, Ink.TEXT3));
+                TextView t = ink.center(ink.text(String.valueOf(e.getKey()), TypeScale.LABEL, ink.TEXT3));
                 t.setGravity(Gravity.CENTER);
                 t.setBackground(ink.pressable());
                 t.setOnClickListener(v -> jump.to(e.getValue()));
@@ -2228,12 +2254,12 @@ public class MainActivity extends Activity {
             boolean on = pic.getAbsolutePath().equals(selected);
             LinearLayout cell = ink.col();
             cell.setPadding(ink.dp(4), ink.dp(4), ink.dp(4), ink.dp(4));
-            cell.setBackground(on ? ink.stroke(Color.WHITE, 8, Ink.TEXT) : ink.pressable());
+            cell.setBackground(on ? ink.stroke(ink.PAPER, 8, ink.TEXT) : ink.pressable());
             ImageView th = new ImageView(this);
             th.setScaleType(ImageView.ScaleType.FIT_XY);
-            th.setBackgroundColor(Ink.FILL);
+            th.setBackgroundColor(ink.FILL);
             cell.addView(th, new LinearLayout.LayoutParams(-1, ink.dp(140)));
-            TextView name = ink.oneLine(ink.text(pic.getName(), 11, on ? Ink.MEDIUM : Ink.REGULAR, on ? Ink.TEXT : Ink.TEXT3));
+            TextView name = ink.oneLine(ink.text(pic.getName(), TypeScale.META, on ? ink.TEXT : ink.TEXT3));
             name.setPadding(0, ink.dp(5), 0, 0);
             cell.addView(name);
             thumbs.execute(() -> {
@@ -2381,7 +2407,7 @@ public class MainActivity extends Activity {
         sv.addView(body, new ScrollView.LayoutParams(-1, -2));
         frame.addView(sv, new FrameLayout.LayoutParams(-1, -1));
         View mask = new View(this);
-        mask.setBackgroundColor(Color.WHITE);
+        mask.setBackgroundColor(ink.PAPER);
         mask.setClickable(true);
         FrameLayout.LayoutParams mp = new FrameLayout.LayoutParams(-1, 0, Gravity.BOTTOM);
         frame.addView(mask, mp);
@@ -2413,11 +2439,11 @@ public class MainActivity extends Activity {
                 bar.addView(next);
             }
         };
-        pageNext = () -> { if (page[0] < starts.size() - 1) { page[0]++; pages.put(pageKey, page[0]); draw[0].run(); } };
-        pagePrev = () -> { if (page[0] > 0) { page[0]--; pages.put(pageKey, page[0]); draw[0].run(); } };
+        pageNext = () -> { if (page[0] < starts.size() - 1) { page[0]++; pages.put(pageKey, page[0]); pageChanged(); draw[0].run(); } };
+        pagePrev = () -> { if (page[0] > 0) { page[0]--; pages.put(pageKey, page[0]); pageChanged(); draw[0].run(); } };
         jumper = v -> {
             int top = topIn(v, body);
-            for (int i = starts.size() - 1; i >= 0; i--) if (starts.get(i) <= top) { page[0] = i; pages.put(pageKey, i); draw[0].run(); return; }
+            for (int i = starts.size() - 1; i >= 0; i--) if (starts.get(i) <= top) { page[0] = i; pages.put(pageKey, i); pageChanged(); draw[0].run(); return; }
         };
         int[] lastSize = {-1, -1};
         Runnable compute = () -> {
@@ -2544,8 +2570,14 @@ public class MainActivity extends Activity {
 
     /** Page keys jump a screen at a time in scrolling lists. */
     private void bindScrollKeys(ScrollView sv) {
-        pageNext = () -> sv.scrollBy(0, (int) (sv.getHeight() * 0.9f));
-        pagePrev = () -> sv.scrollBy(0, -(int) (sv.getHeight() * 0.9f));
+        pageNext = () -> scrollPage(sv, 1);
+        pagePrev = () -> scrollPage(sv, -1);
+    }
+
+    private void scrollPage(ScrollView sv, int direction) {
+        if (!sv.canScrollVertically(direction)) return;
+        pageChanged();
+        sv.scrollBy(0, direction * (int) (sv.getHeight() * 0.9f));
     }
 
     /** Paged grid/list for the library: fits whole rows, turns with Previous/Next or the page keys. */
@@ -2592,8 +2624,8 @@ public class MainActivity extends Activity {
                     bar.addView(next);
                 }
             };
-            pageNext = () -> { int p = pages.getOrDefault(key, 0); if (p < total - 1) { pages.put(key, p + 1); draw[0].run(); } };
-            pagePrev = () -> { int p = pages.getOrDefault(key, 0); if (p > 0) { pages.put(key, p - 1); draw[0].run(); } };
+            pageNext = () -> { int p = pages.getOrDefault(key, 0); if (p < total - 1) { pages.put(key, p + 1); pageChanged(); draw[0].run(); } };
+            pagePrev = () -> { int p = pages.getOrDefault(key, 0); if (p > 0) { pages.put(key, p - 1); pageChanged(); draw[0].run(); } };
             draw[0].run();
         });
         return wrap;
@@ -2601,24 +2633,12 @@ public class MainActivity extends Activity {
 
     // ================================================================== e-ink
 
-    /** Full refresh with Onyx's own waveform (98 = full GC); falls back to a black/white flash. */
     private void cleanScreen() {
-        if (onyxRefresh != null) {
-            try {
-                onyxRefresh.invoke(getWindow().getDecorView(), ONYX_FULL_REFRESH);
-                return;
-            } catch (Exception e) {
-                Log.w(TAG, "Onyx refresh failed", e);
-                onyxRefresh = null;
-            }
-        }
-        ViewGroup decor = (ViewGroup) getWindow().getDecorView();
-        View flash = new View(this);
-        flash.setBackgroundColor(Color.BLACK);
-        flash.setClickable(true);
-        decor.addView(flash, new ViewGroup.LayoutParams(-1, -1));
-        ui.postDelayed(() -> flash.setBackgroundColor(Color.WHITE), 140);
-        ui.postDelayed(() -> decor.removeView(flash), 300);
+        refreshController.clean(true);
+    }
+
+    private void pageChanged() {
+        refreshController.changed(content, coverPage ? Change.IMAGE : Change.PAGE);
     }
 
     // ================================================================== helpers
@@ -2645,7 +2665,7 @@ public class MainActivity extends Activity {
         EditText e = new EditText(this);
         e.setText(initial);
         e.setSingleLine(true);
-        e.setTextColor(Ink.TEXT);
+        e.setTextColor(ink.TEXT);
         FrameLayout f = new FrameLayout(this);
         f.setPadding(ink.dp(20), ink.dp(8), ink.dp(20), 0);
         f.addView(e);

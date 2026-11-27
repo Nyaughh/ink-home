@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Pure black-on-white, no animations, no ripples: everything that makes e-ink ghost or flash is switched off. -->
+    <!-- Mono launch palette. Folio applies the activity's resolved window colours on creation. -->
     <style name="InkTheme" parent="android:Theme.DeviceDefault.Light.NoActionBar">
         <item name="android:windowBackground">@android:color/white</item>
         <item name="android:colorBackground">@android:color/white</item>
@@ -15,10 +15,14 @@
         <item name="android:windowActivityTransitions">false</item>
         <item name="android:statusBarColor">@android:color/white</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:forceDarkAllowed">false</item>
         <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:alertDialogTheme">@style/InkDialog</item>
     </style>
     <style name="InkDialog" parent="android:Theme.DeviceDefault.Light.Dialog.Alert">
+        <item name="android:textAllCaps">false</item>
         <item name="android:windowAnimationStyle">@null</item>
         <item name="android:colorAccent">@android:color/black</item>
         <item name="android:textColorPrimary">@android:color/black</item>
