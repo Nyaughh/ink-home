@@ -49,15 +49,17 @@ final class OnyxEpd implements Epd {
         }
     }
 
-    @Override public void clean(ViewGroup decor, boolean manual) {
-        if (REFRESH != null) {
-            try {
-                REFRESH.invoke(decor, 98);
-                return;
-            } catch (ReflectiveOperationException | RuntimeException ignored) {
-                // A manual clean still has a visible fallback.
-            }
+    static boolean requestFullClean(View target) {
+        if (REFRESH == null) return false;
+        try {
+            REFRESH.invoke(target, 98);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            return false;
         }
-        fallback.clean(decor, manual);
+    }
+
+    @Override public void clean(ViewGroup decor, boolean manual) {
+        if (!requestFullClean(decor)) fallback.clean(decor, manual);
     }
 }

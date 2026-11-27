@@ -1,0 +1,4 @@
+<resources>
+    <string name="shell_probe_label">Shell probe</string>
+    <string name="shell_probe_description">Shows a small strip over other apps. Tap it to test a full screen refresh. Logs Page Up and Page Down and passes every key through. Reads no screen content. Turn this service off to remove the strip.</string>
+</resources>

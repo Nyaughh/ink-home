@@ -17,7 +17,6 @@ import dev.inkhome.folio.widget.Button;
 import dev.inkhome.folio.DisplayProbe;
 import dev.inkhome.folio.core.Capabilities;
 import android.media.AudioManager;
-import android.app.NotificationManager;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
@@ -109,7 +108,6 @@ public class MainActivity extends Activity {
     Store store;
     Ink ink;
     private SheetHost sheets;
-    private FirstRunAccess firstRunAccess;
     final Handler ui = new Handler(Looper.getMainLooper());
     final ExecutorService io = Executors.newSingleThreadExecutor();
     final ExecutorService thumbs = Executors.newSingleThreadExecutor();
@@ -155,6 +153,7 @@ public class MainActivity extends Activity {
         }
     }
 
+    private FirstRunAccess firstRunAccess;
 
     // ================================================================== lifecycle
 
@@ -168,6 +167,10 @@ public class MainActivity extends Activity {
 
         ActivityWindow.applyOrientation(this, store);
         restoreNavigation(b);
+        if (b == null && DotService.ACTION_SETTINGS.equals(getIntent().getAction())) {
+            screen = Screen.SETTINGS;
+            sub = SettingsScreen.DOT;
+        }
 
         FrameLayout shell = new FrameLayout(this);
         ActivityWindow.fitContent(this, shell);
@@ -198,6 +201,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        DotService.resume(this);
         refreshController.resume();
         applySystemBar();
         // Apps installed while another app was open (e.g. from Aurora Store) send their
@@ -239,6 +243,7 @@ public class MainActivity extends Activity {
         boolean menu = menuOpen;
         boolean panel = panelOpen;
         ink = new Ink(this, store.textScale(), store.uiScale());
+        updateSleepPicture(false);
         applySystemBar();
         render();
         if (menu) openMenu();
@@ -302,6 +307,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (DotService.ACTION_SETTINGS.equals(intent.getAction())) {
+            sheets.dismiss();
+            openSettingsPage(SettingsScreen.DOT);
+            return;
+        }
         if (sheets.dismiss()) return;
         if (panelOpen) { closePanel(); return; }
         // Home on Home clears ghosting; otherwise it returns to the home page.
@@ -430,6 +440,10 @@ public class MainActivity extends Activity {
         if (sig == dataSignature) return;
         dataSignature = sig;
         // Never redraw under the user's typing; every redraw also costs an e-ink refresh.
+        if (!panelOpen && screen == Screen.APPS && ((AppsScreen) screen.view).showingRecent(this)) {
+            render();
+            return;
+        }
         if (libSearch != null || panelOpen || sub != null) return;
         if (screen == Screen.HOME || screen == Screen.LIBRARY || screen == Screen.STATS) render();
         else renderDock();
@@ -728,16 +742,13 @@ public class MainActivity extends Activity {
                 openPanel();
             }));
         }
-        NotificationManager notifications = getSystemService(NotificationManager.class);
-        if (notifications != null) {
-            int filter = notifications.getCurrentInterruptionFilter();
-            boolean quiet = filter == NotificationManager.INTERRUPTION_FILTER_NONE
-                    || filter == NotificationManager.INTERRUPTION_FILTER_PRIORITY
-                    || filter == NotificationManager.INTERRUPTION_FILTER_ALARMS;
-            tiles.add(panelTile("quiet", "Quiet", quiet ? "On" : "Off", quiet, () -> {
-                closePanel();
-                if (!start(new Intent("android.settings.ZEN_MODE_SETTINGS"))) panelSettings(Settings.ACTION_SOUND_SETTINGS);
-            }));
+        boolean quiet = store.quiet() && Notifs.count() >= 0;
+        tiles.add(panelTile("quiet", "Quiet", notes < 0 ? "Allow access" : quiet ? "On" : "Off", quiet,
+                () -> { if (changeQuiet(!quiet)) openPanel(); }));
+        if (DotService.available(this)) {
+            boolean enabled = DotService.enabled(this) && DotService.permitted(this);
+            tiles.add(panelTile("clean", "Ink dot", enabled ? "On" : "Off", enabled,
+                    () -> { DotService.setEnabled(this, !enabled); openPanel(); }));
         }
         if (caps.frontlight) {
             tiles.add(panelTile("light", "Light", "Display settings", false,
@@ -805,7 +816,17 @@ public class MainActivity extends Activity {
         }
 
         p.addView(ink.hair());
-        p.addView(Button.create(ink.folio, "Settings", Button.Style.TEXT, v -> go(Screen.SETTINGS)));
+        LinearLayout shortcuts = ink.row();
+        shortcuts.addView(Button.create(ink.folio, "Settings", Button.Style.TEXT, v -> openSettingsPage(null)), ink.weight(1));
+        shortcuts.addView(Button.create(ink.folio, "Switcher", Button.Style.TEXT, v -> {
+            pages.clear();
+            libSearch = null;
+            libCollection = null;
+            screen = Screen.APPS;
+            sub = "switcher";
+            render();
+        }), ink.weight(1));
+        p.addView(shortcuts);
         LinearLayout wrap = ink.col();
         wrap.addView(p);
         wrap.addView(ink.hair());
@@ -817,9 +838,25 @@ public class MainActivity extends Activity {
         overlay.addView(ink.scroller(wrap), lp);
     }
 
+    void openSettingsPage(String page) {
+        pages.clear();
+        libSearch = null;
+        libCollection = null;
+        screen = Screen.SETTINGS;
+        sub = page;
+        render();
+    }
+
+    boolean changeQuiet(boolean enabled) {
+        if (Notifs.setQuiet(enabled)) return true;
+        if (!SetupScreen.notificationsAllowed(this)) panelSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+        else toast("Notification listener is unavailable");
+        return false;
+    }
+
     private void panelSettings(String action) {
         closePanel();
-        if (!start(new Intent(action))) toast("Device settings unavailable");
+        if (!start(new Intent(action).setPackage("com.android.settings"))) toast("Device settings unavailable");
     }
 
     private void addTiles(LinearLayout parent, View first, View second) {
@@ -860,7 +897,8 @@ public class MainActivity extends Activity {
 
     private void openWifi() {
         closePanel();
-        if (!start(new Intent(Settings.Panel.ACTION_WIFI))) start(new Intent(Settings.ACTION_WIFI_SETTINGS));
+        if (!start(new Intent(Settings.Panel.ACTION_WIFI).setPackage("com.android.settings")))
+            panelSettings(Settings.ACTION_WIFI_SETTINGS);
     }
 
     // Older Onyx firmware exposes its notification panel through this service name.
@@ -1051,7 +1089,7 @@ public class MainActivity extends Activity {
         return listView;
     }
 
-    private View homeBookRow(Library.Book bk) {
+    View homeBookRow(Library.Book bk) {
         LinearLayout r = ink.row();
         r.setBackground(ink.listRow(40));
         r.addView(ink.cover(Covers.get(this, bk, store.realCovers())), ink.m(ink.dp(30), ink.dp(43), 0, 0, 12, 0));
@@ -1626,10 +1664,15 @@ public class MainActivity extends Activity {
 
     private void seedFavorites() {
         List<String> want = new ArrayList<>();
-        String[] defaults = {BOOX_HOME, "org.chromium.chrome/com.google.android.apps.chrome.Main",
-                "com.onyx.dict/com.onyx.dict.main.ui.DictMainActivity", "com.android.documentsui/com.android.documentsui.LauncherActivity"};
+        String[] defaults = {"org.chromium.chrome/com.google.android.apps.chrome.Main",
+                "com.android.documentsui/com.android.documentsui.LauncherActivity"};
         for (String d : defaults) if (findApp(d) != null) want.add(d);
+        for (App app : apps) if (booxShellApp(app)) store.setHidden(app.key, true);
         store.setFavorites(want);
+    }
+
+    static boolean booxShellApp(App app) {
+        return BOOX_HOME.equals(app.key) || "com.onyx.floatingbutton".equals(app.pkg);
     }
 
     App findApp(String key) {
@@ -1817,14 +1860,58 @@ public class MainActivity extends Activity {
     // ================================================================== sleep screen
 
     void updateSleepPicture(boolean force) {
-        if (!store.sleepMode().equals("book") || !hasFileAccess()) return;
+        String mode = store.sleepMode();
+        if ("off".equals(mode) || !hasFileAccess()) return;
+        SleepSize size = SleepScreen.panel(this);
+        if ("custom".equals(mode)) {
+            String path = store.sleepSource();
+            // Older versions retained only the exported picture.
+            if (!path.isEmpty() && (!size.key().equals(store.sleepImageSize())
+                    || !"custom".equals(store.sleepFileMode()) || !SleepScreen.file().isFile())) {
+                writeSleepImage(new File(path), store.sleepFill(), false);
+            }
+            return;
+        }
         List<Library.Book> r = reading();
         Library.Book b = r.isEmpty() ? null : r.get(0);
-        String sig = b == null ? "none" : b.key() + b.title + b.author + Covers.pending(this, b) + store.realCovers();
-        if (!force && sig.equals(sleepSignature)) return;
-        sleepSignature = sig;
+        String detail = b == null ? "" : b.progressLine();
+        if (b != null) {
+            double[] reader = store.readerProgress(b.path);
+            if (reader != null && (long) reader[1] == b.lastRead) {
+                detail += " · Chapter " + (store.readerPosition(b.path)[0] + 1);
+            }
+            if (stats != null) detail += " · " + stats.today() + " min today";
+        }
         boolean real = store.realCovers();
-        io.execute(() -> { if (SleepScreen.writeBook(this, b, real)) store.setSleepFileMode("book"); });
+        String sig = size.key() + "|" + (b == null ? "none" : b.key() + b.title + b.author
+                + Covers.pending(this, b) + real + b.progress + detail);
+        if (!force && sig.equals(sleepSignature) && SleepScreen.file().isFile()) return;
+        sleepSignature = sig;
+        final String caption = detail;
+        io.execute(() -> {
+            if (!"book".equals(store.sleepMode())) return;
+            boolean ok = SleepScreen.writeBook(this, size, b, real, caption);
+            if (ok) store.setSleepFileMode("book");
+            ui.post(() -> {
+                if (!ok && sig.equals(sleepSignature)) sleepSignature = "";
+                if ("sleep".equals(sub)) render();
+            });
+        });
+    }
+
+    void writeSleepImage(File pic, boolean fill, boolean picked) {
+        SleepSize size = SleepScreen.panel(this);
+        io.execute(() -> {
+            if (!"custom".equals(store.sleepMode())) return;
+            if (!picked && (!pic.getAbsolutePath().equals(store.sleepSource()) || fill != store.sleepFill())) return;
+            boolean ok = SleepScreen.writeImage(this, size, pic, fill);
+            if (ok) store.rememberSleepImage(pic, fill, size);
+            ui.post(() -> {
+                if (picked) toast(ok ? "Sleep picture updated" : "Couldn't read that picture");
+                if (ok && !size.key().equals(SleepScreen.panel(this).key())) updateSleepPicture(false);
+                if ("sleep".equals(sub)) render();
+            });
+        });
     }
 
     interface FilePick { void on(File f); }

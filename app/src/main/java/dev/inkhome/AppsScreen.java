@@ -1,9 +1,5 @@
 package dev.inkhome;
 
-import android.app.usage.UsageStats;
-import android.app.usage.UsageStatsManager;
-import android.content.Intent;
-import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ImageView;
@@ -11,7 +7,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import dev.inkhome.folio.core.TypeScale;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -23,7 +18,17 @@ final class AppsScreen implements Screen {
     private int tab;
     private boolean grid;
 
+    boolean showingRecent(MainActivity host) {
+        return "switcher".equals(host.sub) || (host.sub == null && tab == 1);
+    }
+
     @Override public void build(MainActivity host) {
+        if ("switcher".equals(host.sub)) {
+            LinearLayout page = host.page();
+            page.addView(host.header("Switcher", null, host::onBackPressed));
+            Switcher.show(host, page, host.apps, "");
+            return;
+        }
         if (host.sub != null && !"hidden".equals(host.sub)) { new AppPickerScreen().build(host); return; }
         if ("hidden".equals(host.sub)) { tab = 2; host.sub = null; }
         LinearLayout col = host.page();
@@ -40,7 +45,8 @@ final class AppsScreen implements Screen {
         search.setContentDescription("Search apps");
         ImageView layout = host.ink.iconButton(grid ? "list" : "grid", () -> { grid = !grid; reset(host); });
         layout.setContentDescription(grid ? "List view" : "Grid view");
-        LinearLayout header = host.header("Apps", tab == 1 ? null : String.valueOf(apps.size()), null, search, layout);
+        View[] actions = tab == 1 ? new View[]{search} : new View[]{search, layout};
+        LinearLayout header = host.header("Apps", tab == 1 ? null : String.valueOf(apps.size()), null, actions);
         col.addView(header);
         if (!query.isEmpty()) {
             TextView clear = host.ink.pill(query + "  ×", false);
@@ -50,47 +56,17 @@ final class AppsScreen implements Screen {
         }
         col.addView(host.tabs(new String[]{"All", "Recent", "Hidden"}, tab, i -> { tab = i; reset(host); }),
                 host.ink.m(-1, -2, MainActivity.PAD, 0, MainActivity.PAD, 0));
+        if (tab == 1) { Switcher.show(host, col, apps, filter); return; }
+        if (tab == 2 && apps.stream().anyMatch(MainActivity::booxShellApp)) {
+            TextView group = host.ink.pill(SettingsScreen.BOOX, false);
+            group.setOnClickListener(v -> host.openSettingsPage(SettingsScreen.BOOX));
+            col.addView(group, host.ink.m(-2, -2, MainActivity.PAD, 0, 0, 0));
+            apps.removeIf(MainActivity::booxShellApp);
+            if (apps.isEmpty()) return;
+        }
         LinearLayout body = host.ink.row();
         col.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
-        if (tab != 1) { show(host, body, apps); return; }
-        if (!Stats.hasAccess(host)) {
-            body.setGravity(Gravity.TOP);
-            body.addView(host.note("Allow usage access", "Ink Home uses app activity to list recently opened apps.",
-                    () -> host.start(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))));
-            return;
-        }
-        body.addView(host.ink.muted("Loading recent apps…", 15));
-        host.io.execute(() -> {
-            Map<String, Long> recent = recentPackages(host);
-            apps.removeIf(a -> !recent.containsKey(a.pkg));
-            apps.sort((a, b) -> Long.compare(recent.get(b.pkg), recent.get(a.pkg)));
-            host.ui.post(() -> {
-                if (!body.isAttachedToWindow()) return;
-                body.removeAllViews();
-                col.removeView(header);
-                col.addView(host.header("Apps", String.valueOf(apps.size()), null,
-                        detach(search), detach(layout)), 0);
-                show(host, body, apps);
-            });
-        });
-    }
-
-    private static View detach(View action) {
-        ((LinearLayout) action.getParent()).removeView(action);
-        return action;
-    }
-
-    static Map<String, Long> recentPackages(MainActivity host) {
-        long now = System.currentTimeMillis(), start = now - 7L * 86400000L;
-        Map<String, Long> recent = new HashMap<>();
-        UsageStatsManager manager = host.getSystemService(UsageStatsManager.class);
-        if (manager != null) {
-            Map<String, UsageStats> usage = manager.queryAndAggregateUsageStats(start, now);
-            if (usage != null) for (UsageStats record : usage.values()) {
-                if (record.getLastTimeUsed() >= start) recent.put(record.getPackageName(), record.getLastTimeUsed());
-            }
-        }
-        return recent;
+        show(host, body, apps);
     }
 
     private void reset(MainActivity host) {

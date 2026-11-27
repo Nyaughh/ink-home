@@ -1,6 +1,7 @@
 package dev.inkhome;
 
 import android.content.Context;
+import java.io.File;
 import android.content.SharedPreferences;
 
 import org.json.JSONArray;
@@ -24,6 +25,9 @@ final class Store {
         context = c.getApplicationContext();
         p = c.getSharedPreferences("inkhome", Context.MODE_PRIVATE);
     }
+
+    boolean quiet() { return p.getBoolean("quiet", false); }
+    void setQuiet(boolean enabled) { p.edit().putBoolean("quiet", enabled).apply(); }
 
     boolean setupDismissed() { return p.getBoolean("setupDismissed", false); }
     void dismissSetup() { p.edit().putBoolean("setupDismissed", true).apply(); }
@@ -233,6 +237,13 @@ final class Store {
 
     /** Which mode last wrote the sleep picture file ("book" or "custom"). */
     String sleepFileMode() { return p.getString("sleepFile", ""); }
+    String sleepSource() { return p.getString("sleepSource", ""); }
+    boolean sleepFill() { return p.getBoolean("sleepFill", true); }
+    String sleepImageSize() { return p.getString("sleepImageSize", ""); }
+    void rememberSleepImage(File source, boolean fill, SleepSize size) {
+        p.edit().putString("sleepSource", source.getAbsolutePath()).putBoolean("sleepFill", fill)
+                .putString("sleepImageSize", size.key()).putString("sleepFile", "custom").apply();
+    }
     void setSleepFileMode(String v) { p.edit().putString("sleepFile", v).apply(); }
 
     /** Long lists (settings, apps…): false = pages with chevron buttons (default), true = scroll. */

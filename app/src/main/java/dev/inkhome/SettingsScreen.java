@@ -13,11 +13,11 @@ import java.util.Arrays;
 final class SettingsScreen implements Screen {
     static final String APPEARANCE = "Appearance", DISPLAY = "Display & refresh", READING = "Reading",
             LIBRARY = "Library", SHELL = "System shell", CONTROLS = "Controls", DEVICE = "Device",
-            ABOUT = "Updates & about", SETUP = "Set up Ink Home", LICENCES = "Font licences";
+            ABOUT = "Updates & about", SETUP = "Set up Ink Home", LICENCES = "Font licences", DOT = "Ink dot", BOOX = "Boox apps";
 
     static String parent(String sub) {
         switch (sub) {
-            case "hidden": case "sleep": return SHELL;
+            case DOT: case BOOX: case "hidden": case "sleep": return SHELL;
             case "reading": return READING;
             case "wallpaper": return APPEARANCE;
             case LICENCES: case SETUP: return ABOUT;
@@ -55,6 +55,15 @@ final class SettingsScreen implements Screen {
             case DISPLAY: display(host, g); break;
             case READING: reading(host, g); break;
             case LIBRARY: library(host, g); break;
+            case DOT: dot(host, g); break;
+            case BOOX:
+                for (MainActivity.App app : host.apps) if (MainActivity.booxShellApp(app)) {
+                    g.toggle(host.displayLabel(app), !host.store.hidden().contains(app.key), shown -> {
+                        host.store.setHidden(app.key, !shown);
+                        host.render();
+                    });
+                }
+                break;
             case SHELL: shell(host, g); break;
             case CONTROLS: controls(host, g); break;
             case DEVICE: device(host, g); break;
@@ -173,8 +182,35 @@ final class SettingsScreen implements Screen {
         g.add("Notification access", SetupScreen.notificationsAllowed(host) ? "Allowed" : "Allow", () -> host.start(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
         g.add("Default home app", host.isDefaultHome() ? "Ink Home" : "Choose", host::openHomeSettings);
         g.add("Hidden apps", String.valueOf(host.store.hidden().size()), () -> open(host, "hidden"));
-        MainActivity.App boox = host.findApp(MainActivity.BOOX_HOME);
-        if (boox != null) g.add("Onyx Launcher", "", () -> host.launch(boox));
+        if (host.apps.stream().anyMatch(MainActivity::booxShellApp)) category(host, g, BOOX, "Choose which apps to show");
+        if (DotService.available(host)) category(host, g, DOT, dotOn(host) ? "On" : "Off");
+        if (Notifs.count() >= 0) {
+            g.toggle("Quiet", host.store.quiet(), enabled -> { host.changeQuiet(enabled); host.render(); });
+        } else g.add("Quiet", "Requires notification access", () -> host.changeQuiet(true));
+    }
+
+    static boolean dotOn(MainActivity host) {
+        return DotService.enabled(host) && DotService.permitted(host);
+    }
+
+    private void dot(MainActivity host, MainActivity.Rows g) {
+        g.toggle("Show Ink dot", dotOn(host), enabled -> {
+            DotService.setEnabled(host, enabled);
+            host.render();
+        });
+        int[] sizes = {36, 42, 52};
+        g.segments("Size", new String[]{"Small", "Medium", "Large"},
+                MainActivity.settingIndex(sizes, DotService.size(host)), i -> {
+                    DotService.setSize(host, sizes[i]);
+                    host.render();
+                });
+        g.toggle("Tuck against the edge", DotService.tucked(host), tucked -> {
+            DotService.setTucked(host, tucked);
+            host.render();
+        });
+        if (DotService.ballAvailable(host)) g.add("Boox Navigation Ball", "Its accessibility service is enabled", () -> {
+            if (!DotService.openBallSettings(host)) host.toast("Navigation Ball settings are unavailable");
+        });
     }
 
     private void controls(MainActivity host, MainActivity.Rows g) {
@@ -206,7 +242,7 @@ final class SettingsScreen implements Screen {
 
     private void link(MainActivity host, MainActivity.Rows g, String title, String value, String action) {
         g.add(title, value, () -> {
-            if (!host.start(new Intent(action))) host.toast(title + " settings are unavailable");
+            if (!host.start(new Intent(action).setPackage("com.android.settings"))) host.toast(title + " settings are unavailable");
         });
     }
 

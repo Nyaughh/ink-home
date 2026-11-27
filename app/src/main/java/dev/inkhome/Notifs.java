@@ -74,7 +74,23 @@ public class Notifs extends NotificationListenerService {
         if (n != null) n.recount();
     }
 
-    @Override public void onListenerConnected() { instance = this; recount(); }
+    static boolean setQuiet(boolean enabled) {
+        Notifs service = instance;
+        if (service == null) return false;
+        try {
+            service.requestListenerHints(enabled ? HINT_HOST_DISABLE_NOTIFICATION_EFFECTS : 0);
+            new Store(service).setQuiet(enabled);
+            return true;
+        } catch (RuntimeException denied) {
+            return false;
+        }
+    }
+
+    @Override public void onListenerConnected() {
+        instance = this;
+        if (new Store(this).quiet()) setQuiet(true);
+        recount();
+    }
     @Override public void onListenerDisconnected() { instance = null; count = -1; items = Collections.emptyList(); notifyListener(); }
     @Override public void onNotificationPosted(StatusBarNotification sbn) { recount(); }
     @Override public void onNotificationRemoved(StatusBarNotification sbn) { recount(); }

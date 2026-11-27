@@ -11,7 +11,9 @@ import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.graphics.Typeface;
+import android.view.Display;
+import android.view.Surface;
+import android.view.WindowManager;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
@@ -20,6 +22,8 @@ import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 
+import dev.inkhome.folio.Type;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
@@ -27,13 +31,18 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Sleep pictures: a 758×1024 greyscale PNG in Pictures/Ink Home, made from the current book or
- * from any picture the user picks. Boox copies a picture when it's set as the screensaver, so
- * the user sets this file in Boox (Storage › Pictures › Ink Home) after each new picture.
+ * Full-panel greyscale PNG in Pictures/Ink Home. Boox copies the file when the user sets it
+ * as the screensaver, so it must be set again after a change.
  */
 final class SleepScreen {
 
-    static final int W = 758, H = 1024;
+    static SleepSize panel(Context c) {
+        Display display = c.getSystemService(WindowManager.class).getDefaultDisplay();
+        Display.Mode mode = display.getMode();
+        int rotation = display.getRotation();
+        return SleepSize.rotated(mode.getPhysicalWidth(), mode.getPhysicalHeight(),
+                rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270);
+    }
 
     static File dir() {
         File d = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Ink Home");
@@ -44,62 +53,85 @@ final class SleepScreen {
     static File file() { return new File(dir(), "Ink Home sleep.png"); }
 
     /** Sleep picture from the current book. Call off the UI thread. */
-    static boolean writeBook(Context c, Library.Book book, boolean realCovers) {
-        Bitmap out = blank();
+    static boolean writeBook(Context c, SleepSize size, Library.Book book, boolean realCovers, String detail) {
+        Bitmap out = blank(size);
         Canvas cv = new Canvas(out);
+        float scale = size.artworkScale();
+        cv.scale(scale, scale);
+        float width = size.width / scale;
+        float height = size.height / scale;
         TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        tp.setTextAlign(Paint.Align.CENTER);
         tp.setColor(Color.BLACK);
         if (book != null) {
-            Bitmap cover = Covers.get(c, book, realCovers);
-            float cw = 420, ch = cw * Covers.H / Covers.W;
-            float left = (W - cw) / 2f, top = 120;
+            float left = (width - 236) / 2;
+            RectF cover = new RectF(left, 74, left + 236, 74 + 236 * 10f / 7);
+            cv.drawBitmap(Covers.get(c, book, realCovers), null, cover, greyPaint());
             Paint edge = new Paint();
-            edge.setColor(0xFF9A9A9A);
-            cv.drawRect(left - 2, top - 2, left + cw + 2, top + ch + 2, edge);
-            cv.drawBitmap(cover, null, new RectF(left, top, left + cw, top + ch), new Paint(Paint.FILTER_BITMAP_FLAG));
+            edge.setStyle(Paint.Style.STROKE);
+            edge.setStrokeWidth(1 / scale);
+            cv.drawRect(cover, edge);
 
-            tp.setTypeface(Typeface.create(Typeface.SERIF, Typeface.BOLD));
-            tp.setTextSize(36);
-            StaticLayout title = StaticLayout.Builder.obtain(book.title, 0, book.title.length(), tp, W - 140)
-                    .setAlignment(Layout.Alignment.ALIGN_CENTER).setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).build();
+            tp.setTypeface(Type.sans(c, 700));
+            tp.setTextSize(24);
+            tp.setTextAlign(Paint.Align.LEFT);
+            int lineWidth = Math.max(1, Math.round(width - 96));
+            StaticLayout title = StaticLayout.Builder.obtain(book.title, 0, book.title.length(), tp, lineWidth)
+                    .setIncludePad(false).setAlignment(Layout.Alignment.ALIGN_CENTER)
+                    .setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).build();
+            float y = cover.bottom + 28;
             cv.save();
-            cv.translate(70, top + ch + 44);
+            cv.translate((width - lineWidth) / 2, y);
             title.draw(cv);
             cv.restore();
+            y += title.getHeight();
+            tp.setTextAlign(Paint.Align.CENTER);
+            tp.setTypeface(Type.sans(c, 500));
+            tp.setTextSize(16);
             if (!book.author.isEmpty()) {
-                tp.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
-                tp.setTextSize(24);
-                tp.setColor(0xFF555555);
-                CharSequence a = TextUtils.ellipsize(book.author, tp, W - 140, TextUtils.TruncateAt.END);
-                cv.drawText(a, 0, a.length(), (W - tp.measureText(a, 0, a.length())) / 2f, top + ch + 44 + title.getHeight() + 40, tp);
+                y += 6;
+                CharSequence author = TextUtils.ellipsize(book.author, tp, lineWidth, TextUtils.TruncateAt.END);
+                cv.drawText(author, 0, author.length(), width / 2, y - tp.ascent(), tp);
+                y += 22;
             }
+            y += 22;
+            cv.drawRect(left, y + 2, cover.right, y + 2 + 1 / scale, tp);
+            float progress = Math.min(1, Math.max(0, book.progress));
+            cv.drawRect(left, y, left + 236 * progress, y + 5, tp);
+            tp.setTypeface(Type.sans(c, 600));
+            tp.setTextSize(13);
+            CharSequence line = TextUtils.ellipsize(detail, tp, lineWidth, TextUtils.TruncateAt.END);
+            cv.drawText(line, 0, line.length(), width / 2, y + 15 - tp.ascent(), tp);
         } else {
-            tp.setTypeface(Typeface.create(Typeface.SERIF, Typeface.BOLD));
-            tp.setTextSize(56);
-            String t = "Sleeping";
-            cv.drawText(t, (W - tp.measureText(t)) / 2f, H / 2f, tp);
+            tp.setTypeface(Type.sans(c, 700));
+            tp.setTextSize(24);
+            cv.drawText("Sleeping", width / 2, height / 2, tp);
         }
-        footer(cv);
+        tp.setTypeface(Type.sans(c, 500));
+        tp.setTextSize(13);
+        cv.drawText("Ink Home · asleep", width / 2, height - 26 - tp.descent(), tp);
         return save(c, out);
     }
 
-    /** Sleep picture from a picture file. fill = crop to fill the screen, else fit with white margins. */
-    static boolean writeImage(Context c, File image, boolean fill) {
-        Bitmap src = decode(image, W * 2, H * 2);
+    static boolean writeImage(Context c, SleepSize size, File image, boolean fill) {
+        Bitmap src = decode(image, size.width, size.height);
         if (src == null) return false;
-        Bitmap out = blank();
+        Bitmap out = blank(size);
         Canvas cv = new Canvas(out);
-        float s = fill ? Math.max((float) W / src.getWidth(), (float) H / src.getHeight())
-                : Math.min((float) W / src.getWidth(), (float) H / src.getHeight());
-        float w = src.getWidth() * s, h = src.getHeight() * s;
-        RectF dst = new RectF((W - w) / 2f, (H - h) / 2f, (W + w) / 2f, (H + h) / 2f);
+        float scale = size.imageScale(src.getWidth(), src.getHeight(), fill);
+        float w = src.getWidth() * scale, h = src.getHeight() * scale;
+        float left = (size.width - w) / 2, top = (size.height - h) / 2;
+        cv.drawBitmap(src, null, new RectF(left, top, left + w, top + h), greyPaint());
+        src.recycle();
+        return save(c, out);
+    }
+
+    private static Paint greyPaint() {
         ColorMatrix grey = new ColorMatrix();
         grey.setSaturation(0f);
         Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
         p.setColorFilter(new ColorMatrixColorFilter(grey));
-        cv.drawBitmap(src, null, dst, p);
-        src.recycle();
-        return save(c, out);
+        return p;
     }
 
     /** Pictures on the tablet the user could use (Pictures, Download, DCIM), newest first. */
@@ -128,6 +160,10 @@ final class SleepScreen {
         }
     }
 
+    static Bitmap preview(File file, int width, int height) {
+        return decode(file, width, height);
+    }
+
     /** Small greyscale thumbnail for the picker. */
     static Bitmap thumb(File f, int w, int h) {
         Bitmap b = decode(f, w, h);
@@ -137,30 +173,17 @@ final class SleepScreen {
         cv.drawColor(Color.WHITE);
         float s = Math.max((float) w / b.getWidth(), (float) h / b.getHeight());
         float bw = b.getWidth() * s, bh = b.getHeight() * s;
-        ColorMatrix grey = new ColorMatrix();
-        grey.setSaturation(0f);
-        Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
-        p.setColorFilter(new ColorMatrixColorFilter(grey));
-        cv.drawBitmap(b, null, new RectF((w - bw) / 2f, (h - bh) / 2f, (w + bw) / 2f, (h + bh) / 2f), p);
+        cv.drawBitmap(b, null, new RectF((w - bw) / 2f, (h - bh) / 2f, (w + bw) / 2f, (h + bh) / 2f), greyPaint());
         b.recycle();
         return out;
     }
 
     // ---------------------------------------------------------------- helpers
 
-    private static Bitmap blank() {
-        Bitmap out = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
+    private static Bitmap blank(SleepSize size) {
+        Bitmap out = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888);
         out.eraseColor(Color.WHITE);
         return out;
-    }
-
-    private static void footer(Canvas cv) {
-        TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        tp.setColor(0xFF555555);
-        tp.setTextSize(22);
-        tp.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
-        String s = "Press the power button to wake";
-        cv.drawText(s, (W - tp.measureText(s)) / 2f, H - 48, tp);
     }
 
     private static Bitmap decode(File f, int maxW, int maxH) {
@@ -194,12 +217,18 @@ final class SleepScreen {
     }
 
     private static boolean save(Context c, Bitmap out) {
-        try (FileOutputStream fo = new FileOutputStream(file())) {
-            out.compress(Bitmap.CompressFormat.PNG, 100, fo);
+        android.util.AtomicFile png = new android.util.AtomicFile(file());
+        FileOutputStream fo = null;
+        try {
+            fo = png.startWrite();
+            if (!out.compress(Bitmap.CompressFormat.PNG, 100, fo)) throw new java.io.IOException("PNG encoding failed");
+            png.finishWrite(fo);
         } catch (Exception e) {
+            if (fo != null) png.failWrite(fo);
             return false;
+        } finally {
+            out.recycle();
         }
-        // Index it, or the Boox picture picker won't list it.
         c.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file())));
         return true;
     }

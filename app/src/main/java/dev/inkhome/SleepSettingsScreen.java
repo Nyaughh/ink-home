@@ -20,40 +20,41 @@ final class SleepSettingsScreen implements Screen {
         String[] keys = {"off", "book", "custom"};
         body.addView(MainActivity.item(new Segmented(host.ink.folio, "Sleep screen", new String[]{"Off", "Book", "Picture"}, Arrays.asList(keys).indexOf(mode), i -> {
             host.store.setSleepMode(keys[i]);
-            if (keys[i].equals("book")) { host.sleepSignature = ""; host.updateSleepPicture(true); host.ui.postDelayed(host::render, 900); }
-            else host.render();
+            host.sleepSignature = "";
+            host.updateSleepPicture("book".equals(keys[i]));
+            host.render();
         })));
 
         if (!mode.equals("off")) {
             LinearLayout prev = host.ink.row();
             prev.setGravity(Gravity.TOP);
             ImageView iv = new ImageView(host);
-            iv.setScaleType(ImageView.ScaleType.FIT_XY);
+            iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
             iv.setPadding(1, 1, 1, 1);
             iv.setBackgroundColor(0xFF9A9A9A);
             File f = SleepScreen.file();
             boolean ready = f.exists() && mode.equals(host.store.sleepFileMode());
+            SleepSize size = SleepScreen.panel(host);
+            float ratio = Math.min(114f / size.width, 154f / size.height);
+            int width = Math.max(1, Math.round(size.width * ratio));
+            int height = Math.max(1, Math.round(size.height * ratio));
             if (ready) host.thumbs.execute(() -> {
-                Bitmap bm = SleepScreen.thumb(f, 228, 308);
+                Bitmap bm = SleepScreen.preview(f, width * 2, height * 2);
                 host.ui.post(() -> { if (bm != null) iv.setImageBitmap(bm); });
             });
-            prev.addView(iv, new LinearLayout.LayoutParams(host.ink.dp(114), host.ink.dp(154)));
+            prev.addView(iv, new LinearLayout.LayoutParams(host.ink.dp(width), host.ink.dp(height)));
             LinearLayout how = host.ink.col();
             how.setPadding(host.ink.dp(18), 0, 0, 0);
             how.addView(host.ink.medium(ready ? "Picture ready" : mode.equals("custom") ? "Pick a picture below" : "Making picture…", 16));
             // Boox copies the picture when it's set, so Ink Home can't apply or refresh it itself.
-            TextView t = host.ink.muted("To use it: in Boox, open Storage › Pictures › Ink Home, long-press “Ink Home sleep” and choose Set as screensaver. "
-                    + "Boox keeps its own copy, so set it again whenever you make a new picture.", 14);
+            boolean boox = host.findApp(MainActivity.BOOX_HOME) != null;
+            String instructions = boox
+                    ? "In Boox Storage, open Pictures › Ink Home, long-press “Ink Home sleep” and choose Set as screensaver. Boox keeps a copy, so set it again after each update."
+                    : "The image is saved in Pictures › Ink Home as “Ink Home sleep.png”. Choose it in your device’s sleep screen settings if supported.";
+            TextView t = host.ink.muted(instructions, 14);
             t.setLineSpacing(0, 1.2f);
             t.setPadding(0, host.ink.dp(8), 0, 0);
             how.addView(t);
-            if (ready) {
-                TextView open = host.ink.pill("Open Boox", false);
-                open.setOnClickListener(v -> { MainActivity.App a = host.findApp(MainActivity.BOOX_HOME); if (a != null) host.launch(a); });
-                LinearLayout or = host.ink.row();
-                or.addView(open);
-                how.addView(or, host.ink.m(-1, -2, 0, 12, 0, 0));
-            }
             prev.addView(how, host.ink.weight(1));
             body.addView(prev, host.ink.m(-1, -2, 0, 20, 0, 0));
         } else {
@@ -66,11 +67,7 @@ final class SleepSettingsScreen implements Screen {
         if (mode.equals("custom")) {
             host.pictureGrid(body, null, pic -> host.choose("Use this picture", new String[]{"Fill the screen (crop edges)", "Show the whole picture"}, -1, w -> {
                 host.toast("Making sleep picture…");
-                host.io.execute(() -> {
-                    boolean ok = SleepScreen.writeImage(host, pic, w == 0);
-                    if (ok) host.store.setSleepFileMode("custom");
-                    host.ui.post(() -> { host.toast(ok ? "Sleep picture updated" : "Couldn't read that picture"); host.render(); });
-                });
+                host.writeSleepImage(pic, w == 0, true);
             }));
         }
         col.addView(host.scrollable(body), new LinearLayout.LayoutParams(-1, 0, 1f));

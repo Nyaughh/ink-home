@@ -15,3 +15,9 @@ The integrated Phase 0 debug APK is 1,262,843 bytes (+962,676 bytes including th
 | S7 · Ink dot | The enabled accessibility service list contains com.onyx.floatingbutton/.service.FloatButtonAccessibilityService. This identifies the Boox service, but cannot confirm whether its ball is visible. Cross-app cleaning, persistence and mode changes require overlay testing. |
 
 The approved side-by-side install succeeded. ActivityManager reported dev.inkhome.dev/dev.inkhome.MainActivity as resumed on the C69. No grants or settings changes were made.
+
+The Phase 4 Home capture showed a real EPUB cover and the Korean author name.
+Before the Phase 5 overlay test, both the package and UID queries for
+SYSTEM_ALERT_WINDOW returned “No operations” and “Default mode: default”.
+The browser and reader packages on this C69 are org.chromium.chrome and
+com.onyx.kreader.

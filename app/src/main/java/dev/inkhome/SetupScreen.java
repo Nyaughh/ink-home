@@ -59,6 +59,8 @@ final class SetupScreen {
         rows.add("Make Ink Home the home screen", host.isDefaultHome() ? "Ink Home is your home screen" : "Choose Ink Home as the default home app.",
                 host::openHomeSettings);
         rows.add("Confirm your display", displayName(host) + (host.store.displayConfirmed() ? " · Confirmed" : " · Confirm or change"), () -> chooseDisplay(host));
+        if (DotService.available(host)) rows.add("Ink dot (optional)", SettingsScreen.dotOn(host) ? "On" : "Floating screen refresh control",
+                () -> SettingsScreen.open(host, SettingsScreen.DOT));
         if (!host.store.setupDismissed()) rows.add("Dismiss setup on Home", "Reopen this checklist in Updates & about.", () -> {
             host.store.dismissSetup();
             host.onBackPressed();

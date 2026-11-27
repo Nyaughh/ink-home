@@ -45,4 +45,8 @@ android {
     }
 }
 
-dependencies { testImplementation 'junit:junit:4.13.2' }
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'com.vaadin.external.google:android-json:0.0.20131108.vaadin1'
+}
