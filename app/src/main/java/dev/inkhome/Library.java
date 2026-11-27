@@ -47,7 +47,7 @@ final class Library {
 
         String key() { return Integer.toHexString((path + "|" + modified + "|" + size).hashCode()); }
 
-        String format() { return ext.toUpperCase(Locale.ROOT); }
+        String format() { return ext; }
 
         String folder() {
             File parent = file.getParentFile();

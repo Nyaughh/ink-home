@@ -14,7 +14,7 @@ public interface Epd {
 
     static Epd forView(View decor) {
         if (!DisplayProbe.displayClass(decor.getContext()).isEink()) return new NoEpd();
-        if (OnyxEpd.available()) return new OnyxEpd();
+        if (OnyxEpd.available()) return new OnyxEpd(DisplayProbe.smoothText(decor.getContext()));
         return new FlashEpd();
     }
 }

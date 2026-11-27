@@ -1,69 +1,162 @@
 package dev.inkhome;
 
-import dev.inkhome.folio.core.TypeScale;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
+import android.content.Intent;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import dev.inkhome.folio.core.TypeScale;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 final class AppsScreen implements Screen {
-    @Override
-    public void build(MainActivity host) {
-        if (host.sub != null) { new AppPickerScreen().build(host); return; }
+    private String query = "";
+    private int tab;
+    private boolean grid;
+
+    @Override public void build(MainActivity host) {
+        if (host.sub != null && !"hidden".equals(host.sub)) { new AppPickerScreen().build(host); return; }
+        if ("hidden".equals(host.sub)) { tab = 2; host.sub = null; }
         LinearLayout col = host.page();
         Set<String> hidden = host.store.hidden();
-        List<MainActivity.App> visible = new ArrayList<>();
-        for (MainActivity.App a : host.apps) if (!hidden.contains(a.key)) visible.add(a);
-        View[] actions = hidden.isEmpty() ? new View[0] : new View[]{host.ink.pill("Hidden " + hidden.size(), false)};
-        if (actions.length > 0) actions[0].setOnClickListener(v -> { host.sub = "hidden"; host.render(); });
-        col.addView(host.header("Apps", String.valueOf(visible.size()), null, actions));
-
-        LinearLayout list = host.ink.col();
-        list.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(8), host.ink.dp(16));
-        Map<Character, View> firstRow = new LinkedHashMap<>();
-        Set<String> readingApps = host.store.readingApps();
-        list.addView(host.ink.hair());
-        for (MainActivity.App a : visible) {
-            LinearLayout r = host.ink.row();
-            r.setBackground(host.ink.listRow(host.store.appIcons() ? 44 : 0));
-            if (host.store.appIcons()) r.addView(host.appIcon(a, 28), host.ink.m(host.ink.dp(28), host.ink.dp(28), 0, 0, 16, 0));
-            r.addView(host.ink.oneLine(host.ink.body(host.displayLabel(a))), host.ink.weight(1));
-            if (readingApps.contains(a.pkg)) r.addView(host.ink.faint("Reading", 12), host.ink.m(-2, -2, 0, 0, 10, 0));
-            if (host.store.isFavorite(a.key)) r.addView(host.ink.icon("star", 14), host.ink.m(host.ink.dp(14), host.ink.dp(14), 0, 0, 8, 0));
-            r.setOnClickListener(v -> host.launch(a));
-            r.setOnLongClickListener(v -> { host.appMenu(a); return true; });
-            list.addView(MainActivity.item(r), new LinearLayout.LayoutParams(-1, host.ink.dp(54)));
-            String l = host.displayLabel(a);
-            char ch = l.isEmpty() ? '#' : Character.toUpperCase(l.charAt(0));
-            if (!Character.isLetter(ch)) ch = '#';
-            if (!firstRow.containsKey(ch)) firstRow.put(ch, r);
+        List<MainActivity.App> apps = new ArrayList<>();
+        String filter = query.trim().toLowerCase(Locale.getDefault());
+        for (MainActivity.App app : host.apps) {
+            if (hidden.contains(app.key) == (tab == 2)
+                    && host.displayLabel(app).toLowerCase(Locale.getDefault()).contains(filter)) apps.add(app);
         }
-        TextView hint = host.ink.faint("Long-press an app to add it to favorites, hide it, or count it as reading.", 13);
-        hint.setPadding(0, host.ink.dp(16), host.ink.dp(14), 0);
-        list.addView(hint);
-
-        View lister = host.scrollable(list);
-        MainActivity.Jumper jump = host.jumper;
+        ImageView search = host.ink.iconButton("search", () -> host.searchApps(query, value -> {
+            query = value.trim(); reset(host);
+        }));
+        search.setContentDescription("Search apps");
+        ImageView layout = host.ink.iconButton(grid ? "list" : "grid", () -> { grid = !grid; reset(host); });
+        layout.setContentDescription(grid ? "List view" : "Grid view");
+        LinearLayout header = host.header("Apps", tab == 1 ? null : String.valueOf(apps.size()), null, search, layout);
+        col.addView(header);
+        if (!query.isEmpty()) {
+            TextView clear = host.ink.pill(query + "  ×", false);
+            clear.setContentDescription("Clear search for " + query);
+            clear.setOnClickListener(v -> { query = ""; reset(host); });
+            col.addView(clear, host.ink.m(-2, -2, MainActivity.PAD, 0, 0, 0));
+        }
+        col.addView(host.tabs(new String[]{"All", "Recent", "Hidden"}, tab, i -> { tab = i; reset(host); }),
+                host.ink.m(-1, -2, MainActivity.PAD, 0, MainActivity.PAD, 0));
         LinearLayout body = host.ink.row();
-        body.setGravity(Gravity.TOP);
-        body.addView(lister, new LinearLayout.LayoutParams(0, -1, 1f));
-        if (firstRow.size() > 3) {
-            LinearLayout az = host.ink.col();
-            az.setPadding(0, 0, host.ink.dp(6), host.ink.dp(8));
-            for (Map.Entry<Character, View> e : firstRow.entrySet()) {
-                TextView t = host.ink.center(host.ink.text(String.valueOf(e.getKey()), TypeScale.LABEL, host.ink.TEXT3));
-                t.setGravity(Gravity.CENTER);
-                t.setBackground(host.ink.pressable());
-                t.setOnClickListener(v -> jump.to(e.getValue()));
-                az.addView(t, new LinearLayout.LayoutParams(host.ink.dp(28), 0, 1f));
-            }
-            body.addView(az, new LinearLayout.LayoutParams(host.ink.dp(34), -1));
+        col.addView(body, new LinearLayout.LayoutParams(-1, 0, 1));
+        if (tab != 1) { show(host, body, apps); return; }
+        if (!Stats.hasAccess(host)) {
+            body.setGravity(Gravity.TOP);
+            body.addView(host.note("Allow usage access", "Ink Home uses app activity to list recently opened apps.",
+                    () -> host.start(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))));
+            return;
         }
-        col.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
+        body.addView(host.ink.muted("Loading recent apps…", 15));
+        host.io.execute(() -> {
+            Map<String, Long> recent = recentPackages(host);
+            apps.removeIf(a -> !recent.containsKey(a.pkg));
+            apps.sort((a, b) -> Long.compare(recent.get(b.pkg), recent.get(a.pkg)));
+            host.ui.post(() -> {
+                if (!body.isAttachedToWindow()) return;
+                body.removeAllViews();
+                col.removeView(header);
+                col.addView(host.header("Apps", String.valueOf(apps.size()), null,
+                        detach(search), detach(layout)), 0);
+                show(host, body, apps);
+            });
+        });
+    }
+
+    private static View detach(View action) {
+        ((LinearLayout) action.getParent()).removeView(action);
+        return action;
+    }
+
+    static Map<String, Long> recentPackages(MainActivity host) {
+        long now = System.currentTimeMillis(), start = now - 7L * 86400000L;
+        Map<String, Long> recent = new HashMap<>();
+        UsageStatsManager manager = host.getSystemService(UsageStatsManager.class);
+        if (manager != null) {
+            Map<String, UsageStats> usage = manager.queryAndAggregateUsageStats(start, now);
+            if (usage != null) for (UsageStats record : usage.values()) {
+                if (record.getLastTimeUsed() >= start) recent.put(record.getPackageName(), record.getLastTimeUsed());
+            }
+        }
+        return recent;
+    }
+
+    private void reset(MainActivity host) {
+        host.pages.put("list:APPS:null", 0);
+        host.pages.put("appsGrid", 0);
+        host.render();
+    }
+
+    private void show(MainActivity host, LinearLayout body, List<MainActivity.App> apps) {
+        body.setGravity(Gravity.TOP);
+        body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(8), 0);
+        if (apps.isEmpty()) {
+            body.addView(host.ink.muted(!query.isEmpty() ? "No matches." : tab == 2 ? "No hidden apps."
+                    : tab == 1 ? "No recent apps." : "No apps available.", 15));
+            return;
+        }
+        if (grid) {
+            body.addView(host.appGrid(apps.size(), i -> entry(host, apps.get(i), true, false)), -1, -1);
+            return;
+        }
+        LinearLayout list = host.ink.col();
+        Map<Character, View> initials = new LinkedHashMap<>();
+        Set<String> reading = host.store.readingApps();
+        for (MainActivity.App app : apps) {
+            View row = entry(host, app, false, reading.contains(app.pkg));
+            list.addView(MainActivity.item(row), -1, -2);
+            String name = host.displayLabel(app);
+            char initial = name.isEmpty() ? '#' : Character.toUpperCase(name.charAt(0));
+            initials.putIfAbsent(Character.isLetter(initial) ? initial : '#', row);
+        }
+        body.addView(host.scrollable(list), new LinearLayout.LayoutParams(0, -1, 1));
+        if (tab == 1 || initials.size() <= 3) return;
+        MainActivity.Jumper jump = host.jumper;
+        LinearLayout rail = host.ink.col();
+        for (Map.Entry<Character, View> letter : initials.entrySet()) {
+            TextView t = host.ink.center(host.ink.text(letter.getKey().toString(), TypeScale.LABEL, host.ink.TEXT));
+            t.setOnClickListener(v -> jump.to(letter.getValue()));
+            rail.addView(t, new LinearLayout.LayoutParams(host.ink.dp(28), 0, 1));
+        }
+        body.addView(rail, -2, -1);
+    }
+
+    private View entry(MainActivity host, MainActivity.App app, boolean tile, boolean reading) {
+        LinearLayout box = tile ? host.ink.col() : host.ink.row();
+        box.setMinimumHeight(host.ink.dp(tile ? 88 : 52));
+        box.setGravity(tile ? Gravity.CENTER : Gravity.CENTER_VERTICAL);
+        box.setBackground(tile ? host.ink.pressable() : host.ink.listRow(0));
+        if (host.store.appIcons()) {
+            int size = host.ink.dp(tile ? 36 : 30);
+            box.addView(host.appIcon(app, tile ? 36 : 30), host.ink.m(size, size, 0, 0, tile ? 0 : 12, 0));
+        }
+        TextView label = host.ink.oneLine(host.ink.body(host.displayLabel(app)));
+        if (tile) box.addView(label); else box.addView(label, host.ink.weight(1));
+        if (!tile && reading) {
+            TextView tag = host.ink.faint("Reading", 12);
+            tag.setPadding(host.ink.dp(4), 0, host.ink.dp(4), 0);
+            tag.setBackground(host.ink.stroke(host.ink.PAPER, 0, host.ink.TEXT));
+            box.addView(tag);
+        }
+        if (!tile && host.store.isFavorite(app.key)) box.addView(host.ink.icon("star", 16));
+        box.setOnClickListener(v -> {
+            if (tab == 2) { host.store.setHidden(app.key, false); host.render(); }
+            else host.launch(app);
+        });
+        if (tab == 2) box.setContentDescription("Show " + host.displayLabel(app) + " in Apps");
+        box.setOnLongClickListener(v -> { host.appMenu(app); return true; });
+        return box;
     }
 }

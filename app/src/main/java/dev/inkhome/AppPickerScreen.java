@@ -9,7 +9,7 @@ final class AppPickerScreen implements Screen {
     public void build(MainActivity host) {
         LinearLayout col = host.page();
         boolean hiddenMode = "hidden".equals(host.sub);
-        col.addView(host.header(hiddenMode ? "Hidden apps" : "Reading apps", null, () -> { host.sub = null; host.render(); }));
+        col.addView(host.header(hiddenMode ? "Hidden apps" : "Reading apps", null, host::onBackPressed));
         LinearLayout list = host.ink.col();
         list.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), host.ink.dp(16));
         TextView hint = host.ink.muted(hiddenMode ? "Tap an app to show it in Apps again." : "Time in these apps counts as reading. Your book reader always counts.", 14);

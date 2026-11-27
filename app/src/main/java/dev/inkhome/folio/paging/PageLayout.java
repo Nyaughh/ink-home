@@ -25,6 +25,10 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
     private int lastWidth = -1, lastHeight = -1, lastExtent = -1;
     private float downX, downY;
     private boolean swiping;
+    private boolean swipeEnabled = true;
+
+    public final void setSwipeEnabled(boolean enabled) { swipeEnabled = enabled; }
+
 
     PageLayout(Folio folio, LinearLayout header, int initialPage, IntConsumer remember, Runnable changed) {
         super(folio.context);
@@ -123,7 +127,7 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
     }
 
     private boolean crossed(MotionEvent e) {
-        return pages != null && pages.count() > 1 &&
+        return swipeEnabled && pages != null && pages.count() > 1 &&
                 Math.max(Math.abs(e.getX() - downX), Math.abs(e.getY() - downY)) >= folio.u(32);
     }
 

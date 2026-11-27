@@ -15,17 +15,19 @@ final class SearchScreen implements Screen {
     public void build(MainActivity host) {
         LinearLayout col = host.page();
         LinearLayout head = host.ink.row();
-        head.setPadding(host.ink.dp(MainActivity.PAD), host.ink.dp(16), host.ink.dp(MainActivity.PAD), host.ink.dp(12));
+        int margin = host.ink.dp(host.ink.folio.windowClass().margin);
+        head.setPadding(margin, host.ink.dp(8), margin, host.ink.dp(8));
         EditText q = new EditText(host);
         q.setText(host.libSearch);
-        q.setHint("Search titles and authors");
+        q.setHint("Search titles, authors and files");
+        q.setTypeface(host.ink.REGULAR);
         q.setTextColor(host.ink.TEXT);
         q.setHintTextColor(host.ink.TEXT3);
         q.setTextSize(17 * host.ink.scale);
         q.setSingleLine(true);
         q.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         q.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-        q.setBackground(host.ink.stroke(host.ink.PAPER, 9, host.ink.LINE));
+        q.setBackground(host.ink.stroke(host.ink.PAPER, 0, host.ink.LINE));
         q.setPadding(host.ink.dp(14), host.ink.dp(10), host.ink.dp(14), host.ink.dp(10));
         head.addView(q, host.ink.weight(1));
         TextView cancel = host.ink.medium("Cancel", 15);
@@ -34,7 +36,7 @@ final class SearchScreen implements Screen {
         head.addView(cancel);
         col.addView(head);
         LinearLayout results = host.ink.col();
-        results.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), 0);
+        results.setPadding(margin, 0, margin, 0);
         col.addView(results, new LinearLayout.LayoutParams(-1, 0, 1f));
         Runnable refresh = () -> {
             results.removeAllViews();

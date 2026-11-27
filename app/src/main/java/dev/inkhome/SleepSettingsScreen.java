@@ -13,7 +13,7 @@ final class SleepSettingsScreen implements Screen {
     @Override
     public void build(MainActivity host) {
         LinearLayout col = host.page();
-        col.addView(host.header("Sleep screen", null, () -> { host.sub = null; host.render(); }));
+        col.addView(host.header("Sleep screen", null, host::onBackPressed));
         LinearLayout body = host.ink.col();
         body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), host.ink.dp(20));
         String mode = host.store.sleepMode();

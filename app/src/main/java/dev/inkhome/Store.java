@@ -25,6 +25,21 @@ final class Store {
         p = c.getSharedPreferences("inkhome", Context.MODE_PRIVATE);
     }
 
+    boolean setupDismissed() { return p.getBoolean("setupDismissed", false); }
+    void dismissSetup() { p.edit().putBoolean("setupDismissed", true).apply(); }
+    boolean displayConfirmed() { return p.getBoolean("displayConfirmed", false); }
+    String displayOverride() { return p.getString("displayClass", ""); }
+    void confirmDisplay(String displayClass) {
+        p.edit().putBoolean("displayConfirmed", true).putString("displayClass", displayClass).apply();
+    }
+    boolean swipePages() { return p.getBoolean("swipePages", true); }
+    void setSwipePages(boolean enabled) { p.edit().putBoolean("swipePages", enabled).apply(); }
+    boolean hasThemeOverride() { return p.contains("night"); }
+    void setNight(Boolean night) {
+        if (night == null) p.edit().remove("night").apply();
+        else p.edit().putBoolean("night", night).apply();
+    }
+
     // ---------------------------------------------------------------- favorites & hidden apps
 
     List<String> favorites() { return list("pinned"); }

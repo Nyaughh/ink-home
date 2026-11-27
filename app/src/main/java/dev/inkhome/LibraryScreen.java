@@ -4,11 +4,17 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+import android.view.View;
+import dev.inkhome.folio.widget.Chip;
 import java.util.List;
-import java.util.Map;
+
 
 final class LibraryScreen implements Screen {
+    static final String[] SORT_KEYS = {"recent", "title", "author", "added", "progress"};
+    static final String[] SORT_LABELS = {"Recently read", "Title", "Author", "Recently added", "Progress"};
+    static final String[] TYPE_KEYS = {"all", "book", "comic", "pdf"};
+    static final String[] TYPE_LABELS = {"All types", "Books", "Comics", "PDFs"};
+
     @Override
     public void build(MainActivity host) {
         if (host.libSearch != null) { new SearchScreen().build(host); return; }
@@ -17,10 +23,21 @@ final class LibraryScreen implements Screen {
         ImageView search = host.ink.iconButton("search", () -> { host.libSearch = ""; host.pages.put("lib", 0); host.render(); });
         ImageView view = host.ink.iconButton(host.store.libraryGrid() ? "list" : "grid", () -> { host.store.setLibraryGrid(!host.store.libraryGrid()); host.pages.put("lib", 0); host.render(); });
         Runnable back = host.libCollection != null ? () -> { host.libCollection = null; host.render(); } : null;
-        col.addView(host.header(host.libCollection != null ? host.libCollection : "Library", host.booksLoaded ? String.valueOf(host.books.size()) : null, back, search, view));
+        boolean collections = host.libCollection == null && host.libTab.equals("collections");
+        ImageView options = host.ink.iconButton(collections ? "plus" : "filter", () -> {
+            if (collections) host.newCollection(); else host.libraryOptions();
+        });
+        search.setContentDescription("Search books");
+        options.setContentDescription(collections ? "New collection" : "Sort and filter");
+        view.setContentDescription(host.store.libraryGrid() ? "List view" : "Grid view");
+        String title = host.libCollection != null ? host.libCollection : "Library";
+        String count = host.booksLoaded ? String.valueOf(host.books.size()) : null;
+        View[] actions = collections ? new View[]{search, options} : new View[]{search, options, view};
+        col.addView(host.header(title, count, back, actions));
 
         LinearLayout body = host.ink.col();
-        body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), 0);
+        int margin = host.ink.dp(host.ink.folio.windowClass().margin);
+        body.setPadding(margin, 0, margin, 0);
         col.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         if (host.libCollection == null) {
@@ -38,20 +55,20 @@ final class LibraryScreen implements Screen {
             return;
         }
 
-        LinearLayout pills = host.ink.row();
-        pills.setPadding(0, host.ink.dp(12), 0, host.ink.dp(10));
-        Map<String, String> sorts = new LinkedHashMap<>();
-        sorts.put("recent", "Recent"); sorts.put("title", "Title"); sorts.put("author", "Author"); sorts.put("added", "Added"); sorts.put("progress", "Progress");
-        TextView sort = host.ink.pill("Sort: " + sorts.get(host.store.librarySort()), false);
-        sort.setOnClickListener(v -> host.chooseSort());
-        pills.addView(sort);
-        Map<String, String> types = new LinkedHashMap<>();
-        types.put("all", "All types"); types.put("book", "Books"); types.put("comic", "Comics"); types.put("pdf", "PDFs");
-        TextView type = host.ink.pill(types.get(host.store.libraryType()), !host.store.libraryType().equals("all"));
-        type.setOnClickListener(v -> host.chooseType());
-        pills.addView(type, host.ink.m(-2, -2, 8, 0, 0, 0));
-        body.addView(pills);
-        body.addView(host.ink.hair());
+        LinearLayout filters = host.ink.row();
+        int type = Arrays.asList(TYPE_KEYS).indexOf(host.store.libraryType());
+        if (type > 0) filters.addView(Chip.create(host.ink.folio, TYPE_LABELS[type] + " only", v -> {
+            host.store.setLibraryType("all");
+            host.pages.put("lib", 0);
+            host.render();
+        }));
+        int sort = Arrays.asList(SORT_KEYS).indexOf(host.store.librarySort());
+        if (sort > 0) filters.addView(Chip.create(host.ink.folio, "Sorted by " + SORT_LABELS[sort].toLowerCase(java.util.Locale.ROOT), v -> {
+            host.store.setLibrarySort("recent");
+            host.pages.put("lib", 0);
+            host.render();
+        }), host.ink.m(-2, -2, type > 0 ? 8 : 0, 0, 0, 0));
+        if (filters.getChildCount() > 0) body.addView(filters, host.ink.m(-1, -2, 0, 8, 0, 4));
 
         List<Library.Book> list = host.filterBooks(false);
         if (list.isEmpty()) {

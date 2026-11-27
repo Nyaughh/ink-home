@@ -60,6 +60,14 @@ public final class DisplayProbe {
         return hardwareClass();
     }
 
+    public static boolean smoothText(Context context) {
+        return preferences(context).getBoolean("smoothText", true);
+    }
+
+    public static void setSmoothText(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("smoothText", enabled).apply();
+    }
+
     public static boolean night(Context context) {
         int mode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
         return preferences(context).getBoolean("night",

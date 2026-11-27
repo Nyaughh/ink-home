@@ -34,7 +34,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
-import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
@@ -74,6 +73,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -310,7 +310,8 @@ public class MainActivity extends Activity {
         if (panelOpen) closePanel();
         else if (libSearch != null) { libSearch = null; hideKeyboard(); render(); }
         else if (libCollection != null) { libCollection = null; render(); }
-        else if (sub != null) { sub = null; render(); }
+        else if (screen == Screen.SETTINGS && SetupScreen.FROM_HOME.equals(sub)) go(Screen.HOME);
+        else if (sub != null) { sub = screen == Screen.SETTINGS ? SettingsScreen.parent(sub) : null; render(); }
         else if (screen != Screen.HOME) go(Screen.HOME);
     }
 
@@ -470,6 +471,13 @@ public class MainActivity extends Activity {
             sub = null;
         }
         screen = s;
+        render();
+    }
+
+    void openHomeSetup() {
+        pages.clear();
+        sub = SetupScreen.FROM_HOME;
+        screen = Screen.SETTINGS;
         render();
     }
 
@@ -946,16 +954,18 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** Readblio-style: one big cover and the title, with the reading app underneath. */
+    /** The cover layout starts with the current book, or the newest book before reading begins. */
     void homeCover(LinearLayout col, List<Library.Book> reading) {
         Library.Book b = !reading.isEmpty() ? reading.get(0) : (books.isEmpty() ? null : newest().get(0));
         if (b == null) {
             col.addView(emptyHero());
             return;
         }
-        // With other books to list, the cover is a little smaller so a few of them fit below.
-        boolean compact = books.size() > 1;
-        int cw = compact ? 136 : 168, chh = compact ? 195 : 240;
+        boolean expanded = ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.EXPANDED;
+        int heightU = Math.round(getResources().getConfiguration().screenHeightDp / ink.folio.uiScale);
+        boolean wide = expanded || (heightU < 500 && ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.MEDIUM);
+        int cw = expanded ? 168 : wide ? 104 : Math.min(132, Math.max(72, (heightU - 320) / 2));
+        int chh = Math.round(cw * 10f / 7);
         LinearLayout hero = ink.row();
         hero.setGravity(Gravity.TOP);
         hero.setBackground(ink.pressable());
@@ -968,9 +978,9 @@ public class MainActivity extends Activity {
             n.setPadding(0, 0, 0, ink.dp(8));
             info.addView(n);
         }
-        info.addView(ink.lines(ink.text(b.title, TypeScale.TITLE, ink.TEXT), compact ? 3 : 4));
+        info.addView(ink.lines(ink.text(b.title, TypeScale.TITLE, ink.TEXT), 4));
         if (!b.author.isEmpty()) {
-            TextView a = ink.oneLine(ink.muted(b.author, 16));
+            TextView a = ink.oneLine(ink.text(b.author, TypeScale.BYLINE, ink.TEXT2));
             a.setPadding(0, ink.dp(8), 0, 0);
             info.addView(a);
         }
@@ -978,148 +988,128 @@ public class MainActivity extends Activity {
 
         LinearLayout app = ink.row();
         ResolveInfo reader = readerFor(b);
-        if (reader != null || readerPkgFor(b).equals(Store.BUILT_IN)) {
+        if (reader != null) {
             info.addView(app);
-            app.addView(reader != null ? appIcon(reader.loadIcon(getPackageManager()), 20) : ink.icon("book", 20));
-            String rlabel = reader != null ? String.valueOf(reader.loadLabel(getPackageManager())) : "Ink Home reader";
+            app.addView(appIcon(reader.loadIcon(getPackageManager()), 20));
+            String rlabel = String.valueOf(reader.loadLabel(getPackageManager()));
             TextView rn = ink.oneLine(ink.medium(rlabel, 15));
             rn.setPadding(ink.dp(8), 0, 0, 0);
             app.addView(rn, ink.weight(1));
         }
         if (b.progress >= 0 || b.finished) info.addView(ink.progress(b.finished ? 1f : b.progress, 4), ink.m(-1, -2, 0, 14, 0, 0));
-        TextView st = ink.oneLine(ink.muted(bookStatus(b) + (b.lastRead > 0 ? "  ·  " + Library.ago(b.lastRead) : ""), 14));
-        st.setPadding(0, ink.dp(8), 0, 0);
-        info.addView(st);
+        LinearLayout status = ink.row();
+        status.setPadding(0, ink.dp(6), 0, 0);
+        int percent = b.percent();
+        String progress = b.finished ? "Finished" : percent >= 0 ? percent + "%" : b.started() ? "Started" : "Not started";
+        status.addView(ink.text(progress, TypeScale.META, ink.TEXT));
+        int minutes = bookMinutes(b);
+        String when = minutes > 0 ? Stats.hm(minutes) + " read" : "";
+        if (b.lastRead > 0) when += (when.isEmpty() ? "" : " · ") + Library.ago(b.lastRead);
+        TextView activity = ink.oneLine(ink.text(when, TypeScale.META, ink.TEXT2));
+        activity.setGravity(Gravity.END);
+        status.addView(activity, ink.weight(1));
+        info.addView(status);
         hero.addView(info, new LinearLayout.LayoutParams(0, ink.dp(chh), 1f));
         hero.setOnClickListener(v -> openBook(b));
         hero.setOnLongClickListener(v -> { bookMenu(b); return true; });
-        col.addView(hero);
+        LinearLayout next = col;
+        if (wide) {
+            LinearLayout panes = ink.row();
+            panes.setGravity(Gravity.TOP);
+            panes.addView(hero, ink.weight(1));
+            next = ink.col();
+            next.setPadding(ink.dp(ink.folio.windowClass().gutter), 0, 0, 0);
+            panes.addView(next, new LinearLayout.LayoutParams(0, -1, 1));
+            col.addView(panes, new LinearLayout.LayoutParams(-1, 0, 1));
+            next.setTag("homeRight");
+        } else {
+            col.addView(hero);
+        }
 
         // Every other book, the ones being read first, whichever app they're read in.
-        List<Library.Book> rest = new ArrayList<>();
-        for (Library.Book x : reading) if (x != b) rest.add(x);
-        for (Library.Book x : newest()) if (x != b && !rest.contains(x)) rest.add(x);
-        if (!rest.isEmpty()) col.addView(homeBookList(rest), new LinearLayout.LayoutParams(-1, 0, 1f));
+        Set<Library.Book> ordered = new LinkedHashSet<>(reading);
+        ordered.addAll(newest());
+        ordered.remove(b);
+        List<Library.Book> rest = new ArrayList<>(ordered);
+        if (!rest.isEmpty()) {
+            next.addView(ink.hair(), ink.m(-1, ink.folio.rule, 0, wide ? 0 : 14, 0, 0));
+            next.addView(homeBookList(rest), new LinearLayout.LayoutParams(-1, 0, 1f));
+        }
     }
 
-    /** Compact rows of books that fill whatever space is left, with a link to the full library. */
+    /** Page whole rows in the space between the hero and favorites. */
     private View homeBookList(List<Library.Book> list) {
         LinearLayout head = ink.row();
-        head.addView(ink.heading("Your books"), ink.weight(1));
-        View listView = cells("home", head, list.size(), 0, 46, i -> homeBookRow(list.get(i)));
+        head.addView(ink.text("Up next", TypeScale.LABEL, ink.TEXT), ink.weight(1));
+        View listView = cells("home", head, list.size(), 0, 52, i -> homeBookRow(list.get(i)));
         listView.setTag("list");
         return listView;
     }
 
     private View homeBookRow(Library.Book bk) {
-        {
-            {
-                LinearLayout r = ink.row();
-                r.setBackground(ink.listRow(40));
-                r.addView(ink.cover(Covers.get(this, bk, store.realCovers())), ink.m(ink.dp(28), ink.dp(40), 0, 0, 12, 0));
-                LinearLayout t = ink.col();
-                t.addView(ink.oneLine(ink.text(bk.title, TypeScale.BODY_LG, ink.TEXT)));
-                String meta = (bk.author.isEmpty() ? bk.format() : bk.author) + "  ·  " + bookStatus(bk);
-                TextView m = ink.oneLine(ink.muted(meta, 12));
-                m.setPadding(0, ink.dp(3), 0, 0);
-                t.addView(m);
-                r.addView(t, ink.weight(1));
-                if (bk.progress >= 0 && !bk.finished) r.addView(ink.progress(bk.progress, 3), ink.m(ink.dp(44), -2, 10, 0, 0, 0));
-                r.setOnClickListener(v -> openBook(bk));
-                r.setOnLongClickListener(v -> { bookMenu(bk); return true; });
-                return r;
-            }
-        }
+        LinearLayout r = ink.row();
+        r.setBackground(ink.listRow(40));
+        r.addView(ink.cover(Covers.get(this, bk, store.realCovers())), ink.m(ink.dp(30), ink.dp(43), 0, 0, 12, 0));
+        LinearLayout t = ink.col();
+        t.addView(ink.oneLine(ink.text(bk.title, TypeScale.BODY_LG, ink.TEXT)));
+        String meta = (bk.author.isEmpty() ? bk.format() : bk.author) + "  ·  " + bookStatus(bk);
+        TextView m = ink.oneLine(ink.muted(meta, 12));
+        m.setPadding(0, ink.dp(3), 0, 0);
+        t.addView(m);
+        r.addView(t, ink.weight(1));
+        if (bk.progress >= 0 && !bk.finished) r.addView(ink.progress(bk.progress, 3), ink.m(ink.dp(44), -2, 10, 0, 0, 0));
+        r.setOnClickListener(v -> openBook(bk));
+        r.setOnLongClickListener(v -> { bookMenu(bk); return true; });
+        return r;
     }
 
-    /** Same layout as a book, with an empty cover outline, for when there's nothing to show yet. */
     private View emptyHero() {
-        LinearLayout hero = ink.row();
-        hero.setGravity(Gravity.TOP);
-        LinearLayout cover = ink.col();
-        cover.setGravity(Gravity.CENTER);
-        cover.setBackground(ink.stroke(0xFFF4F4F4, 4, 0xFFB5B5B5));
-        ImageView icon = ink.icon("book", 40);
-        icon.setAlpha(0.4f);
-        cover.addView(icon);
-        hero.addView(cover, new LinearLayout.LayoutParams(ink.dp(168), ink.dp(240)));
-        LinearLayout info = ink.col();
-        info.setPadding(ink.dp(20), ink.dp(2), 0, 0);
-        info.addView(ink.lines(ink.text(booksLoaded ? "No book yet" : "Opening your library…", TypeScale.TITLE, ink.TEXT), 3));
-        TextView sub = ink.muted(booksLoaded ? "Copy EPUB, PDF, MOBI or CBZ files over USB or BooxDrop and they'll appear here." : "Finding books on this tablet.", 15);
-        sub.setLineSpacing(0, 1.2f);
-        sub.setPadding(0, ink.dp(10), 0, 0);
-        info.addView(sub);
-        hero.addView(info, new LinearLayout.LayoutParams(0, ink.dp(240), 1f));
-        hero.setBackground(ink.pressable());
-        hero.setOnClickListener(v -> go(Screen.LIBRARY));
-        return hero;
-    }
-
-    private View miniBook(Library.Book b, int w) {
-        LinearLayout c = ink.col();
-        c.setPadding(ink.dp(2), ink.dp(2), ink.dp(10), ink.dp(4));
-        c.setBackground(ink.pressable());
-        c.addView(ink.cover(Covers.get(this, b, store.realCovers())), new LinearLayout.LayoutParams(ink.dp(w), Math.round(ink.dp(w) * 1.43f)));
-        if (b.progress >= 0) c.addView(ink.progress(b.progress, 3), ink.m(ink.dp(w), -2, 0, 6, 0, 0));
-        TextView t = ink.lines(ink.text(b.title, TypeScale.META, ink.TEXT), 2);
-        t.setPadding(0, ink.dp(6), 0, 0);
-        c.addView(t, new LinearLayout.LayoutParams(ink.dp(w + 8), -2));
-        c.setOnClickListener(v -> openBook(b));
-        c.setOnLongClickListener(v -> { bookMenu(b); return true; });
-        return c;
+        return dev.inkhome.folio.widget.EmptyState.create(ink.folio,
+                booksLoaded ? "No book yet" : "Opening your library…",
+                booksLoaded ? "Copy EPUB, PDF, MOBI or CBZ files over USB or BooxDrop and they'll appear here."
+                        : "Finding books on this tablet.", "Library", v -> go(Screen.LIBRARY));
     }
 
     void homeShelf(LinearLayout col, List<Library.Book> reading) {
         List<Library.Book> shelf = new ArrayList<>(reading);
-        for (Library.Book b : newest()) {
-            if (shelf.size() >= 6) break;
-            if (!shelf.contains(b) && !b.finished) shelf.add(b);
+        Set<String> onShelf = new HashSet<>();
+        for (Library.Book book : reading) onShelf.add(book.path);
+        for (Library.Book book : newest()) {
+            if (!book.finished && onShelf.add(book.path)) shelf.add(book);
         }
-        col.addView(ink.heading(reading.isEmpty() ? "Your books" : "Reading"));
         if (shelf.isEmpty()) {
-            col.addView(note(booksLoaded ? "No books yet" : "Opening your library…", "Copy books to the tablet over USB or BooxDrop.", null));
+            col.addView(emptyHero());
             return;
         }
-        int rows = ink.scale <= 1.16f ? 2 : 1;
-        for (int r = 0; r < rows; r++) {
-            LinearLayout line = ink.row();
-            line.setGravity(Gravity.TOP);
-            for (int i = 0; i < 3; i++) {
-                int idx = r * 3 + i;
-                if (idx < shelf.size()) line.addView(miniBook(shelf.get(idx), 104), ink.weight(1));
-                else line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
-            }
-            col.addView(line, ink.m(-1, -2, 0, 0, 0, 14));
-        }
+        View grid = bookGrid("home", shelf);
+        grid.setTag("list");
+        col.addView(grid, new LinearLayout.LayoutParams(-1, 0, 1));
     }
 
     void homeMinimal(LinearLayout col, List<Library.Book> reading) {
         Date now = new Date();
         TextView clock = ink.center(ink.text(timeText(now), TypeScale.DISPLAY, ink.TEXT));
         col.addView(clock, new LinearLayout.LayoutParams(-1, -2));
-        TextView date = ink.center(ink.muted(new SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now), 17));
-        date.setPadding(0, ink.dp(10), 0, ink.dp(30));
-        col.addView(date, new LinearLayout.LayoutParams(-1, -2));
         if (reading.isEmpty()) return;
         Library.Book b = reading.get(0);
         LinearLayout c = ink.col();
         c.setPadding(ink.dp(18), ink.dp(16), ink.dp(18), ink.dp(16));
-        c.setBackground(ink.card(12, true));
-        c.addView(ink.faint("Continue reading", 13));
+        c.setBackground(ink.pressable());
         TextView t = ink.lines(ink.text(b.title, TypeScale.TITLE, ink.TEXT), 2);
         t.setPadding(0, ink.dp(8), 0, ink.dp(8));
         c.addView(t);
         c.addView(ink.muted(bookStatus(b), 14));
         if (b.progress >= 0) c.addView(ink.progress(b.progress, 4), ink.m(-1, -2, 0, 10, 0, 0));
         c.setOnClickListener(v -> openBook(b));
+        c.setOnLongClickListener(v -> { bookMenu(b); return true; });
         col.addView(c);
     }
 
     void homeFavorites(LinearLayout col) {
         List<App> favs = favoriteApps();
-        col.addView(ink.heading("Favorites"), ink.m(-1, -2, 0, 10, 0, 0));
-        col.addView(ink.hair());
+        LinearLayout right = col.findViewWithTag("homeRight");
+        if (right != null) col = right;
+        col.addView(new Structure(ink.folio).sectionHead("Favorites", false, null));
         if (favs.isEmpty()) {
             TextView h = ink.muted("Long-press an app in Apps to add it here.", 14);
             h.setPadding(0, ink.dp(14), 0, ink.dp(10));
@@ -1127,20 +1117,24 @@ public class MainActivity extends Activity {
             return;
         }
         boolean icons = store.appIcons();
-        int max = ink.scale > 1.16f ? 4 : 8;
+        float width = getResources().getConfiguration().screenWidthDp / ink.folio.uiScale;
+        if (right != null) width = (width - ink.folio.windowClass().gutter) / 2;
+        int columns = ink.folio.windowClass().columns(width, 88);
+        float height = getResources().getConfiguration().screenHeightDp / ink.folio.uiScale;
+        int max = columns * (height >= 780 ? 2 : 1);
         LinearLayout line = null;
         for (int i = 0; i < Math.min(max, favs.size()); i++) {
-            if (i % 4 == 0) {
+            if (i % columns == 0) {
                 line = ink.row();
                 line.setGravity(Gravity.TOP);
-                col.addView(line, ink.m(-1, -2, 0, 10, 0, 0));
+                col.addView(line, ink.m(-1, -2, 0, 2, 0, 0));
             }
             App a = favs.get(i);
             LinearLayout cell = ink.col();
             cell.setGravity(Gravity.CENTER_HORIZONTAL);
-            cell.setPadding(ink.dp(2), ink.dp(6), ink.dp(2), ink.dp(6));
+            cell.setPadding(ink.dp(2), 0, ink.dp(2), 0);
             cell.setBackground(ink.pressable());
-            if (icons) cell.addView(appIcon(a, 36));
+            if (icons) cell.addView(appIcon(a, 40));
             TextView t = ink.center(ink.oneLine(ink.text(displayLabel(a), TypeScale.APP_NAME, ink.TEXT)));
             t.setPadding(0, icons ? ink.dp(8) : ink.dp(12), 0, icons ? 0 : ink.dp(12));
             cell.addView(t, new LinearLayout.LayoutParams(-1, -2));
@@ -1148,7 +1142,7 @@ public class MainActivity extends Activity {
             cell.setOnLongClickListener(v -> { appMenu(a); return true; });
             line.addView(cell, ink.weight(1));
         }
-        if (line != null) while (line.getChildCount() < 4) line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
+        if (line != null) while (line.getChildCount() < columns) line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
     }
 
     /** Bordered card with a title and a muted explanation. */
@@ -1206,41 +1200,53 @@ public class MainActivity extends Activity {
     }
 
     View bookPages(List<Library.Book> list, boolean grid) {
-        if (grid) {
-            return cells("lib", null, list.size(), 96, 208, i -> {
-                Library.Book b = list.get(i);
-                LinearLayout cell = ink.col();
-                cell.setGravity(Gravity.CENTER_HORIZONTAL);
-                cell.setPadding(ink.dp(4), ink.dp(14), ink.dp(4), 0);
-                cell.setBackground(ink.pressable());
-                cell.addView(ink.cover(Covers.get(this, b, store.realCovers())), new LinearLayout.LayoutParams(ink.dp(88), ink.dp(126)));
-                View bar = b.progress >= 0 || b.finished ? ink.progress(b.finished ? 1f : b.progress, 3) : new View(this);
-                cell.addView(bar, ink.m(ink.dp(88), ink.dp(3), 0, 6, 0, 0));
-                TextView t = ink.center(ink.lines(ink.text(b.title, TypeScale.META, ink.TEXT), 2));
-                t.setPadding(ink.dp(4), ink.dp(7), ink.dp(4), 0);
-                cell.addView(t, new LinearLayout.LayoutParams(-1, -2));
-                cell.setOnClickListener(v -> openBook(b));
-                cell.setOnLongClickListener(v -> { bookMenu(b); return true; });
-                return cell;
-            });
-        }
-        return cells("lib", null, list.size(), 0, 88, i -> {
+        if (grid) return bookGrid("lib", list);
+        return cells("lib", null, list.size(), 0, 72, i -> {
             Library.Book b = list.get(i);
-            LinearLayout r = ink.row();
-            r.setBackground(ink.listRow(62));
-            r.addView(ink.cover(Covers.get(this, b, store.realCovers())), new LinearLayout.LayoutParams(ink.dp(46), ink.dp(66)));
+            LinearLayout row = ink.row();
+            row.setBackground(ink.listRow(0));
+            row.addView(ink.cover(Covers.get(this, b, store.realCovers())), ink.dp(40), ink.dp(57));
             LinearLayout info = ink.col();
-            info.setPadding(ink.dp(16), 0, 0, 0);
+            info.setPadding(ink.dp(14), 0, ink.dp(8), 0);
             info.addView(ink.oneLine(ink.text(b.title, TypeScale.BODY_LG, ink.TEXT)));
-            String meta = (b.author.isEmpty() ? b.format() : b.author) + "  ·  " + bookStatus(b);
-            TextView a = ink.oneLine(ink.muted(meta, 13));
-            a.setPadding(0, ink.dp(6), 0, 0);
-            info.addView(a);
-            if (b.progress >= 0 && !b.finished) info.addView(ink.progress(b.progress, 3), ink.m(ink.dp(120), -2, 0, 8, 0, 0));
-            r.addView(info, ink.weight(1));
-            r.setOnClickListener(v -> openBook(b));
-            r.setOnLongClickListener(v -> { bookMenu(b); return true; });
-            return r;
+            int mins = bookMinutes(b);
+            String meta = b.author.isEmpty() ? b.format() : b.author;
+            if (mins > 0) meta += " · " + Stats.hm(mins) + " read";
+            info.addView(ink.oneLine(ink.text(meta, TypeScale.META, ink.TEXT2)));
+            if (b.finished || b.progress >= 0)
+                info.addView(ink.progress(b.finished ? 1 : b.progress, 3), ink.m(ink.dp(150), -2, 0, 4, 0, 0));
+            row.addView(info, ink.weight(1));
+            String status = b.finished ? "Finished" : b.percent() >= 0 ? b.percent() + "%" : "";
+            row.addView(ink.text(status, TypeScale.META, ink.TEXT));
+            row.setOnClickListener(v -> openBook(b));
+            row.setOnLongClickListener(v -> { bookMenu(b); return true; });
+            return row;
+        });
+    }
+
+    private View bookGrid(String pageKey, List<Library.Book> list) {
+        dev.inkhome.folio.core.WindowClass window = ink.folio.windowClass();
+        float width = getResources().getConfiguration().screenWidthDp / ink.folio.uiScale;
+        int columns = window.columns(width, 96);
+        float cellWidth = (width - 2 * window.margin - (columns - 1) * window.gutter) / columns;
+        int height = Math.round(cellWidth * 10 / 7) + 68;
+        return cells(pageKey, null, list.size(), 96, height, i -> {
+            Library.Book book = list.get(i);
+            View cell = dev.inkhome.folio.widget.BookViews.cell(ink.folio,
+                    ink.cover(Covers.get(this, book, store.realCovers())), book.title,
+                    book.finished ? 100 : Math.max(0, book.percent()), () -> openBook(book));
+            cell.setPadding(0, ink.dp(12), 0, 0);
+            cell.setOnLongClickListener(v -> { bookMenu(book); return true; });
+            return cell;
+        });
+    }
+
+    void newCollection() {
+        askText("New collection", "", name -> {
+            Map<String, List<String>> collections = store.collections();
+            if (!collections.containsKey(name)) collections.put(name, new ArrayList<>());
+            store.setCollections(collections);
+            render();
         });
     }
 
@@ -1257,12 +1263,7 @@ public class MainActivity extends Activity {
                 TextView t = ink.medium("New collection", 16);
                 t.setPadding(ink.dp(12), 0, 0, 0);
                 r.addView(t);
-                r.setOnClickListener(v -> askText("New collection", "", name -> {
-                    Map<String, List<String>> m = store.collections();
-                    if (!m.containsKey(name)) m.put(name, new ArrayList<>());
-                    store.setCollections(m);
-                    render();
-                }));
+                r.setOnClickListener(v -> newCollection());
                 return r;
             }
             String name = names.get(i);
@@ -1297,78 +1298,131 @@ public class MainActivity extends Activity {
         });
     }
 
-    void chooseSort() {
-        String[] keys = {"recent", "title", "author", "added", "progress"};
-        choose("Sort by", new String[]{"Recently read", "Title", "Author", "Recently added", "Progress"},
-                Arrays.asList(keys).indexOf(store.librarySort()), w -> { store.setLibrarySort(keys[w]); pages.put("lib", 0); render(); });
+    void libraryOptions() {
+        LinearLayout options = ink.col();
+        options.setPadding(ink.dp(16), ink.dp(4), ink.dp(16), ink.dp(12));
+        libraryChoices(options, "Sort by", LibraryScreen.SORT_LABELS, LibraryScreen.SORT_KEYS,
+                store.librarySort(), store::setLibrarySort);
+        libraryChoices(options, "Show", LibraryScreen.TYPE_LABELS, LibraryScreen.TYPE_KEYS,
+                store.libraryType(), store::setLibraryType);
+        libraryChoices(options, "View", new String[]{"Grid", "List"}, new String[]{"grid", "list"},
+                store.libraryGrid() ? "grid" : "list", key -> store.setLibraryGrid(key.equals("grid")));
+        sheets.custom("Sort and filter", options);
     }
 
-    void chooseType() {
-        String[] keys = {"all", "book", "comic", "pdf"};
-        choose("Show", new String[]{"All types", "Books (EPUB, MOBI, FB2, TXT…)", "Comics (CBZ, CBR)", "PDFs and DJVU"},
-                Arrays.asList(keys).indexOf(store.libraryType()), w -> { store.setLibraryType(keys[w]); pages.put("lib", 0); render(); });
+    private void libraryChoices(LinearLayout options, String title, String[] labels,
+                                String[] keys, String current, java.util.function.Consumer<String> select) {
+        options.addView(new Structure(ink.folio).sectionHead(title, true, null));
+        for (int i = 0; i < labels.length; i++) {
+            String key = keys[i];
+            boolean selected = key.equals(current);
+            TextView choice = ink.body((selected ? "●   " : "○   ") + labels[i]);
+            choice.setSelected(selected);
+            choice.setGravity(Gravity.CENTER_VERTICAL);
+            choice.setMinHeight(ink.dp(44));
+            choice.setOnClickListener(v -> {
+                sheets.dismiss();
+                select.accept(key);
+                pages.put("lib", 0);
+                render();
+            });
+            options.addView(choice);
+        }
     }
 
     private void bookMenu(Library.Book b) {
-        List<String> opts = new ArrayList<>();
-        opts.add("Open");
-        opts.add("Open with…");
-        opts.add("Add to collection…");
-        if (libCollection != null) opts.add("Remove from this collection");
-        opts.add(b.finished ? "Mark as not finished" : "Mark as finished");
-        if (b.started() && !b.finished) opts.add("Remove from Reading");
-        opts.add("Details");
-        choose(b.title, opts.toArray(new String[0]), -1, w -> {
-            String o = opts.get(w);
-            switch (o) {
-                case "Open": openBook(b); break;
-                case "Open with…": openWith(b); break;
-                case "Add to collection…": addToCollection(b); break;
-                case "Remove from this collection": {
-                    Map<String, List<String>> m = store.collections();
-                    List<String> l = m.get(libCollection);
-                    if (l == null || !l.contains(b.path)) break;
-                    final String collection = libCollection;
-                    final int position = l.indexOf(b.path);
-                    l.remove(position);
-                    store.setCollections(m);
+        showBookSheet(b, false);
+    }
+
+    private void showBookSheet(Library.Book b, boolean details) {
+        LinearLayout body = ink.col();
+        body.setPadding(ink.dp(16), ink.dp(12), ink.dp(16), ink.dp(8));
+        LinearLayout heading = ink.row();
+        int width = details ? 108 : 62;
+        heading.addView(ink.cover(Covers.get(this, b, store.realCovers())), ink.dp(width), ink.dp(width * 10f / 7));
+        LinearLayout labels = ink.col();
+        labels.setPadding(ink.dp(16), 0, 0, 0);
+        labels.addView(ink.lines(ink.text(b.title, TypeScale.TITLE_SM, ink.TEXT), 4));
+        if (!b.author.isEmpty()) labels.addView(ink.text(b.author, TypeScale.BYLINE, ink.TEXT2));
+        labels.addView(ink.text(bookStatus(b), TypeScale.META, ink.TEXT2));
+        heading.addView(labels, ink.weight(1));
+        body.addView(heading);
+        if (details) {
+            if (!b.pages.isEmpty()) body.addView(ink.body("Page " + b.pages));
+            if (b.lastRead > 0) body.addView(ink.body("Last read " + Library.ago(b.lastRead)));
+            body.addView(ink.body(b.format() + " · " + Library.humanSize(b.size)));
+            TextView path = ink.text(b.path, TypeScale.META, ink.TEXT2);
+            path.setTextIsSelectable(true);
+            body.addView(path);
+        }
+        String open = b.started() ? "Continue reading" : "Open book";
+        body.addView(dev.inkhome.folio.widget.Button.create(ink.folio, open,
+                dev.inkhome.folio.widget.Button.Style.PRIMARY, v -> { sheets.dismiss(); openBook(b); }),
+                ink.m(-1, -2, 0, 12, 0, 4));
+        List<String> actions = new ArrayList<>();
+        actions.add("Open with…");
+        actions.add("Add to collection…");
+        if (libCollection != null) actions.add("Remove from this collection");
+        actions.add(b.finished ? "Mark as not finished" : "Mark as finished");
+        if (b.started() && !b.finished) actions.add("Remove from Reading");
+        if (!details) actions.add("Details");
+        for (String action : actions) {
+            body.addView(new Structure(ink.folio).listRow(null, action, null, null, 44, false, () -> {
+                sheets.dismiss();
+                bookSheetAction(action, b);
+            }));
+        }
+        sheets.custom(details ? "Book details" : "Book actions", body);
+    }
+
+    private void bookSheetAction(String action, Library.Book b) {
+        switch (action) {
+            case "Open with…": openWith(b); break;
+            case "Add to collection…": addToCollection(b); break;
+            case "Remove from this collection": {
+                Map<String, List<String>> m = store.collections();
+                List<String> l = m.get(libCollection);
+                if (l == null || !l.contains(b.path)) break;
+                final String collection = libCollection;
+                final int position = l.indexOf(b.path);
+                l.remove(position);
+                store.setCollections(m);
+                render();
+                sheets.notice("Removed from collection", () -> {
+                    Map<String, List<String>> current = store.collections();
+                    List<String> members = current.get(collection);
+                    if (members != null && !members.contains(b.path)) {
+                        members.add(Math.min(position, members.size()), b.path);
+                        store.setCollections(current);
+                    }
                     render();
-                    sheets.notice("Removed from collection", () -> {
-                        Map<String, List<String>> current = store.collections();
-                        List<String> members = current.get(collection);
-                        if (members != null && !members.contains(b.path)) {
-                            members.add(Math.min(position, members.size()), b.path);
-                            store.setCollections(current);
-                        }
-                        render();
-                    }, null);
-                    break;
-                }
-                case "Remove from Reading": {
-                    long previous = store.dismissedAt(b.path);
-                    store.dismiss(b.path);
-                    render();
-                    sheets.notice("Removed from Reading", () -> {
-                        store.setDismissedAt(b.path, previous);
-                        render();
-                    }, null);
-                    break;
-                }
-                case "Details": {
-                    String msg = (b.author.isEmpty() ? "" : b.author + "\n\n") + bookStatus(b)
-                            + (b.pages.isEmpty() ? "" : "\nPage " + b.pages)
-                            + (b.lastRead > 0 ? "\nLast read " + Library.ago(b.lastRead) : "")
-                            + "\n\n" + b.format() + "  ·  " + Library.humanSize(b.size) + "\n" + b.path;
-                    sheets.message(b.title, msg, "Book actions", () -> bookMenu(b));
-                    break;
-                }
-                default:
-                    b.finished = !b.finished;
-                    store.setFinished(b.path, b.finished);
-                    dataSignature = 0;
-                    render();
+                }, null);
+                break;
             }
-        });
+            case "Remove from Reading": {
+                long previous = store.dismissedAt(b.path);
+                store.dismiss(b.path);
+                render();
+                sheets.notice("Removed from Reading", () -> {
+                    store.setDismissedAt(b.path, previous);
+                    render();
+                }, null);
+                break;
+            }
+            case "Details": showBookSheet(b, true); break;
+            default:
+                boolean previous = b.finished;
+                setBookFinished(b, !previous);
+                sheets.notice(previous ? "Marked as not finished" : "Marked as finished",
+                        () -> setBookFinished(b, previous), null);
+        }
+    }
+
+    private void setBookFinished(Library.Book book, boolean finished) {
+        book.finished = finished;
+        store.setFinished(book.path, finished);
+        dataSignature = 0;
+        render();
     }
 
     private void addToCollection(Library.Book b) {
@@ -1533,88 +1587,6 @@ public class MainActivity extends Activity {
     // ================================================================== reading stats
 
     /** Two equal-height cards side by side. */
-    View metricRow(View a, View b) {
-        LinearLayout r = ink.row();
-        r.setGravity(Gravity.TOP);
-        r.addView(a, new LinearLayout.LayoutParams(0, -1, 1f));
-        LinearLayout.LayoutParams pb = new LinearLayout.LayoutParams(0, -1, 1f);
-        pb.leftMargin = ink.dp(10);
-        r.addView(b, pb);
-        return r;
-    }
-
-    View metric(String label, String value, String sub) {
-        LinearLayout t = ink.col();
-        t.setPadding(ink.dp(16), ink.dp(14), ink.dp(12), ink.dp(14));
-        t.setBackground(ink.card(12, false));
-        t.addView(ink.faint(label, 13));
-        TextView v = ink.oneLine(ink.text(value, TypeScale.TITLE_SM, ink.TEXT));
-        v.setPadding(0, ink.dp(8), 0, 0);
-        t.addView(v);
-        if (sub != null) {
-            TextView s = ink.muted(sub, 12);
-            s.setPadding(0, ink.dp(5), 0, 0);
-            t.addView(s);
-        }
-        return t;
-    }
-
-    /** Seven bars: black when the day met the goal (or any reading without a goal), outlined otherwise. */
-    final class WeekChart extends View {
-        private final Stats s;
-        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-
-        WeekChart(Context c, Stats s) {
-            super(c);
-            this.s = s;
-        }
-
-        @Override protected void onDraw(Canvas c) {
-            Calendar[] week = s.week();
-            int max = Math.max(1, s.goal);
-            for (Calendar d : week) max = Math.max(max, s.on(d));
-            float w = getWidth(), h = getHeight();
-            float labelH = ink.dp(22), valueH = ink.dp(16);
-            float top = valueH, bottom = h - labelH;
-            float slot = w / 7f, barW = slot * 0.42f, r = ink.dp(3);
-            Calendar today = Calendar.getInstance();
-            SimpleDateFormat dn = new SimpleDateFormat("EEE", Locale.getDefault());
-            p.setTextAlign(Paint.Align.CENTER);
-            for (int i = 0; i < 7; i++) {
-                int m = s.on(week[i]);
-                float x = slot * i + slot / 2f;
-                float bh = (bottom - top) * m / (float) max;
-                boolean isToday = week[i].get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR) && week[i].get(Calendar.YEAR) == today.get(Calendar.YEAR);
-                boolean strong = s.hasGoal() ? m >= s.goal : m > 0;
-                if (m > 0) {
-                    p.setColor(strong ? ink.TEXT : 0xFF9A9A9A);
-                    p.setStyle(Paint.Style.FILL);
-                    c.drawRoundRect(x - barW / 2f, bottom - Math.max(bh, ink.dp(4)), x + barW / 2f, bottom, r, r, p);
-                    p.setColor(ink.TEXT2);
-                    p.setTextSize(ink.dp(11));
-                    p.setTypeface(ink.REGULAR);
-                    c.drawText(String.valueOf(m), x, bottom - Math.max(bh, ink.dp(4)) - ink.dp(5), p);
-                } else {
-                    p.setColor(0xFFD6D6D6);
-                    c.drawRoundRect(x - barW / 2f, bottom - ink.dp(2), x + barW / 2f, bottom, 1, 1, p);
-                }
-                p.setColor(isToday ? ink.TEXT : ink.TEXT3);
-                p.setTextSize(ink.dp(12));
-                p.setTypeface(isToday ? ink.MEDIUM : ink.REGULAR);
-                c.drawText(dn.format(week[i].getTime()), x, h - ink.dp(4), p);
-            }
-            if (s.hasGoal()) {
-                float gy = bottom - (bottom - top) * s.goal / (float) max;
-                Paint dash = new Paint(Paint.ANTI_ALIAS_FLAG);
-                dash.setColor(ink.TEXT3);
-                dash.setStyle(Paint.Style.STROKE);
-                dash.setStrokeWidth(Math.max(1, ink.dp(1)));
-                dash.setPathEffect(new DashPathEffect(new float[]{ink.dp(4), ink.dp(4)}, 0));
-                c.drawLine(0, gy, w, gy, dash);
-            }
-        }
-    }
-
     void chooseGoal() {
         int[] goals = {0, 10, 15, 20, 30, 45, 60, 90, 120};
         String[] labels = new String[goals.length];
@@ -1689,6 +1661,14 @@ public class MainActivity extends Activity {
         return iv;
     }
 
+    View appGrid(int count, IntFunction<View> builder) {
+        return cells("appsGrid", null, count, 96, 88, builder);
+    }
+
+    void searchApps(String initial, java.util.function.Consumer<String> result) {
+        sheets.prompt("Search apps", initial, result);
+    }
+
     void appMenu(App a) {
         boolean fav = store.isFavorite(a.key);
         boolean reads = store.readingApps().contains(a.pkg);
@@ -1697,7 +1677,7 @@ public class MainActivity extends Activity {
         opts.add(fav ? "Remove from favorites" : "Add to favorites");
         if (fav) opts.add("Move to first favorite");
         opts.add(reads ? "Don't count as reading" : "Count time as reading");
-        opts.add("Hide from Apps");
+        opts.add(store.hidden().contains(a.key) ? "Show in Apps" : "Hide from Apps");
         opts.add("App info");
         choose(displayLabel(a), opts.toArray(new String[0]), -1, w -> {
             switch (opts.get(w)) {
@@ -1716,6 +1696,7 @@ public class MainActivity extends Activity {
                     store.setReadingApp(a.pkg, !reads);
                     render();
                     break;
+                case "Show in Apps": store.setHidden(a.key, false); render(); break;
                 case "Hide from Apps": {
                     store.setHidden(a.key, true);
                     List<String> f = store.favorites();
@@ -1908,7 +1889,7 @@ public class MainActivity extends Activity {
                 } else if (manual) {
                     toast(failed != null ? "Couldn't reach GitHub. Try again later." : "Ink Home is up to date");
                 }
-                if (screen == Screen.SETTINGS && sub == null) render();
+                if (screen == Screen.SETTINGS && (sub == null || SettingsScreen.ABOUT.equals(sub))) render();
             });
         });
     }
@@ -1969,6 +1950,7 @@ public class MainActivity extends Activity {
     }
 
     private View bindPageKeys(PageLayout layout) {
+        layout.setSwipeEnabled(store.swipePages());
         pageNext = layout::next;
         pagePrev = layout::previous;
         return layout;
