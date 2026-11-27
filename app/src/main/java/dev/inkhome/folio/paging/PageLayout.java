@@ -21,6 +21,7 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
     private final int footerHeight;
     private ScrollView overflow;
     private int page;
+    private int pendingItem = -1;
     private Pagination pages;
     private int lastWidth = -1, lastHeight = -1, lastExtent = -1;
     private float downX, downY;
@@ -83,6 +84,10 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
         lastHeight = height;
         lastExtent = extent;
         pages = paginate(width, height, footerHeight);
+        if (pendingItem >= 0) {
+            page = pages.pageAt(pendingItem);
+            pendingItem = -1;
+        }
         page = Math.max(0, Math.min(page, pages.count() - 1));
         drawPage();
         postInvalidateOnAnimation();
@@ -95,7 +100,10 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
 
     public final void next() { move(page + 1); }
     public final void previous() { move(page - 1); }
-    final void jump(int position) { if (pages != null) move(pages.pageAt(position)); }
+    protected final void jump(int position) {
+        if (pages == null) pendingItem = position;
+        else move(pages.pageAt(position));
+    }
 
     private void move(int to) {
         if (pages == null || to < 0 || to >= pages.count() || to == page) return;

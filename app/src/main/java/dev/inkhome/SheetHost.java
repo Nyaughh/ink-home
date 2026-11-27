@@ -22,6 +22,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import dev.inkhome.folio.widget.Button;
+import dev.inkhome.folio.paging.PagedList;
 import dev.inkhome.folio.core.TypeScale;
 import dev.inkhome.folio.core.WindowClass;
 
@@ -128,6 +129,10 @@ final class SheetHost {
         present(title, ink.scroller(body), null, null, null);
     }
 
+    void paged(String title, PagedList contents) {
+        present(title, contents, null, null, null);
+    }
+
     void custom(String title, View contents) {
         present(title, style.get().scroller(contents), "Done", this::dismiss, null);
     }
@@ -187,14 +192,19 @@ final class SheetHost {
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE |
                     WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
         }
-        if (body instanceof ListView || body instanceof ScrollView) {
+        if (body instanceof ListView || body instanceof ScrollView || body instanceof PagedList) {
             d.setOnKeyListener((dialog, key, event) -> {
-                boolean next = key == KeyEvent.KEYCODE_PAGE_DOWN || key == KeyEvent.KEYCODE_VOLUME_DOWN;
-                boolean prev = key == KeyEvent.KEYCODE_PAGE_UP || key == KeyEvent.KEYCODE_VOLUME_UP;
+                boolean next = key == KeyEvent.KEYCODE_PAGE_DOWN || key == KeyEvent.KEYCODE_VOLUME_DOWN
+                        || (body instanceof PagedList && key == KeyEvent.KEYCODE_DPAD_RIGHT);
+                boolean prev = key == KeyEvent.KEYCODE_PAGE_UP || key == KeyEvent.KEYCODE_VOLUME_UP
+                        || (body instanceof PagedList && key == KeyEvent.KEYCODE_DPAD_LEFT);
                 if (!next && !prev) return false;
                 if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
                     boolean forward = settings.pageKeysReversed() ? prev : next;
-                    if (body instanceof ListView) {
+                    if (body instanceof PagedList) {
+                        PagedList list = (PagedList) body;
+                        if (forward) list.next(); else list.previous();
+                    } else if (body instanceof ListView) {
                         ListView list = (ListView) body;
                         int start = list.getFirstVisiblePosition();
                         int step = Math.max(1, list.getLastVisiblePosition() - start);

@@ -9,8 +9,6 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.Layout;
-import android.graphics.text.LineBreaker;
 import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -28,15 +26,18 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.File;
+import dev.inkhome.reader.ChapterPages;
+import dev.inkhome.reader.ContentsSheet;
+import dev.inkhome.folio.Type;
+import dev.inkhome.folio.core.TypeScale;
 import dev.inkhome.folio.epd.RefreshController;
 import dev.inkhome.folio.widget.Stepper;
 import dev.inkhome.folio.widget.Segmented;
 import dev.inkhome.folio.core.RefreshBudget.Change;
-import java.text.SimpleDateFormat;
+import dev.inkhome.reader.TextSheet;
+import dev.inkhome.folio.widget.Progress;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -60,6 +61,8 @@ public class ReaderActivity extends Activity {
     private FrameLayout root;
     private SheetHost sheets;
     private View menu;
+    private TextSheet textSheet;
+    private boolean moreSettings;
     private RefreshController refreshController;
 
     // position
@@ -72,6 +75,7 @@ public class ReaderActivity extends Activity {
     private StaticLayout layout;
     private final List<Integer> pageStarts = new ArrayList<>();
     private boolean loading = false;
+    private int laidOutChapter = -1;
     private volatile int layoutGeneration;
 
     // ================================================================== lifecycle
@@ -92,7 +96,7 @@ public class ReaderActivity extends Activity {
 
         root = new FrameLayout(this);
         ActivityWindow.fitContent(this, root);
-        root.setBackgroundColor(Color.WHITE);
+        root.setBackgroundColor(ink.PAPER);
         pageView = new PageView(this);
         root.addView(pageView, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
@@ -162,6 +166,8 @@ public class ReaderActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (sheets.dismiss()) return;
+        if (moreSettings) { showTextSettings(); return; }
         if (menu != null) { hideMenu(); return; }
         super.onBackPressed();
     }
@@ -174,7 +180,10 @@ public class ReaderActivity extends Activity {
         boolean prev = code == KeyEvent.KEYCODE_PAGE_UP || code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_DPAD_LEFT;
         if (store.pageKeysReversed()) { boolean t = next; next = prev; prev = t; }
         if (next || prev) {
-            if (e.getAction() == KeyEvent.ACTION_UP && !e.isCanceled() && menu == null) { if (next) nextPage(); else prevPage(); }
+            if (e.getAction() == KeyEvent.ACTION_UP && !e.isCanceled()) {
+                if (textSheet != null) textSheet.pageScroll(next);
+                else if (menu == null) { if (next) nextPage(); else prevPage(); }
+            }
             return true;
         }
         return super.dispatchKeyEvent(e);
@@ -184,19 +193,24 @@ public class ReaderActivity extends Activity {
 
     private TextPaint paint() {
         TextPaint p = new TextPaint(TextPaint.ANTI_ALIAS_FLAG);
-        p.setColor(Color.BLACK);
+        p.setColor(ink.TEXT);
         // Links would otherwise use the default link colour, which is transparent here.
-        p.linkColor = Color.BLACK;
+        p.linkColor = ink.TEXT;
         p.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, store.readerFontSize(), getResources().getDisplayMetrics()));
-        p.setTypeface(store.readerSerif() ? Typeface.SERIF : Typeface.SANS_SERIF);
+        p.setTypeface(readerTypeface(store.readerFont()));
         return p;
     }
 
     private int marginPx() { return ink.dp(store.readerMargin()); }
     private int headerPx() { return ink.dp(20); }
-    private int footerPx() { return ink.dp(20); }
-    private int textWidth() { return Math.max(100, pageView.getWidth() - 2 * marginPx()); }
-    private int textHeight() { return Math.max(100, pageView.getHeight() - headerPx() - footerPx()); }
+    private int footerPx() {
+        if ("off".equals(store.readerFooter())) return ink.dp(20);
+        return ink.dp(16) + (int) Math.ceil(pageView.small.descent() - pageView.small.ascent());
+    }
+    private int textWidth(float em) {
+        return Math.max(1, Math.min(pageView.getWidth() - 2 * marginPx(), Math.round(34 * em)));
+    }
+    private int textHeight() { return Math.max(1, pageView.getHeight() - headerPx() - footerPx()); }
 
     /** Lays out the current chapter off the UI thread, then shows the page holding pendingOffset. */
     private void loadChapter() {
@@ -204,8 +218,8 @@ public class ReaderActivity extends Activity {
         final int generation = ++layoutGeneration;
         loading = true;
         pageView.invalidate();
-        final int ch = chapter, w = textWidth(), h = textHeight();
         final TextPaint tp = paint();
+        final int ch = chapter, w = textWidth(tp.getTextSize()), h = textHeight();
         final float spacing = store.readerLineSpacing();
         final boolean justify = store.readerJustify();
         work.execute(() -> {
@@ -214,28 +228,10 @@ public class ReaderActivity extends Activity {
             List<Integer> starts = new ArrayList<>();
             try {
                 Spanned raw = book.chapter(ch, getResources(), w, h);
-                android.text.SpannableStringBuilder text = new android.text.SpannableStringBuilder(raw);
-                text.setSpan(new ParagraphGap(Math.round(tp.getTextSize() * 0.55f)), 0, text.length(), Spanned.SPAN_INCLUSIVE_INCLUSIVE);
-                StaticLayout.Builder sb = StaticLayout.Builder.obtain(text, 0, text.length(), tp, w)
-                        .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                        .setLineSpacing(0, spacing)
-                        .setIncludePad(false)
-                        .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NORMAL)
-                        .setBreakStrategy(LineBreaker.BREAK_STRATEGY_HIGH_QUALITY);
-                if (justify) sb.setJustificationMode(LineBreaker.JUSTIFICATION_MODE_INTER_WORD);
-                sl = sb.build();
-                // A page is as many whole lines as fit; a line taller than a page gets one to itself.
-                int line = 0, n = sl.getLineCount();
-                while (line < n) {
-                    starts.add(line);
-                    int top = sl.getLineTop(line);
-                    int next = line + 1;
-                    while (next < n && sl.getLineBottom(next) - top <= h) next++;
-                    line = next;
-                }
-                if (starts.isEmpty()) starts.add(0);
+                sl = ChapterPages.layout(raw, tp, w, h, spacing, justify, starts);
             } catch (Exception e) {
-                sl = StaticLayout.Builder.obtain("This chapter couldn't be read.", 0, 30, tp, w).build();
+                String message = "This chapter couldn't be read.";
+                sl = StaticLayout.Builder.obtain(message, 0, message.length(), tp, w).build();
                 starts.clear();
                 starts.add(0);
             }
@@ -243,13 +239,18 @@ public class ReaderActivity extends Activity {
             ui.post(() -> {
                 if (generation != layoutGeneration || isDestroyed() || isFinishing()) return;
                 layout = result;
+                laidOutChapter = ch;
                 pageStarts.clear();
                 pageStarts.addAll(starts);
                 if (pendingOffset < 0) page = pageStarts.size() - 1;
                 else page = pageForOffset(pendingOffset);
                 if (pendingOffset < 0) pendingOffset = offsetOfPage();
                 loading = false;
-                showPage(true);
+                if (textSheet == null) showPage(true);
+                else {
+                    pageView.invalidate();
+                    savePosition();
+                }
             });
         });
     }
@@ -257,9 +258,8 @@ public class ReaderActivity extends Activity {
     private int pageForOffset(int offset) {
         if (layout == null) return 0;
         int line = layout.getLineForOffset(Math.min(offset, layout.getText().length()));
-        int p = 0;
-        for (int i = 0; i < pageStarts.size(); i++) if (pageStarts.get(i) <= line) p = i;
-        return p;
+        int match = java.util.Collections.binarySearch(pageStarts, line);
+        return match >= 0 ? match : Math.max(0, -match - 2);
     }
 
     private int offsetOfPage() {
@@ -299,16 +299,18 @@ public class ReaderActivity extends Activity {
 
     // ================================================================== drawing
 
-    /** Just the page: no header or footer while reading. Tap the middle for controls. */
+    /** Just the page: with the configured reading footer. Tap the middle for controls. */
     final class PageView extends View {
         private final TextPaint small = new TextPaint(TextPaint.ANTI_ALIAS_FLAG);
         private float downX, downY;
 
         PageView(Context c) {
             super(c);
-            small.setColor(0xFF6A6A6A);
-            small.setTextSize(ink.dp(13));
-            small.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            TypeScale label = TypeScale.LABEL;
+            small.setColor(ink.TEXT2);
+            small.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
+                    label.size * ink.folio.textScale * ink.folio.uiScale, getResources().getDisplayMetrics()));
+            small.setTypeface(Type.sans(c, label.weight(ink.folio.displayClass)));
         }
 
         @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
@@ -318,9 +320,9 @@ public class ReaderActivity extends Activity {
         }
 
         @Override protected void onDraw(Canvas c) {
-            c.drawColor(Color.WHITE);
-            int m = marginPx(), w = getWidth();
-            if (book == null || layout == null || loading) {
+            c.drawColor(ink.PAPER);
+            int w = getWidth();
+            if (book == null || layout == null || laidOutChapter != chapter) {
                 String s = book == null ? "Opening…" : "";
                 c.drawText(s, (w - small.measureText(s)) / 2f, getHeight() / 2f, small);
                 return;
@@ -329,10 +331,30 @@ public class ReaderActivity extends Activity {
             int last = page + 1 < pageStarts.size() ? pageStarts.get(page + 1) - 1 : layout.getLineCount() - 1;
             int top = layout.getLineTop(first), bottom = layout.getLineBottom(last);
             c.save();
-            c.translate(m, headerPx() - top);
-            c.clipRect(0, top, textWidth(), bottom);
+            int left = (w - layout.getWidth()) / 2;
+            c.translate(left, headerPx() - top);
+            c.clipRect(0, top, layout.getWidth(), Math.min(bottom, top + textHeight()));
             layout.draw(c);
             c.restore();
+            String footer = store.readerFooter();
+            if (!"off".equals(footer)) drawFooter(c, left, footer);
+        }
+
+        private void drawFooter(Canvas canvas, int left, String mode) {
+            int width = layout.getWidth();
+            float baseline = getHeight() - ink.dp(8) - small.descent();
+            String progress = Math.round(book.progress(chapter, chapterFraction()) * 100)
+                    + "% · " + (page + 1) + " / " + pageStarts.size();
+            float progressX = Math.max(0, width - small.measureText(progress));
+            canvas.save();
+            canvas.clipRect(left, getHeight() - footerPx(), left + width, getHeight());
+            canvas.drawText(progress, left + progressX, baseline, small);
+            if ("chapter_progress".equals(mode)) {
+                CharSequence title = TextUtils.ellipsize(chapterName(chapter), small,
+                        Math.max(0, progressX - ink.dp(12)), TextUtils.TruncateAt.END);
+                canvas.drawText(title.toString(), left, baseline, small);
+            }
+            canvas.restore();
         }
 
         @Override public boolean onTouchEvent(MotionEvent e) {
@@ -352,41 +374,21 @@ public class ReaderActivity extends Activity {
         }
     }
 
-    /** Progress bar in pure black and white: outlined track, solid fill. */
-    final class BwBar extends View {
-        private final float f;
-        private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-
-        BwBar(Context c, float fraction) {
-            super(c);
-            f = Math.max(0f, Math.min(1f, fraction));
-        }
-
-        @Override protected void onMeasure(int w, int h) {
-            setMeasuredDimension(MeasureSpec.getSize(w), ink.dp(10));
-        }
-
-        @Override protected void onDraw(Canvas c) {
-            float s = Math.max(2, ink.dp(1.5f)), r = getHeight() / 2f;
-            p.setColor(Color.BLACK);
-            p.setStyle(android.graphics.Paint.Style.STROKE);
-            p.setStrokeWidth(s);
-            c.drawRoundRect(s / 2, s / 2, getWidth() - s / 2, getHeight() - s / 2, r, r, p);
-            p.setStyle(android.graphics.Paint.Style.FILL);
-            if (f > 0) c.drawRoundRect(0, 0, Math.max(getHeight(), getWidth() * f), getHeight(), r, r, p);
-        }
-    }
-
     // ================================================================== controls
 
     private void hideMenu() {
         if (menu == null) return;
-        root.removeView(menu);
-        menu = null;
-        refreshController.changed(pageView, Change.OVERLAY);
+        removeControls();
+        refreshController.cleanWhenIdle();
     }
 
-    /** One tap shows: back and settings at the top; chapter picker, chevrons and progress at the bottom. */
+    private void removeControls() {
+        if (menu != null) root.removeView(menu);
+        menu = null;
+        textSheet = null;
+        moreSettings = false;
+    }
+
     private void showMenu() {
         if (book == null) return;
         hideMenu();
@@ -394,21 +396,24 @@ public class ReaderActivity extends Activity {
         overlay.setOnClickListener(v -> hideMenu());
 
         LinearLayout top = ink.row();
-        top.setBackgroundColor(Color.WHITE);
+        top.setBackgroundColor(ink.PAPER);
         top.setPadding(ink.dp(10), ink.dp(10), ink.dp(10), ink.dp(10));
         top.setClickable(true);
-        top.addView(barIcon("back", this::finish));
+        ImageView back = barIcon("back", this::finish);
+        back.setContentDescription("Close book");
+        top.addView(back);
         TextView title = ink.oneLine(ink.medium(book.title.isEmpty() ? Library.titleFromName(file.getName()) : book.title, 16));
         title.setPadding(ink.dp(8), 0, ink.dp(8), 0);
         top.addView(title, ink.weight(1));
-        top.addView(barIcon("settings", this::showTextSettings));
+        top.addView(barLabel("Contents", "Contents", this::showChapters));
+        top.addView(barLabel("Aa", "Text settings", this::showTextSettings));
         LinearLayout topWrap = ink.col();
         topWrap.addView(top);
         topWrap.addView(ink.hair());
         overlay.addView(topWrap, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
 
         LinearLayout bottom = ink.col();
-        bottom.setBackgroundColor(Color.WHITE);
+        bottom.setBackgroundColor(ink.PAPER);
         bottom.setClickable(true);
         bottom.setPadding(ink.dp(10), ink.dp(10), ink.dp(10), ink.dp(16));
 
@@ -416,31 +421,27 @@ public class ReaderActivity extends Activity {
         ImageView prev = barIcon("back", () -> { if (chapter > 0) { chapter--; pendingOffset = 0; hideMenu(); loadChapter(); } });
         prev.setAlpha(chapter > 0 ? 1f : 0.3f);
         chapters.addView(prev);
-        // The chapter name, centred, opens the chapter list on the current chapter.
-        LinearLayout picker = ink.row();
-        picker.setGravity(Gravity.CENTER);
-        picker.setPadding(ink.dp(10), ink.dp(8), ink.dp(10), ink.dp(8));
-        picker.setBackground(ink.card(8, true));
+        prev.setEnabled(chapter > 0);
+        prev.setContentDescription("Previous chapter");
+        LinearLayout description = ink.col();
         TextView name = ink.oneLine(ink.medium(chapterName(chapter), 15));
         name.setGravity(Gravity.CENTER);
-        picker.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
-        picker.addView(ink.icon("down", 16), ink.m(ink.dp(16), ink.dp(16), 6, 0, 0, 0));
-        picker.setOnClickListener(v -> showChapters());
-        chapters.addView(picker, ink.m(0, -2, 8, 0, 8, 0));
-        ((LinearLayout.LayoutParams) picker.getLayoutParams()).weight = 1;
+        description.addView(name);
+        TextView position = ink.medium("Page " + (page + 1) + " of " + Math.max(1, pageStarts.size())
+                + " in this chapter", 13);
+        position.setGravity(Gravity.CENTER);
+        description.addView(position);
+        chapters.addView(description, ink.weight(1));
         ImageView next = barIcon("chevron", () -> { if (chapter < book.spine.size() - 1) { chapter++; pendingOffset = 0; hideMenu(); loadChapter(); } });
         next.setAlpha(chapter < book.spine.size() - 1 ? 1f : 0.3f);
+        next.setEnabled(chapter < book.spine.size() - 1);
+        next.setContentDescription("Next chapter");
         chapters.addView(next);
         bottom.addView(chapters);
 
         int pct = Math.round(book.progress(chapter, chapterFraction()) * 100);
-        LinearLayout prog = ink.row();
-        prog.setPadding(ink.dp(8), ink.dp(16), ink.dp(8), 0);
-        prog.addView(new BwBar(this, pct / 100f), new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView pc = ink.medium(pct + "%", 15);
-        pc.setPadding(ink.dp(12), 0, 0, 0);
-        prog.addView(pc);
-        bottom.addView(prog);
+        Progress progress = new Progress(ink.folio, 5, true, pct);
+        bottom.addView(progress, ink.m(-1, -2, 8, 12, 8, 0));
 
         LinearLayout bottomWrap = ink.col();
         bottomWrap.addView(ink.hair());
@@ -450,6 +451,18 @@ public class ReaderActivity extends Activity {
         refreshController.changed(overlay, Change.OVERLAY);
         menu = overlay;
         root.addView(overlay, new FrameLayout.LayoutParams(-1, -1));
+    }
+
+    private TextView barLabel(String label, String description, Runnable click) {
+        TextView button = ink.medium(label, 16);
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(ink.dp(44));
+        button.setMinWidth(ink.dp(44));
+        button.setPadding(ink.dp(6), 0, ink.dp(6), 0);
+        button.setContentDescription(description);
+        button.setBackground(ink.pressable());
+        button.setOnClickListener(v -> click.run());
+        return button;
     }
 
     private ImageView barIcon(String icon, Runnable r) {
@@ -467,7 +480,7 @@ public class ReaderActivity extends Activity {
         return t.isEmpty() ? "Chapter " + (ch + 1) + " of " + book.spine.size() : t;
     }
 
-    /** The chapter list, opened scrolled to the current chapter with it selected. */
+    /** Open the contents on the page containing the current chapter. */
     private void showChapters() {
         final List<Integer> targets = new ArrayList<>();
         List<String> names = new ArrayList<>();
@@ -482,64 +495,107 @@ public class ReaderActivity extends Activity {
             for (int i = 0; i < book.spine.size(); i++) { names.add("Chapter " + (i + 1)); targets.add(i); }
             current = chapter;
         }
-        sheets.choose("Contents", names.toArray(new String[0]), current, w -> {
+        ContentsSheet contents = new ContentsSheet(ink.folio, names, current, w -> {
+            sheets.dismiss();
             chapter = targets.get(w);
             pendingOffset = 0;
             hideMenu();
             loadChapter();
-        });
+        }, () -> refreshController.changed(root, Change.PAGE));
+        sheets.paged("Contents", contents);
     }
 
-    /** Text settings: size, spacing, margins, typeface, justification and refresh rate. */
-    private void showTextSettings() {
-        LinearLayout p = ink.col();
-        p.setPadding(ink.dp(20), ink.dp(8), ink.dp(20), ink.dp(4));
-        p.addView(stepper("Text size", store.readerFontSize() + " sp", () -> setFont(-1), () -> setFont(+1)));
-        p.addView(stepper("Line spacing", String.format(Locale.ROOT, "%.2f", store.readerLineSpacing()),
-                () -> { store.setReaderLineSpacing(Math.max(1.0f, store.readerLineSpacing() - 0.1f)); relayout(); },
-                () -> { store.setReaderLineSpacing(Math.min(2.2f, store.readerLineSpacing() + 0.1f)); relayout(); }));
-        p.addView(stepper("Margins", store.readerMargin() + " u", () -> { store.setReaderMargin(Math.max(8, store.readerMargin() - 4)); relayout(); },
-                () -> { store.setReaderMargin(Math.min(64, store.readerMargin() + 4)); relayout(); }));
-        p.addView(new Segmented(ink.folio, "Typeface", new String[]{"Serif", "Sans"}, store.readerSerif() ? 0 : 1, i -> { store.setReaderSerif(i == 0); relayout(); }), ink.m(-1, -2, 0, 12, 0, 0));
-        p.addView(new Segmented(ink.folio, "Alignment", new String[]{"Justified", "Ragged"}, store.readerJustify() ? 0 : 1, i -> { store.setReaderJustify(i == 0); relayout(); }), ink.m(-1, -2, 0, 10, 0, 0));
-        int[] rates = {0, 1, 4, 8, 16};
-        String[] labels = {"Off", "1 page", "4 pages", "8 pages", "16 pages"};
-        int cur = 3;
-        for (int i = 0; i < rates.length; i++) if (rates[i] == store.readerRefreshEvery()) cur = i;
-        p.addView(ink.heading("Full refresh"), ink.m(-1, -2, 0, 16, 0, 0));
-        p.addView(new Stepper(ink.folio, "Full refresh", labels, cur, i -> store.setReaderRefreshEvery(rates[i])));
-        sheets.custom("Text", p);
+    private static final String[] FONT_IDS = {"literata", "source_sans", "system_serif", "system_sans"};
+    private static final String[] FOOTER_IDS = {"off", "progress", "chapter_progress"};
+
+    private Typeface readerTypeface(String font) {
+        switch (font) {
+            case "system_serif": return Typeface.SERIF;
+            case "system_sans": return Typeface.SANS_SERIF;
+            case "source_sans": return Type.sans(this, 400);
+            default: return Type.reading(this, false);
+        }
     }
 
-    private void setFont(int delta) {
-        store.setReaderFontSize(Math.max(12, Math.min(40, store.readerFontSize() + delta)));
+    private TextSheet openTextPanel(String title, boolean more) {
+        removeControls();
+        moreSettings = more;
+        FrameLayout overlay = new FrameLayout(this);
+        overlay.setOnClickListener(v -> hideMenu());
+        textSheet = new TextSheet(ink.folio, title, root.getHeight() * 3 / 4,
+                more ? this::showTextSettings : this::hideMenu);
+        int width = Math.min(root.getWidth(), ink.dp(500));
+        overlay.addView(textSheet, new FrameLayout.LayoutParams(width, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
+        menu = overlay;
+        root.addView(overlay);
+        refreshController.changed(textSheet, Change.OVERLAY);
+        return textSheet;
+    }
+
+    private void textChanged() {
+        refreshController.fast(textSheet);
         relayout();
     }
 
-    private View stepper(String label, String value, Runnable minus, Runnable plus) {
-        LinearLayout r = ink.row();
-        r.setPadding(0, ink.dp(8), 0, ink.dp(8));
-        r.addView(ink.body(label), ink.weight(1));
-        TextView v = ink.medium(value, 16);
-        ImageView m = Stepper.button(ink.folio, "minus", "Decrease " + label, () -> { minus.run(); refreshDialogValue(v, label); });
-        ImageView pl = Stepper.button(ink.folio, "plus", "Increase " + label, () -> { plus.run(); refreshDialogValue(v, label); });
-        r.addView(m, ink.dp(38), ink.dp(34));
-        v.setGravity(Gravity.CENTER);
-        r.addView(v, new LinearLayout.LayoutParams(ink.dp(64), -2));
-        r.addView(pl, ink.dp(38), ink.dp(34));
-        return r;
+    private void showTextSettings() {
+        TextSheet panel = openTextPanel("Text", false);
+        Typeface[] faces = new Typeface[FONT_IDS.length];
+        for (int i = 0; i < faces.length; i++) faces[i] = readerTypeface(FONT_IDS[i]);
+        panel.fonts(new String[]{"Literata", "Source Sans", "System serif", "System sans"}, faces,
+                java.util.Arrays.asList(FONT_IDS).indexOf(store.readerFont()), i -> {
+                    store.setReaderFont(FONT_IDS[i]);
+                    textChanged();
+                });
+        panel.sizes(store.readerFontSize(), size -> {
+            store.setReaderFontSize(size);
+            textChanged();
+        });
+        float[] spacing = {1.1f, 1.35f, 1.7f};
+        int[] margins = {12, 24, 40};
+        // Keep existing custom values until the user chooses a preset.
+        int lineChoice = -1, marginChoice = -1;
+        for (int i = 0; i < spacing.length; i++) {
+            if (Math.abs(spacing[i] - store.readerLineSpacing()) < .001f) lineChoice = i;
+            if (margins[i] == store.readerMargin()) marginChoice = i;
+        }
+        panel.pictured("Line spacing", false, new String[]{"Compact", "Standard", "Loose"}, lineChoice, i -> {
+            store.setReaderLineSpacing(spacing[i]);
+            textChanged();
+        });
+        panel.pictured("Margins", true, new String[]{"Narrow", "Standard", "Wide"}, marginChoice, i -> {
+            store.setReaderMargin(margins[i]);
+            textChanged();
+        });
+        panel.heading("Alignment");
+        panel.control(new Segmented(ink.folio, "Alignment", new String[]{"Justified", "Left"},
+                store.readerJustify() ? 0 : 1, i -> {
+                    store.setReaderJustify(i == 0);
+                    textChanged();
+                }));
+        panel.control(barLabel("Page footer, refresh and more", "Page footer, refresh and more", this::showMoreSettings));
     }
 
-    private void refreshDialogValue(TextView v, String label) {
-        refreshController.fast(v);
-        if (label.equals("Text size")) v.setText(store.readerFontSize() + " sp");
-        else if (label.equals("Line spacing")) v.setText(String.format(Locale.ROOT, "%.2f", store.readerLineSpacing()));
-        else v.setText(store.readerMargin() + " u");
+    private void showMoreSettings() {
+        TextSheet panel = openTextPanel("Reader settings", true);
+        panel.heading("Page footer");
+        panel.control(new Segmented(ink.folio, "Page footer", new String[]{"Off", "Progress", "Chapter and progress"},
+                java.util.Arrays.asList(FOOTER_IDS).indexOf(store.readerFooter()), i -> {
+                    store.setReaderFooter(FOOTER_IDS[i]);
+                    textChanged();
+                }));
+        int[] rates = {0, 1, 4, 8, 16};
+        String[] labels = {"Off", "1 page", "4 pages", "8 pages", "16 pages"};
+        int current = 3;
+        for (int i = 0; i < rates.length; i++) if (rates[i] == store.readerRefreshEvery()) current = i;
+        panel.heading("Full refresh");
+        panel.control(new Stepper(ink.folio, "Full refresh", labels, current, i -> {
+            store.setReaderRefreshEvery(rates[i]);
+            refreshController.fast(panel);
+        }));
     }
 
     /** Re-paginates the chapter with new text settings, keeping the same place. */
     private void relayout() {
-        pendingOffset = offsetOfPage();
         loadChapter();
     }
 
@@ -547,20 +603,6 @@ public class ReaderActivity extends Activity {
     public boolean dispatchTouchEvent(MotionEvent event) {
         if (sheets != null) sheets.touched(event);
         return super.dispatchTouchEvent(event);
-    }
-
-    /** Adds a little space after each paragraph instead of a whole blank line. */
-    static final class ParagraphGap implements android.text.style.LineHeightSpan {
-        private final int gap;
-        ParagraphGap(int gapPx) { gap = gapPx; }
-
-        @Override
-        public void chooseHeight(CharSequence text, int start, int end, int spanstartv, int lineHeight, android.graphics.Paint.FontMetricsInt fm) {
-            if (end > 0 && end <= text.length() && text.charAt(end - 1) == '\n') {
-                fm.descent += gap;
-                fm.bottom += gap;
-            }
-        }
     }
 
     static Intent intent(Context c, File f) {

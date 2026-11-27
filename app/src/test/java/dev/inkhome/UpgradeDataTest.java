@@ -73,7 +73,7 @@ public class UpgradeDataTest {
         assertEquals(1.3f, store.uiScale(), 0f);
         assertEquals(1.6f, store.readerLineSpacing(), 0f);
         assertEquals(23, store.readerFontSize());
-        assertFalse(store.readerSerif());
+        assertEquals("system_sans", store.readerFont());
         assertEquals("custom", store.sleepMode());
         assertEquals("custom", store.sleepFileMode());
         assertEquals("progress", store.librarySort());

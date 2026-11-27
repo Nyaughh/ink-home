@@ -154,8 +154,16 @@ final class Store {
     void setReaderLineSpacing(float v) { p.edit().putFloat("rSpacing", v).apply(); }
     int readerMargin() { return p.getInt("rMargin", 24); }
     void setReaderMargin(int v) { p.edit().putInt("rMargin", v).apply(); }
-    boolean readerSerif() { return p.getBoolean("rSerif", true); }
-    void setReaderSerif(boolean v) { p.edit().putBoolean("rSerif", v).apply(); }
+    String readerFont() {
+        String font = p.getString("rFontFace", null);
+        if (font != null) return font;
+        // A saved switch explicitly selected one of Android's system families.
+        if (!p.contains("rSerif")) return "literata";
+        return p.getBoolean("rSerif", true) ? "system_serif" : "system_sans";
+    }
+    void setReaderFont(String font) { p.edit().putString("rFontFace", font).apply(); }
+    String readerFooter() { return p.getString("rFooter", "off"); }
+    void setReaderFooter(String footer) { p.edit().putString("rFooter", footer).apply(); }
     boolean readerJustify() { return p.getBoolean("rJustify", true); }
     void setReaderJustify(boolean v) { p.edit().putBoolean("rJustify", v).apply(); }
     int readerRefreshEvery() { return p.getInt("rRefresh", 8); }

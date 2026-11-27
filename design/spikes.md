@@ -21,3 +21,11 @@ Before the Phase 5 overlay test, both the package and UID queries for
 SYSTEM_ALERT_WINDOW returned “No operations” and “Default mode: default”.
 The browser and reader packages on this C69 are org.chromium.chrome and
 com.onyx.kreader.
+
+S7 on the Phase 5 build: the application overlay stayed visible in Chromium and
+NeoReader. Android Settings reported mForceHideNonSystemOverlayWindow=true
+and hid the dot; the dot returned in Chromium. Moving across edges, tucking,
+and pulling back out worked. One tap at 16:21:44.847 returned from the Onyx
+refreshScreen(98) method. The physical extent of the clean requires observation.
+Disabling the dot removed its window and foreground service. The package and
+UID overlay modes were both verified back at default after testing.
