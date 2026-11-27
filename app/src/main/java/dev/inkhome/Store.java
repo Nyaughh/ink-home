@@ -77,7 +77,8 @@ final class Store {
 
     /** Books the user removed from "Reading" (path -> time removed). Re-opening brings them back. */
     long dismissedAt(String path) { return map("dismissed").optLong(path, 0); }
-    void dismiss(String path) { putInMap("dismissed", path, System.currentTimeMillis()); }
+    void dismiss(String path) { setDismissedAt(path, System.currentTimeMillis()); }
+    void setDismissedAt(String path, long time) { putInMap("dismissed", path, time); }
 
     // collections: name -> list of paths, kept in creation order
     Map<String, List<String>> collections() {
@@ -223,6 +224,12 @@ final class Store {
     boolean autoUpdate() { return p.getBoolean("autoUpdate", true); }
     void setAutoUpdate(boolean v) { p.edit().putBoolean("autoUpdate", v).apply(); }
 
+    void setUpdateNotice(String message) { p.edit().putString("updateNotice", message).apply(); }
+    String takeUpdateNotice() {
+        String message = p.getString("updateNotice", null);
+        if (message != null) p.edit().remove("updateNotice").apply();
+        return message;
+    }
     long lastUpdateCheck() { return p.getLong("updCheck", 0); }
     void setLastUpdateCheck(long v) { p.edit().putLong("updCheck", v).apply(); }
 

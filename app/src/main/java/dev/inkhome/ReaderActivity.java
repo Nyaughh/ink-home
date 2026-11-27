@@ -1,7 +1,6 @@
 package dev.inkhome;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Canvas;
@@ -30,6 +29,8 @@ import android.widget.TextView;
 
 import java.io.File;
 import dev.inkhome.folio.epd.RefreshController;
+import dev.inkhome.folio.widget.Stepper;
+import dev.inkhome.folio.widget.Segmented;
 import dev.inkhome.folio.core.RefreshBudget.Change;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -57,6 +58,7 @@ public class ReaderActivity extends Activity {
     private Epub book;
     private PageView pageView;
     private FrameLayout root;
+    private SheetHost sheets;
     private View menu;
     private RefreshController refreshController;
 
@@ -91,6 +93,7 @@ public class ReaderActivity extends Activity {
         pageView = new PageView(this);
         root.addView(pageView, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
+        sheets = new SheetHost(this, root, null, () -> ink);
 
         String path = getIntent().getStringExtra(EXTRA_PATH);
         if (path == null) { finish(); return; }
@@ -110,8 +113,7 @@ public class ReaderActivity extends Activity {
                 });
             } catch (Exception ex) {
                 ui.post(() -> {
-                    android.widget.Toast.makeText(this, "Couldn't open this book", android.widget.Toast.LENGTH_LONG).show();
-                    finish();
+                    sheets.notice("Couldn't open this book", null, this::finish);
                 });
             }
         });
@@ -132,6 +134,7 @@ public class ReaderActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        sheets.close();
         refreshController.close();
         super.onDestroy();
         work.execute(() -> { if (book != null) book.close(); });
@@ -458,38 +461,33 @@ public class ReaderActivity extends Activity {
             for (int i = 0; i < book.spine.size(); i++) { names.add("Chapter " + (i + 1)); targets.add(i); }
             current = chapter;
         }
-        AlertDialog d = new AlertDialog.Builder(this)
-                .setSingleChoiceItems(names.toArray(new String[0]), current, (di, w) -> {
-                    di.dismiss();
-                    chapter = targets.get(w);
-                    pendingOffset = 0;
-                    hideMenu();
-                    loadChapter();
-                }).create();
-        show(d);
-        final int sel = current;
-        if (d.getListView() != null) d.getListView().post(() -> d.getListView().setSelection(Math.max(0, sel - 3)));
+        sheets.choose("Contents", names.toArray(new String[0]), current, w -> {
+            chapter = targets.get(w);
+            pendingOffset = 0;
+            hideMenu();
+            loadChapter();
+        });
     }
 
     /** Text settings: size, spacing, margins, typeface, justification and refresh rate. */
     private void showTextSettings() {
         LinearLayout p = ink.col();
         p.setPadding(ink.dp(20), ink.dp(8), ink.dp(20), ink.dp(4));
-        p.addView(stepper("Text size", store.readerFontSize() + "", () -> setFont(-1), () -> setFont(+1)));
+        p.addView(stepper("Text size", store.readerFontSize() + " sp", () -> setFont(-1), () -> setFont(+1)));
         p.addView(stepper("Line spacing", String.format(Locale.ROOT, "%.2f", store.readerLineSpacing()),
                 () -> { store.setReaderLineSpacing(Math.max(1.0f, store.readerLineSpacing() - 0.1f)); relayout(); },
                 () -> { store.setReaderLineSpacing(Math.min(2.2f, store.readerLineSpacing() + 0.1f)); relayout(); }));
-        p.addView(stepper("Margins", store.readerMargin() + "", () -> { store.setReaderMargin(Math.max(8, store.readerMargin() - 4)); relayout(); },
+        p.addView(stepper("Margins", store.readerMargin() + " u", () -> { store.setReaderMargin(Math.max(8, store.readerMargin() - 4)); relayout(); },
                 () -> { store.setReaderMargin(Math.min(64, store.readerMargin() + 4)); relayout(); }));
-        p.addView(ink.segmented(new String[]{"Serif", "Sans"}, store.readerSerif() ? 0 : 1, i -> { store.setReaderSerif(i == 0); relayout(); }), ink.m(-1, -2, 0, 12, 0, 0));
-        p.addView(ink.segmented(new String[]{"Justified", "Ragged"}, store.readerJustify() ? 0 : 1, i -> { store.setReaderJustify(i == 0); relayout(); }), ink.m(-1, -2, 0, 10, 0, 0));
-        int[] rates = {1, 4, 8, 16, 0};
-        String[] labels = {"Every page", "Every 4", "Every 8", "Every 16", "Never"};
-        int cur = 2;
+        p.addView(new Segmented(ink.folio, "Typeface", new String[]{"Serif", "Sans"}, store.readerSerif() ? 0 : 1, i -> { store.setReaderSerif(i == 0); relayout(); }), ink.m(-1, -2, 0, 12, 0, 0));
+        p.addView(new Segmented(ink.folio, "Alignment", new String[]{"Justified", "Ragged"}, store.readerJustify() ? 0 : 1, i -> { store.setReaderJustify(i == 0); relayout(); }), ink.m(-1, -2, 0, 10, 0, 0));
+        int[] rates = {0, 1, 4, 8, 16};
+        String[] labels = {"Off", "1 page", "4 pages", "8 pages", "16 pages"};
+        int cur = 3;
         for (int i = 0; i < rates.length; i++) if (rates[i] == store.readerRefreshEvery()) cur = i;
         p.addView(ink.heading("Full refresh"), ink.m(-1, -2, 0, 16, 0, 0));
-        p.addView(ink.segmented(labels, cur, i -> store.setReaderRefreshEvery(rates[i])));
-        show(new AlertDialog.Builder(this).setTitle("Text").setView(p).setPositiveButton("Done", null).create());
+        p.addView(new Stepper(ink.folio, "Full refresh", labels, cur, i -> store.setReaderRefreshEvery(rates[i])));
+        sheets.custom("Text", p);
     }
 
     private void setFont(int delta) {
@@ -502,20 +500,20 @@ public class ReaderActivity extends Activity {
         r.setPadding(0, ink.dp(8), 0, ink.dp(8));
         r.addView(ink.body(label), ink.weight(1));
         TextView v = ink.medium(value, 16);
-        ImageView m = ink.iconButton("back", () -> { minus.run(); refreshDialogValue(v, label); });
-        ImageView pl = ink.iconButton("chevron", () -> { plus.run(); refreshDialogValue(v, label); });
-        r.addView(m);
+        ImageView m = Stepper.button(ink.folio, "minus", "Decrease " + label, () -> { minus.run(); refreshDialogValue(v, label); });
+        ImageView pl = Stepper.button(ink.folio, "plus", "Increase " + label, () -> { plus.run(); refreshDialogValue(v, label); });
+        r.addView(m, ink.dp(38), ink.dp(34));
         v.setGravity(Gravity.CENTER);
         r.addView(v, new LinearLayout.LayoutParams(ink.dp(64), -2));
-        r.addView(pl);
+        r.addView(pl, ink.dp(38), ink.dp(34));
         return r;
     }
 
     private void refreshDialogValue(TextView v, String label) {
         refreshController.fast(v);
-        if (label.equals("Text size")) v.setText(String.valueOf(store.readerFontSize()));
+        if (label.equals("Text size")) v.setText(store.readerFontSize() + " sp");
         else if (label.equals("Line spacing")) v.setText(String.format(Locale.ROOT, "%.2f", store.readerLineSpacing()));
-        else v.setText(String.valueOf(store.readerMargin()));
+        else v.setText(store.readerMargin() + " u");
     }
 
     /** Re-paginates the chapter with new text settings, keeping the same place. */
@@ -524,12 +522,10 @@ public class ReaderActivity extends Activity {
         loadChapter();
     }
 
-    private void show(AlertDialog d) {
-        if (d.getWindow() != null) {
-            d.getWindow().setWindowAnimations(0);
-            d.getWindow().setDimAmount(0f);
-        }
-        d.show();
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (sheets != null) sheets.touched(event);
+        return super.dispatchTouchEvent(event);
     }
 
     /** Adds a little space after each paragraph instead of a whole blank line. */

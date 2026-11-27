@@ -9,6 +9,8 @@ import android.service.notification.StatusBarNotification;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 /** Keeps the shade's notifications for Ink Home's status bar and quick panel. */
@@ -44,9 +46,32 @@ public class Notifs extends NotificationListenerService {
         if (n != null) try { n.cancelNotification(key); } catch (Exception ignored) { }
     }
 
-    static void clearAll() {
+    // Android cannot restore a cancelled notification. Hide it in the launcher during
+    // the Undo window and cancel only that exact posting when the notice expires.
+    private static final Map<String, Long> staged = new HashMap<>();
+
+    static List<Item> stageClear() {
+        List<Item> removed = new ArrayList<>(items);
+        for (Item item : removed) staged.put(item.key, item.when);
+        if (instance != null) instance.recount();
+        return removed;
+    }
+
+    static void finishClear(List<Item> removed, boolean cancel) {
         Notifs n = instance;
-        if (n != null) try { n.cancelAllNotifications(); } catch (Exception ignored) { }
+        Map<String, Long> batch = new HashMap<>();
+        for (Item item : removed) {
+            if (staged.remove(item.key, item.when)) batch.put(item.key, item.when);
+        }
+        if (cancel && n != null) {
+            try {
+                for (StatusBarNotification current : n.getActiveNotifications()) {
+                    Long when = batch.get(current.getKey());
+                    if (when != null && when == current.getPostTime()) n.cancelNotification(current.getKey());
+                }
+            } catch (RuntimeException ignored) { }
+        }
+        if (n != null) n.recount();
     }
 
     @Override public void onListenerConnected() { instance = this; recount(); }
@@ -59,6 +84,8 @@ public class Notifs extends NotificationListenerService {
         try {
             PackageManager pm = getPackageManager();
             for (StatusBarNotification s : getActiveNotifications()) {
+                Long hidden = staged.get(s.getKey());
+                if (hidden != null && hidden == s.getPostTime()) continue;
                 Notification no = s.getNotification();
                 boolean ongoing = (no.flags & Notification.FLAG_ONGOING_EVENT) != 0;
                 boolean summary = (no.flags & Notification.FLAG_GROUP_SUMMARY) != 0;

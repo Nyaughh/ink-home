@@ -28,6 +28,7 @@ import java.util.Locale;
  */
 final class Updater {
 
+    static Runnable onInstallFailure;
     static final String REPO = "Nyaughh/ink-home";
     private static final String API = "https://api.github.com/repos/" + REPO + "/releases/latest";
 
@@ -110,7 +111,8 @@ final class Updater {
                 }
             } else if (status != PackageInstaller.STATUS_SUCCESS) {
                 String msg = i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
-                android.widget.Toast.makeText(c, "Update didn't install" + (msg == null ? "" : ": " + msg), android.widget.Toast.LENGTH_LONG).show();
+                new Store(c).setUpdateNotice("Update didn't install" + (msg == null ? "" : ": " + msg));
+                if (onInstallFailure != null) onInstallFailure.run();
             }
         }
     }

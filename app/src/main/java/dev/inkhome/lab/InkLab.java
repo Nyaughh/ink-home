@@ -18,12 +18,19 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import dev.inkhome.SheetGallery;
+import dev.inkhome.folio.Folio;
+import dev.inkhome.folio.widget.FolioSwitch;
+import dev.inkhome.folio.widget.LevelBar;
+import dev.inkhome.folio.widget.Segmented;
+import dev.inkhome.folio.widget.Stepper;
 import dev.inkhome.folio.core.Tokens;
 import dev.inkhome.folio.core.Tokens.Type;
 
 /** Interactive, view-local panel diagnostics. Never changes the global update mode. */
 public final class InkLab {
     private final Activity host;
+    private final Folio folio;
     private final float uiScale;
     private final float textScale;
     private final Typeface sans;
@@ -38,6 +45,7 @@ public final class InkLab {
 
     private InkLab(Activity host, float uiScale, float textScale, Bitmap cover) {
         this.host = host;
+        folio = new Folio(host, textScale, uiScale);
         this.uiScale = uiScale;
         this.textScale = textScale;
         sans = font("FolioSans.ttf", Typeface.SANS_SERIF);
@@ -60,14 +68,14 @@ public final class InkLab {
     private LinearLayout column() {
         LinearLayout layout = new LinearLayout(host);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setBackgroundColor(Color.WHITE);
+        layout.setBackgroundColor(folio.palette.paper);
         return layout;
     }
 
     private TextView label(String text, float size, int weight) {
         TextView view = new TextView(host);
         view.setText(text);
-        view.setTextColor(Color.BLACK);
+        view.setTextColor(folio.palette.ink);
         view.setTypeface(Typeface.create(sans, weight, false));
         view.setTextSize(size * uiScale * textScale);
         return view;
@@ -85,20 +93,65 @@ public final class InkLab {
         close.setOnClickListener(v -> dialog.dismiss());
         header.addView(close);
         page.addView(header);
+        ScrollView scroll = new ScrollView(host);
+        page.addView(new Segmented(folio, "Lab view", new String[]{"Components", "Refresh tests"}, 0,
+                index -> {
+                    content.removeAllViews();
+                    boolean diagnostics = index == 1;
+                    pattern.setVisibility(diagnostics ? View.VISIBLE : View.GONE);
+                    result.setVisibility(diagnostics ? View.VISIBLE : View.GONE);
+                    if (diagnostics) {
+                        addModes();
+                        addProbes();
+                        addSpecimens();
+                    } else {
+                        addGallery(uiScale);
+                    }
+                    scroll.scrollTo(0, 0);
+                }));
         // Keep the specimen visible while scrolling through the waveform buttons.
         page.addView(pattern, -1, Math.min(u(132),
                 host.getWindowManager().getCurrentWindowMetrics().getBounds().height() / 3));
         page.addView(result);
-        ScrollView scroll = new ScrollView(host);
         scroll.addView(content);
         page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-        addModes();
-        addProbes();
-        addSpecimens();
+        pattern.setVisibility(View.GONE);
+        result.setVisibility(View.GONE);
+        addGallery(uiScale);
         dialog.setContentView(page);
         Window window = dialog.getWindow();
         if (window != null) window.setLayout(-1, -1);
         dialog.show();
+    }
+
+    private void addGallery(float scale) {
+        Folio sample = new Folio(host, textScale, scale);
+        content.addView(label("Preview size", 16, 600));
+        float[] sizes = {1f, 1.15f, 1.3f, 1.45f};
+        int current = 0;
+        for (int i = 1; i < sizes.length; i++)
+            if (Math.abs(scale - sizes[i]) < Math.abs(scale - sizes[current])) current = i;
+        content.addView(new Segmented(folio, "Preview size", new String[]{"100%", "115%", "130%", "145%"},
+                current, i -> {
+                    content.removeAllViews();
+                    addGallery(sizes[i]);
+                }));
+        content.addView(label("Switch", 16, 600));
+        LinearLayout switches = new LinearLayout(host);
+        switches.addView(new FolioSwitch(sample, "Book covers", false, checked -> {}));
+        switches.addView(new FolioSwitch(sample, "App icons", true, checked -> {}));
+        content.addView(switches);
+        content.addView(label("Segmented", 16, 600));
+        content.addView(new Segmented(sample, "Clock", new String[]{"Auto", "12-hour", "24-hour"}, 0, i -> {}));
+        content.addView(label("Stepper", 16, 600));
+        content.addView(new Stepper(sample, "Full refresh", new String[]{"Off", "1 page", "4 pages"}, 1, i -> {}));
+        TextView level = label("Level bar · 100%", 16, 600);
+        content.addView(level);
+        String[] levels = {"90%", "100%", "115%", "130%"};
+        content.addView(new LevelBar(sample, "Text size", levels, 1, i -> level.setText("Level bar · " + levels[i])));
+        StructureGallery.add(content, sample);
+        DataGallery.add(content, sample);
+        SheetGallery.add(content, sample);
     }
 
     private void addModes() {
