@@ -144,13 +144,28 @@ final class SettingsScreen implements Screen {
 
     private void appearance(MainActivity host, MainActivity.Rows g) {
         String[] layouts = {"hero", "shelf", "minimal"};
-        String[] names = host.getResources().getStringArray(R.array.settings_ui_home_layouts);
-        int layout = Math.max(0, Arrays.asList(layouts).indexOf(host.store.homeLayout()));
-        g.add(host.getString(R.string.settings_ui_home_layout), names[layout],
-                () -> host.choose(host.getString(R.string.settings_ui_home_layout), names, layout, i -> {
-            host.store.setHomeLayout(layouts[i]);
-            host.render();
-        }));
+        String[] styles = host.getResources().getStringArray(R.array.settings_ui_home_layouts);
+        String[] choices = Arrays.copyOf(styles, styles.length + 1);
+        choices[styles.length] = host.getString(R.string.home_custom_grid);
+        int selected = !host.store.useHomePreset() && host.desktop.active() ? styles.length
+                : Math.max(0, Arrays.asList(layouts).indexOf(host.store.homeLayout()));
+        g.add(host.getString(R.string.settings_ui_home_layout), choices[selected],
+                () -> host.choose(host.getString(R.string.settings_ui_home_layout), choices, selected, i -> {
+                    if (i == styles.length) {
+                        if (!HomeLayout.exists(host)) HomeLayout.preset("reading").save(host);
+                        host.store.setUseHomePreset(false);
+                    } else {
+                        host.store.setUseHomePreset(true);
+                        host.store.setHomeLayout(layouts[i]);
+                    }
+                    host.render();
+                }));
+        g.add(host.getString(R.string.home_edit_grid), host.getString(R.string.home_edit_grid_summary), host::editHome);
+        g.add(host.getString(R.string.home_grid_files), host.getString(R.string.home_grid_files_summary), () ->
+                host.choose(host.getString(R.string.home_grid_files), host.getResources().getStringArray(R.array.home_grid_files), -1, i -> {
+                    if (i == 0) HomeLayoutFiles.exportLayout(host);
+                    else HomeLayoutFiles.importLayout(host);
+                }));
         g.scale(host.getString(R.string.settings_ui_text_size), new int[]{90, 100, 115, 130}, host.store.textScale(), value -> {
             host.store.setTextScale(value / 100f);
             host.ink = new Ink(host, host.store.textScale(), host.store.uiScale());

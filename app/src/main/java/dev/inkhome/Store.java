@@ -180,6 +180,9 @@ final class Store {
 
     // ---------------------------------------------------------------- settings
 
+    boolean isNewProfile() { return p.getAll().isEmpty(); }
+    boolean useHomePreset() { return p.getBoolean("useHomePreset", false); }
+    void setUseHomePreset(boolean enabled) { p.edit().putBoolean("useHomePreset", enabled).apply(); }
     String homeLayout() { return p.getString("homeLayout", "hero"); }
     void setHomeLayout(String v) { p.edit().putString("homeLayout", v).apply(); }
 

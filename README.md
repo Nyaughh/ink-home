@@ -19,8 +19,23 @@ A calm, reading-first home screen for e-ink Android tablets.
   justification, a full refresh every few pages, and your place kept across
   text changes. Or open books in NeoReader, KOReader or another app; their
   time still counts, and KOReader's progress shows too.
-- **Home**: the book you're reading, then all your other books, whatever app
-  you read them in.
+- **Home** starts with a reading bento on new installations. Upgrades keep your
+  existing book layout. Long-press an empty area or open
+  **Settings › Appearance › Edit Home grid** to arrange tiles on a four-column,
+  six-row page. Start a page with the Reading, Planner or Night arrangement, or
+  build one from an empty grid. Tap a tile in the editor to move or resize it.
+  **Page options › Tidy page** fits the tiles together to fill the page. Turn
+  pages with arrows, a swipe or the page keys.
+  Use tiles for your current book, Up next, favourite apps, clock and date,
+  calendar, daily reading goal, reading month, battery or moon phase. Tap the
+  moon tile to enter coordinates for local moonrise and moonset estimates.
+- Add widgets from installed apps through the Home editor. Android asks you to
+  approve binding when needed. The widget redraw limit controls how often live
+  widgets can repaint the page. The default is once a minute.
+- Switch back to a preset in **Settings › Appearance › Home layout**. Your
+  grid is kept for the next time you open the editor. **Home layout file**
+  exports and imports built-in tile placements as JSON. Add Android widgets
+  again on the destination device.
 - The dock keeps Settings at the left, today's reading in the middle and the
   navigation menu under the chevron. Tap the status strip for device controls.
 - Swipe sideways, press a page key or use the arrow buttons to move through

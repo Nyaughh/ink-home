@@ -7,6 +7,13 @@ final class HomeScreen implements Screen {
     @Override
     public void build(MainActivity host) {
         LinearLayout col = host.page();
+        if (!host.store.useHomePreset() && host.desktop.active()) {
+            host.applyWallpaper();
+            SetupScreen.addHomeCallout(host, col);
+            col.addView(host.desktop.build(), new LinearLayout.LayoutParams(-1, 0, 1));
+            return;
+        }
+        col.setOnLongClickListener(v -> { host.editHome(); return true; });
         int margin = host.ink.dp(host.ink.folio.windowClass().margin);
         col.setPadding(margin, host.ink.dp(16), margin, host.ink.dp(8));
         host.applyWallpaper();

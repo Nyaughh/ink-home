@@ -20,6 +20,7 @@ public class UpgradeDataTest {
 
     private static Context legacyContext(Map<String, Object> values) {
         SharedPreferences prefs = mock(SharedPreferences.class, call -> {
+            if (call.getMethod().getName().equals("getAll")) return values;
             String key = call.getArgument(0);
             switch (call.getMethod().getName()) {
                 case "contains": return values.containsKey(key);
@@ -39,6 +40,8 @@ public class UpgradeDataTest {
     }
 
     @Test public void locksPortraitOnFreshInstallAndHonorsExplicitOptOut() {
+        assertTrue(new Store(legacyContext(Map.of())).isNewProfile());
+        assertFalse(new Store(legacyContext(Map.of("pinned", ""))).isNewProfile());
         assertTrue(new Store(legacyContext(Map.of())).portraitLocked());
         assertFalse(new Store(legacyContext(Map.of("portraitLocked", false))).portraitLocked());
     }
@@ -85,6 +88,87 @@ public class UpgradeDataTest {
         assertEquals("progress", store.librarySort());
         assertTrue(store.listScroll());
         assertEquals(1716610000000L, store.lastUpdateCheck());
+    }
+
+    @Test public void openingEditorPreservesLegacyHomeUntilLayoutSaved() {
+        Context legacy = legacyContext(Map.of("homeLayout", "shelf", "pinned", "pkg.two\npkg.one"));
+        SharedPreferences prefs = legacy.getSharedPreferences("inkhome", Context.MODE_PRIVATE);
+        MainActivity activity = mock(MainActivity.class);
+        when(activity.getSharedPreferences("inkhome", Context.MODE_PRIVATE)).thenReturn(prefs);
+
+        assertFalse(HomeLayout.exists(activity));
+        HomeLayout layout = HomeLayout.load(activity);
+        assertEquals(1, layout.pages);
+        assertEquals(8, layout.tiles.size());
+        assertEquals("current", layout.tiles.get(0).kind);
+        assertEquals("next", layout.tiles.get(1).kind);
+        assertEquals("apps", layout.tiles.get(5).kind);
+        for (HomeLayout.Tile t : layout.tiles) {
+            assertTrue(layout.fits(t, t.page, t.x, t.y, t.w, t.h));
+        }
+        assertEquals("shelf", new Store(legacy).homeLayout());
+        assertEquals(Arrays.asList("pkg.two", "pkg.one"), new Store(legacy).favorites());
+        verify(prefs, never()).edit();
+    }
+
+    @Test public void presetsCoverEachGridCellExactlyOnce() {
+        for (String key : Arrays.asList("reading", "planner", "night")) {
+            HomeLayout layout = HomeLayout.preset(key);
+            assertEquals(1, layout.pages);
+            boolean[][] filled = new boolean[6][4];
+            for (HomeLayout.Tile t : layout.tiles) {
+                assertEquals(0, t.page);
+                assertTrue(key, layout.fits(t, t.page, t.x, t.y, t.w, t.h));
+                for (int row = t.y; row < t.y + t.h; row++) {
+                    for (int col = t.x; col < t.x + t.w; col++) {
+                        assertFalse(key, filled[row][col]);
+                        filled[row][col] = true;
+                    }
+                }
+            }
+            for (boolean[] row : filled) {
+                for (boolean cell : row) assertTrue(key, cell);
+            }
+        }
+    }
+
+    @Test public void customizedLayoutRoundTripsAndResetOnlyRemovesGrid() {
+        MainActivity activity = mock(MainActivity.class);
+        SharedPreferences prefs = mock(SharedPreferences.class);
+        SharedPreferences.Editor edit = mock(SharedPreferences.Editor.class, RETURNS_SELF);
+        when(activity.getSharedPreferences("inkhome", Context.MODE_PRIVATE)).thenReturn(prefs);
+        when(prefs.edit()).thenReturn(edit);
+
+        HomeLayout layout = HomeLayout.load(activity);
+        layout.tiles.clear();
+        layout.pages = 3;
+        layout.tiles.add(new HomeLayout.Tile("widget", 1, 1, 2, 3, 4, 79));
+        layout.save(activity);
+        org.mockito.ArgumentCaptor<String> json = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(edit).putString(eq("homeGridV1"), json.capture());
+        when(prefs.getString("homeGridV1", null)).thenReturn(json.getValue());
+        when(prefs.contains("homeGridV1")).thenReturn(true);
+        assertTrue(HomeLayout.exists(activity));
+
+        HomeLayout restored = HomeLayout.load(activity);
+        assertEquals(3, restored.pages);
+        assertEquals(1, restored.tiles.size());
+        HomeLayout.Tile t = restored.tiles.get(0);
+        assertEquals("widget", t.kind);
+        assertArrayEquals(new int[]{1, 1, 2, 3, 4, 79},
+                new int[]{t.page, t.x, t.y, t.w, t.h, t.widgetId});
+        assertFalse(restored.fits(null, 1, 3, 5, 1, 1));
+        assertTrue(restored.fits(t, 1, 3, 5, 1, 1));
+        assertTrue(restored.fits(null, 1, 0, 0, 1, 6));
+        assertTrue(restored.fits(null, 2, 0, 0, 4, 6));
+        assertFalse(restored.fits(null, 3, 0, 0, 1, 1));
+        assertFalse(restored.fits(null, 0, Integer.MAX_VALUE, 0, 1, 1));
+        assertFalse(restored.fits(null, 0, 0, 0, 1, 0));
+
+        HomeLayout.reset(activity);
+        verify(edit).remove("homeGridV1");
+        verify(edit, times(2)).apply();
+        verifyNoMoreInteractions(edit);
     }
 
     @Test public void rebuildsTimeAndStreaksFromLegacyDayAndBookLogsWithoutUsageAccess() {

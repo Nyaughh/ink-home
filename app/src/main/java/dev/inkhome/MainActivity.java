@@ -94,7 +94,7 @@ public class MainActivity extends Activity {
     static final String BOOX_HOME = "com.onyx/com.onyx.StartupActivity";
     static final int PAD = 22;
 
-    private enum Screen {
+    enum Screen {
         HOME(new HomeScreen()), LIBRARY(new LibraryScreen()), STATS(new StatsScreen()),
         APPS(new AppsScreen()), SETTINGS(new SettingsScreen());
 
@@ -107,7 +107,9 @@ public class MainActivity extends Activity {
 
     Store store;
     Ink ink;
-    private SheetHost sheets;
+    HomeDesktop desktop;
+    HomeWidgetHost homeWidgets;
+    SheetHost sheets;
     final Handler ui = new Handler(Looper.getMainLooper());
     final ExecutorService io = Executors.newSingleThreadExecutor();
     final ExecutorService thumbs = Executors.newSingleThreadExecutor();
@@ -164,8 +166,11 @@ public class MainActivity extends Activity {
         // NeoReader tracks progress by file path, so it gets file:// links; other readers get content://.
         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
         store = new Store(this);
+        if (store.isNewProfile()) HomeLayout.load(this).save(this);
         ink = new Ink(this, store.textScale(), store.uiScale());
 
+        homeWidgets = new HomeWidgetHost(this);
+        desktop = new HomeDesktop(this);
         ActivityWindow.applyOrientation(this, store);
         restoreNavigation(b);
         if (b == null && DotService.ACTION_SETTINGS.equals(getIntent().getAction())) {
@@ -198,6 +203,24 @@ public class MainActivity extends Activity {
         loadApps();
         if (!store.favoritesInitialised()) seedFavorites();
         if (b == null) handleShellAction(getIntent());
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        homeWidgets.start();
+    }
+
+    @Override
+    protected void onStop() {
+        homeWidgets.stop();
+        super.onStop();
+    }
+
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (!homeWidgets.result(request, result, data)) HomeLayoutFiles.result(this, request, result, data);
     }
 
     @Override
@@ -362,6 +385,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (panelOpen) closePanel();
+        else if (screen == Screen.HOME && !store.useHomePreset() && desktop.back()) return;
         else if (libSearch != null) { libSearch = null; hideKeyboard(); render(); }
         else if (libraryDetail != null && screen == Screen.LIBRARY) { libraryDetail = null; render(); }
         else if (libCollection != null) { libCollection = null; render(); }
@@ -501,7 +525,7 @@ public class MainActivity extends Activity {
         return out;
     }
 
-    private List<Library.Book> newest() {
+    List<Library.Book> newest() {
         List<Library.Book> out = new ArrayList<>(books);
         out.sort((a, b) -> Long.compare(b.modified, a.modified));
         return out;
@@ -510,7 +534,7 @@ public class MainActivity extends Activity {
     private int bookMinutes(Library.Book b) { return stats == null ? 0 : stats.forBook(b.path); }
 
     /** "42%" / "1 h 10 min read" / "Not started": the most useful one-line status for a book. */
-    private String bookStatus(Library.Book b) {
+    String bookStatus(Library.Book b) {
         if (b.finished) return getString(R.string.launcher_finished);
         int pc = b.percent();
         int mins = bookMinutes(b);
@@ -522,7 +546,7 @@ public class MainActivity extends Activity {
 
     // ================================================================== navigation
 
-    private void go(Screen s) {
+    void go(Screen s) {
         if (s != screen) {
             pages.clear();
             libSearch = null;
@@ -532,6 +556,15 @@ public class MainActivity extends Activity {
         }
         screen = s;
         render();
+    }
+
+    void editHome() {
+        store.setUseHomePreset(false);
+        if (screen != Screen.HOME) {
+            go(Screen.HOME);
+            android.transition.TransitionManager.endTransitions(content);
+        }
+        desktop.edit();
     }
 
     void openHomeSetup() {
@@ -980,7 +1013,7 @@ public class MainActivity extends Activity {
     static final class Battery { int percent; boolean charging; }
     static final class Wifi { boolean enabled, connected; int level = -1; String name; }
 
-    private Battery battery() {
+    Battery battery() {
         Battery b = new Battery();
         Intent i = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         if (i != null) {
@@ -1019,7 +1052,7 @@ public class MainActivity extends Activity {
         return Library.humanSize(this, new StatFs(Environment.getDataDirectory().getPath()).getAvailableBytes());
     }
 
-    private String timeText(Date d) {
+    String timeText(Date d) {
         String c = store.clock();
         if (c.equals("24")) return new SimpleDateFormat(getString(R.string.launcher_clock_24_pattern), Locale.getDefault()).format(d);
         if (c.equals("12")) return new SimpleDateFormat(getString(R.string.launcher_clock_12_pattern), Locale.getDefault()).format(d);
@@ -1451,7 +1484,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void bookMenu(Library.Book b) {
+    void bookMenu(Library.Book b) {
         showBookSheet(b, false);
     }
 
@@ -1791,7 +1824,7 @@ public class MainActivity extends Activity {
         return null;
     }
 
-    private List<App> favoriteApps() {
+    List<App> favoriteApps() {
         List<App> out = new ArrayList<>();
         for (String k : store.favorites()) {
             App a = findApp(k);

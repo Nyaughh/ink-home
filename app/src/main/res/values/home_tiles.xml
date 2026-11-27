@@ -1,0 +1,20 @@
+<resources>
+    <string-array name="tile_moon_phases">
+        <item>New moon</item><item>Waxing crescent</item><item>First quarter</item><item>Waxing gibbous</item>
+        <item>Full moon</item><item>Waning gibbous</item><item>Last quarter</item><item>Waning crescent</item>
+    </string-array>
+    <string name="tile_location">Moonrise and moonset</string>
+    <string name="tile_set_location">Set location</string>
+    <string name="tile_coordinates_hint">Enter decimal degrees. South and west are negative. Times use your device time zone (%1$s).</string>
+    <string name="tile_latitude">Latitude</string>
+    <string name="tile_longitude">Longitude</string>
+    <string name="tile_coordinate_range">Enter a number from −%1$d to %1$d.</string>
+    <string name="tile_moonrise">Rise %1$s</string>
+    <string name="tile_moonset">Set %1$s</string>
+    <string name="tile_moonrise_short">↑ %1$s</string>
+    <string name="tile_moonset_short">↓ %1$s</string>
+    <string name="tile_moon_missing">—</string>
+    <string name="tile_no_rise">No rise today</string>
+    <string name="tile_no_set">No set today</string>
+    <string name="tile_unavailable">Tile unavailable</string>
+</resources>

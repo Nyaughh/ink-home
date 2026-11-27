@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_widget_empty">No home screen widgets installed</string>
+    <string name="home_widget_add">Add a widget</string>
+    <string name="home_widget_add_failed">Could not add this widget</string>
+    <string name="home_widget_unavailable">Widget unavailable</string>
+    <string name="home_widget_redraw_limit">Widget redraw limit</string>
+    <string-array name="home_widget_intervals">
+        <item>As requested by widget</item>
+        <item>Once a second</item>
+        <item>Every 10 seconds</item>
+        <item>Once a minute</item>
+    </string-array>
+</resources>
