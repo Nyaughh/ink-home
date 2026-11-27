@@ -19,6 +19,10 @@ A calm, reading-first home screen for e-ink Android tablets.
   time still counts, and KOReader's progress shows too.
 - **Home**: the book you're reading, then all your other books, whatever app
   you read them in.
+- The dock keeps Settings at the left, today's reading in the middle and the
+  navigation menu under the chevron. Tap the status strip for device controls.
+- Swipe sideways, press a page key or use the arrow buttons to move through
+  paged lists. In Settings, text size and interface size can be adjusted separately.
 - **Made for e-ink**: black and white, no animation, pages instead of
   scrolling (scrolling is a setting), hardware page buttons, and a true full
   refresh through the Onyx firmware to clear ghosting.
@@ -26,7 +30,6 @@ A calm, reading-first home screen for e-ink Android tablets.
   with only the controls the hardware has.
 - **Sleep screen and wallpaper**: your current book or any picture as the
   sleep screen; a faded wallpaper behind home.
-- **Sizes**: text size and a separate interface size that scales everything.
 - **Updates**: checks this repository's releases and installs new versions
   after asking.
 

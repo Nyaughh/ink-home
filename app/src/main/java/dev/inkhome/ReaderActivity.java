@@ -72,6 +72,7 @@ public class ReaderActivity extends Activity {
     private StaticLayout layout;
     private final List<Integer> pageStarts = new ArrayList<>();
     private boolean loading = false;
+    private volatile int layoutGeneration;
 
     // ================================================================== lifecycle
 
@@ -79,6 +80,7 @@ public class ReaderActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         store = new Store(this);
+        ActivityWindow.applyOrientation(this, store);
         ink = new Ink(this, store.textScale(), store.uiScale());
         getWindow().getDecorView();
         WindowInsetsController c = getWindow().getInsetsController();
@@ -89,6 +91,7 @@ public class ReaderActivity extends Activity {
         refreshController = new RefreshController((android.view.ViewGroup) getWindow().getDecorView(), store::readerRefreshEvery);
 
         root = new FrameLayout(this);
+        ActivityWindow.fitContent(this, root);
         root.setBackgroundColor(Color.WHITE);
         pageView = new PageView(this);
         root.addView(pageView, new FrameLayout.LayoutParams(-1, -1));
@@ -101,12 +104,20 @@ public class ReaderActivity extends Activity {
         int[] pos = store.readerPosition(path);
         chapter = pos[0];
         pendingOffset = pos[1];
+        if (b != null) {
+            chapter = b.getInt("chapter", chapter);
+            pendingOffset = b.getInt("offset", pendingOffset);
+        }
         loading = true;
         pageView.invalidate();
         work.execute(() -> {
             try {
                 Epub e = Epub.open(file);
                 ui.post(() -> {
+                    if (isDestroyed() || isFinishing()) {
+                        e.close();
+                        return;
+                    }
                     book = e;
                     chapter = Math.max(0, Math.min(chapter, book.spine.size() - 1));
                     pageView.post(this::loadChapter);
@@ -122,7 +133,15 @@ public class ReaderActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        ActivityWindow.applyOrientation(this, store);
         refreshController.resume();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putInt("chapter", chapter);
+        state.putInt("offset", pendingOffset);
     }
 
     @Override
@@ -181,7 +200,8 @@ public class ReaderActivity extends Activity {
 
     /** Lays out the current chapter off the UI thread, then shows the page holding pendingOffset. */
     private void loadChapter() {
-        if (book == null || pageView.getWidth() == 0) return;
+        if (isDestroyed() || isFinishing() || book == null || pageView.getWidth() == 0) return;
+        final int generation = ++layoutGeneration;
         loading = true;
         pageView.invalidate();
         final int ch = chapter, w = textWidth(), h = textHeight();
@@ -189,6 +209,7 @@ public class ReaderActivity extends Activity {
         final float spacing = store.readerLineSpacing();
         final boolean justify = store.readerJustify();
         work.execute(() -> {
+            if (generation != layoutGeneration) return;
             StaticLayout sl;
             List<Integer> starts = new ArrayList<>();
             try {
@@ -220,12 +241,13 @@ public class ReaderActivity extends Activity {
             }
             final StaticLayout result = sl;
             ui.post(() -> {
-                if (ch != chapter) return;
+                if (generation != layoutGeneration || isDestroyed() || isFinishing()) return;
                 layout = result;
                 pageStarts.clear();
                 pageStarts.addAll(starts);
                 if (pendingOffset < 0) page = pageStarts.size() - 1;
                 else page = pageForOffset(pendingOffset);
+                if (pendingOffset < 0) pendingOffset = offsetOfPage();
                 loading = false;
                 showPage(true);
             });
@@ -247,13 +269,13 @@ public class ReaderActivity extends Activity {
 
     private void nextPage() {
         if (loading || book == null) return;
-        if (page < pageStarts.size() - 1) { page++; showPage(false); return; }
+        if (page < pageStarts.size() - 1) { page++; pendingOffset = offsetOfPage(); showPage(false); return; }
         if (chapter < book.spine.size() - 1) { chapter++; pendingOffset = 0; loadChapter(); }
     }
 
     private void prevPage() {
         if (loading || book == null) return;
-        if (page > 0) { page--; showPage(false); return; }
+        if (page > 0) { page--; pendingOffset = offsetOfPage(); showPage(false); return; }
         if (chapter > 0) { chapter--; pendingOffset = -1; loadChapter(); }
     }
 
@@ -270,9 +292,9 @@ public class ReaderActivity extends Activity {
     }
 
     private void savePosition() {
-        if (book == null || layout == null || file == null) return;
+        if (loading || book == null || layout == null || file == null) return;
         float p = book.progress(chapter, chapterFraction());
-        store.setReaderPosition(file.getAbsolutePath(), chapter, offsetOfPage(), p);
+        store.setReaderPosition(file.getAbsolutePath(), chapter, pendingOffset, p);
     }
 
     // ================================================================== drawing
@@ -291,7 +313,6 @@ public class ReaderActivity extends Activity {
 
         @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
             if (book != null && w > 0 && (w != ow || h != oh)) {
-                pendingOffset = offsetOfPage();
                 loadChapter();
             }
         }

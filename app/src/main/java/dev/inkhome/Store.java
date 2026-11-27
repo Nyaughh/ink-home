@@ -206,6 +206,9 @@ final class Store {
     boolean cleanOnHome() { return p.getBoolean("cleanOnHome", true); }
     void setCleanOnHome(boolean v) { p.edit().putBoolean("cleanOnHome", v).apply(); }
 
+    boolean portraitLocked() { return p.getBoolean("portraitLocked", false); }
+    void setPortraitLocked(boolean locked) { p.edit().putBoolean("portraitLocked", locked).apply(); }
+
     boolean pageKeysReversed() { return p.getBoolean("pageRev", false); }
     void setPageKeysReversed(boolean v) { p.edit().putBoolean("pageRev", v).apply(); }
 

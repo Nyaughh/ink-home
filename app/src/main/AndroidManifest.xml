@@ -41,10 +41,8 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:clearTaskOnLaunch="true"
-            android:stateNotNeeded="true"
             android:excludeFromRecents="true"
-            android:resizeableActivity="false"
-            android:screenOrientation="portrait"
+            android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize"
             android:windowSoftInputMode="adjustResize|stateAlwaysHidden">
             <intent-filter>
@@ -60,7 +58,7 @@
             android:exported="false"
             android:label="Ink Home reader"
             android:taskAffinity="${applicationId}.reader"
-            android:screenOrientation="portrait"
+            android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize"
             android:windowSoftInputMode="stateAlwaysHidden" />
 
