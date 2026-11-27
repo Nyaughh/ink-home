@@ -38,6 +38,11 @@ public class UpgradeDataTest {
         return context;
     }
 
+    @Test public void locksPortraitOnFreshInstallAndHonorsExplicitOptOut() {
+        assertTrue(new Store(legacyContext(Map.of())).portraitLocked());
+        assertFalse(new Store(legacyContext(Map.of("portraitLocked", false))).portraitLocked());
+    }
+
     @Test public void resumesLegacyBookAndReadsCollectionsAndSettings() {
         Context c = legacyContext(Map.ofEntries(
                 Map.entry("readpos", "{\"" + BOOK + "\":{\"c\":7,\"o\":2481,\"p\":0.625,\"t\":1716600000000}}"),
@@ -53,6 +58,7 @@ public class UpgradeDataTest {
                 Map.entry("sleepFile", "custom"), Map.entry("libSort", "progress"),
                 Map.entry("listScroll", true), Map.entry("updCheck", 1716610000000L)));
         Store store = new Store(c);
+        assertTrue(store.portraitLocked());
         assertArrayEquals(new int[]{7, 2481}, store.readerPosition(BOOK));
         assertArrayEquals(new double[]{0.625, 1716600000000L}, store.readerProgress(BOOK), 0);
         assertEquals(1716590000000L, store.openedAt(BOOK));
