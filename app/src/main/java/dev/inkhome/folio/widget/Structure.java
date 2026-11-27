@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.graphics.drawable.ColorDrawable;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -92,14 +93,16 @@ public final class Structure {
             row.addView(text(String.valueOf(notifications), META));
         }
         inlineGlyph(row, wifi < 0 ? "wifi-off" : "wifi", wifi);
-        row.addView(text(battery + "%", META));
+        row.addView(text(f.context.getString(R.string.reader_ui_percent, battery), META));
         inlineGlyph(row, charging ? "battery-charging" : "battery", battery);
         inlineGlyph(row, "tune", -1);
         strip.addView(row);
         rule(strip, false);
-        action(strip, time + ", " + notifications + " notifications, Wi-Fi "
-                + (wifi < 0 ? "off" : "connected") + ", battery " + battery
-                + " percent" + (charging ? ", charging" : "") + ". Open control panel", openPanel);
+        String notificationCount = f.context.getResources().getQuantityString(
+                R.plurals.reader_ui_notifications, notifications, notifications);
+        String wifiState = f.context.getString(wifi < 0 ? R.string.reader_ui_wifi_off : R.string.reader_ui_wifi_connected);
+        action(strip, f.context.getString(charging ? R.string.reader_ui_status_charging : R.string.reader_ui_status,
+                time, notificationCount, wifiState, battery), openPanel);
         return strip;
     }
 
@@ -109,8 +112,8 @@ public final class Structure {
         row.addView(glyph(name, level, false), lp);
     }
 
-    public static String[] menuLabels() {
-        return new String[]{"Home", "Library", "Stats", "Apps", "Search", "Clean screen", "Wi-Fi", "Control panel"};
+    public String[] menuLabels() {
+        return f.context.getResources().getStringArray(R.array.reader_ui_menu_labels);
     }
 
     /** Opens the eight-entry menu against the dock's upper edge. */
@@ -119,19 +122,19 @@ public final class Structure {
         LinearLayout dock = column();
         rule(dock, true);
         LinearLayout row = row(0);
-        row.addView(icon(inSettings ? "home" : "settings", inSettings ? "Home" : "Settings",
+        row.addView(icon(inSettings ? "home" : "settings", inSettings ? f.context.getString(R.string.reader_ui_home) : f.context.getString(R.string.reader_ui_settings),
                 openSettingsOrHome, 50));
         TextView reading = text(readingToday, BODY);
         reading.setGravity(Gravity.CENTER);
         reading.setMinHeight(f.u(50));
-        action(reading, readingToday + ". Open Stats", openStats);
+        action(reading, f.context.getString(R.string.reader_ui_open_stats, readingToday), openStats);
         flex(row, reading);
         PopupWindow[] popup = new PopupWindow[1];
-        FrameLayout toggle = icon("up", "Open menu", null, 50);
+        FrameLayout toggle = icon("up", f.context.getString(R.string.reader_ui_open_menu), null, 50);
         row.addView(toggle);
         dock.addView(row);
         dock.setMinimumHeight(f.u(Tokens.Bar.DOCK));
-        action(toggle, "Open menu", () -> {
+        action(toggle, f.context.getString(R.string.reader_ui_open_menu), () -> {
             if (popup[0] != null) {
                 popup[0].dismiss();
                 return;
@@ -139,11 +142,11 @@ public final class Structure {
             popup[0] = showMenu(dock, destination, select);
             ImageView arrow = (ImageView) toggle.getChildAt(0);
             arrow.setRotation(180f);
-            toggle.setContentDescription("Close menu");
+            toggle.setContentDescription(f.context.getString(R.string.reader_ui_close_menu));
             popup[0].setOnDismissListener(() -> {
                 popup[0] = null;
                 arrow.setRotation(0f);
-                toggle.setContentDescription("Open menu");
+                toggle.setContentDescription(f.context.getString(R.string.reader_ui_open_menu));
             });
         });
         return dock;
@@ -199,9 +202,10 @@ public final class Structure {
 
     public View appBar(String title, String count, Runnable back, Action... actions) {
         LinearLayout row = row(Tokens.Bar.APP);
-        if (back != null) row.addView(icon("back", "Back", back, 48));
+        if (back != null) row.addView(icon("back", f.context.getString(R.string.reader_ui_back), back, 48));
         LinearLayout heading = row(0);
         TextView name = text(title, back == null ? TITLE_LG : TITLE_MD);
+        name.setAccessibilityHeading(true);
         heading.addView(name, new LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, 0));
         if (count != null) {
             TextView total = text(count, META);
@@ -247,7 +251,9 @@ public final class Structure {
         LinearLayout block = column();
         rule(block, true);
         LinearLayout row = row(dense ? Tokens.Bar.DATA_SECTION : Tokens.Bar.SECTION);
-        flex(row, text(title, LABEL));
+        TextView heading = text(title, LABEL);
+        heading.setAccessibilityHeading(true);
+        flex(row, heading);
         if (end != null) row.addView(end);
         block.addView(row);
         return block;

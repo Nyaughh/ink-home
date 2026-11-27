@@ -7,7 +7,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import dev.inkhome.folio.Folio;
 import dev.inkhome.folio.core.TypeScale;
@@ -31,35 +31,50 @@ final class StatsScreen implements Screen {
     @Override public void build(MainActivity host) {
         LinearLayout col = host.page();
         int target = host.store.dailyGoal();
-        TextView goal = host.ink.pill(target > 0 ? "Goal " + target + " min" : "Set a goal", false);
+        TextView goal = host.ink.pill(target > 0 ? host.getString(R.string.stats_ui_goal_minutes, target) : host.getString(R.string.stats_ui_set_a_goal), false);
         goal.setOnClickListener(v -> host.chooseGoal());
-        col.addView(host.header("Reading time", null, null, goal));
+        col.addView(host.header(host.getString(R.string.stats_ui_reading_time), null, null, goal));
         boolean calendar = host.statsTab.equals("calendar");
-        col.addView(host.tabs(new String[]{"Overview", "Calendar"}, calendar ? 1 : 0,
+        col.addView(host.tabs(new String[]{host.getString(R.string.stats_ui_overview), host.getString(R.string.stats_ui_calendar)}, calendar ? 1 : 0,
                 i -> { host.statsTab = i == 1 ? "calendar" : "overview"; host.render(); }),
                 host.ink.m(-1, -2, MainActivity.PAD, 0, MainActivity.PAD, 0));
         LinearLayout body = host.ink.col();
         body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), 0);
         if (!Stats.hasAccess(host)) {
             col.addView(body);
-            body.addView(host.note("Turn on reading time", "Allow usage access to count the minutes spent in reading apps.",
+            body.addView(host.note(host.getString(R.string.stats_ui_turn_on_reading_time), host.getString(R.string.stats_ui_reading_time_access_description),
                     () -> host.start(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))));
         } else if (host.stats == null) {
             col.addView(body);
-            body.addView(host.ink.muted("Loading reading time…", 15));
+            body.addView(host.ink.muted(host.getString(R.string.stats_ui_loading_reading_time), 15));
         } else if (calendar) {
             renderCalendar(host, body, host.stats);
-            ScrollView scroll = calendarScroll(host);
-            scroll.addView(body);
-            col.addView(scroll, -1, -1);
+            Runnable previousMonth = host.pagePrev, nextMonth = host.pageNext;
+            FrameLayout months = monthSwipes(host);
+            int month = host.statsMonth.get(Calendar.MONTH);
+            int year = host.statsMonth.get(Calendar.YEAR);
+            months.addView(host.scrollable(body, "calendar:" + year + ":" + month), -1, -1);
+            host.pagePrev = previousMonth;
+            host.pageNext = nextMonth;
+            col.addView(months, new LinearLayout.LayoutParams(-1, 0, 1));
         } else {
-            renderOverview(host, body, host.stats);
-            col.addView(host.scrollable(body), new LinearLayout.LayoutParams(-1, 0, 1));
+            BarChart chart = renderOverview(host, body, host.stats);
+            View viewport = host.scrollable(body);
+            col.addView(viewport, new LinearLayout.LayoutParams(-1, 0, 1));
+            viewport.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+                // Let the plot absorb a small window inset while preserving both label bands.
+                int available = b - t - (body.getMeasuredHeight() - chart.getMeasuredHeight());
+                int height = chart.heightForSpace(available);
+                if (chart.getLayoutParams().height != height) {
+                    chart.getLayoutParams().height = height;
+                    chart.requestLayout();
+                }
+            });
         }
     }
 
-    private static ScrollView calendarScroll(MainActivity host) {
-        ScrollView scroll = new ScrollView(host) {
+    private static FrameLayout monthSwipes(MainActivity host) {
+        return new FrameLayout(host) {
             float x, y;
             @Override public boolean dispatchTouchEvent(MotionEvent event) {
                 if (event.getActionMasked() == MotionEvent.ACTION_DOWN) { x = event.getX(); y = event.getY(); }
@@ -77,23 +92,20 @@ final class StatsScreen implements Screen {
                 return super.dispatchTouchEvent(event);
             }
         };
-        scroll.setVerticalScrollBarEnabled(false);
-        scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        return scroll;
     }
 
-    private static void renderOverview(MainActivity host, LinearLayout col, Stats s) {
+    private static BarChart renderOverview(MainActivity host, LinearLayout col, Stats s) {
         Folio f = host.ink.folio;
         Structure structure = new Structure(f);
         LinearLayout today = host.ink.row();
         today.setMinimumHeight(f.u(54));
         today.addView(host.ink.text(String.valueOf(s.today()), TypeScale.FIGURE, host.ink.TEXT));
-        today.addView(host.ink.medium("min today", 15), host.ink.m(-2, -2, 4, 0, 12, 0));
+        today.addView(host.ink.medium(host.getString(R.string.stats_ui_min_today), 15), host.ink.m(-2, -2, 4, 0, 12, 0));
         if (s.hasGoal()) {
             LinearLayout goal = host.ink.col();
             goal.addView(new Progress(f, 5, false, Math.round(100f * s.today() / s.goal)));
             int extra = s.today() - s.goal;
-            String status = extra < 0 ? -extra + " min to go" : extra == 0 ? "Goal met" : "Goal met · " + extra + " min over";
+            String status = extra < 0 ? host.getString(R.string.stats_ui_goal_remaining, -extra) : extra == 0 ? host.getString(R.string.stats_ui_goal_met) : host.getString(R.string.stats_ui_goal_exceeded, extra);
             goal.addView(host.ink.muted(status, 14), host.ink.m(-1, -2, 0, 3, 0, 0));
             today.addView(goal, host.ink.weight(1));
         }
@@ -111,13 +123,13 @@ final class StatsScreen implements Screen {
         }
         ranked.sort((a, b) -> Integer.compare(s.forBook(b.path), s.forBook(a.path)));
         col.addView(MainActivity.item(Ledger.create(f,
-                new String[]{"Streak · best " + s.bestStreak(), "This week", "This month", "All time",
-                        "Finished in " + year, "In progress"},
-                new String[]{quantity(s.currentStreak(), "day"), Stats.hm(s.weekTotal()), Stats.hm(s.monthTotal(now)),
-                        Stats.hm(s.total()), quantity(finished, "book"), quantity(host.reading().size(), "book")})));
+                new String[]{host.getString(R.string.stats_ui_best_streak, s.bestStreak()), host.getString(R.string.stats_ui_this_week), host.getString(R.string.stats_ui_this_month), host.getString(R.string.stats_ui_all_time),
+                        host.getString(R.string.stats_ui_finished_in_year, year), host.getString(R.string.stats_ui_in_progress)},
+                new String[]{quantity(host, R.plurals.stats_ui_days, s.currentStreak()), Stats.hm(host, s.weekTotal()), Stats.hm(host, s.monthTotal(now)),
+                        Stats.hm(host, s.total()), quantity(host, R.plurals.stats_ui_books, finished), quantity(host, R.plurals.stats_ui_books, host.reading().size())})));
 
         LinearLayout week = MainActivity.keep(host.ink.col());
-        week.addView(structure.sectionHead("This week", true, s.hasGoal() ? host.ink.faint("Filled bars met the goal", 13) : null));
+        week.addView(structure.sectionHead(host.getString(R.string.stats_ui_this_week), true, s.hasGoal() ? host.ink.faint(host.getString(R.string.stats_ui_filled_bars_met_the_goal), 13) : null));
         String[] names = new String[7];
         int[] values = new int[7];
         Calendar[] dates = s.week();
@@ -126,25 +138,29 @@ final class StatsScreen implements Screen {
             names[i] = weekday.format(dates[i].getTime());
             values[i] = s.on(dates[i]);
         }
-        week.addView(new BarChart(f, names, values, s.goal));
+        BarChart chart = new BarChart(f, names, values, s.goal);
+        week.addView(chart);
         col.addView(week);
 
         LinearLayout most = MainActivity.keep(host.ink.col());
-        most.addView(structure.sectionHead("Most read", true, host.ink.faint("All time", 13)));
-        if (ranked.isEmpty()) most.addView(host.ink.muted("Open a book from Ink Home to see its reading time here.", 14));
+        most.addView(structure.sectionHead(host.getString(R.string.stats_ui_most_read), true, host.ink.faint(host.getString(R.string.stats_ui_all_time), 13)));
+        if (ranked.isEmpty()) most.addView(host.ink.muted(host.getString(R.string.stats_ui_most_read_empty), 14));
         for (int i = 0; i < Math.min(5, ranked.size()); i++) {
             Library.Book book = ranked.get(i);
             int minutes = s.forBook(book.path);
-            LinearLayout row = DataRow.create(f, book.title, minutes / (float) s.forBook(ranked.get(0).path), Stats.hm(minutes));
+            LinearLayout row = DataRow.create(f, book.title, minutes / (float) s.forBook(ranked.get(0).path), Stats.hm(host, minutes));
             host.ink.oneLine((TextView) row.getChildAt(0));
             row.setBackground(i < Math.min(5, ranked.size()) - 1 ? host.ink.listRow(0) : host.ink.pressable());
             row.setOnClickListener(v -> host.openBook(book));
             most.addView(MainActivity.item(row));
         }
         col.addView(most);
+        return chart;
     }
 
-    private static String quantity(int n, String unit) { return n + " " + unit + (n == 1 ? "" : "s"); }
+    private static String quantity(MainActivity host, int resource, int count) {
+        return host.getResources().getQuantityString(resource, count, count);
+    }
 
     private static void renderCalendar(MainActivity host, LinearLayout col, Stats s) {
         Folio f = host.ink.folio;
@@ -157,9 +173,9 @@ final class StatsScreen implements Screen {
         host.pagePrev = () -> { selected.add(Calendar.MONTH, -1); host.render(); };
         host.pageNext = () -> { selected.add(Calendar.MONTH, 1); host.render(); };
         ImageView previous = host.ink.iconButton("back", host.pagePrev);
-        previous.setContentDescription("Previous month");
+        previous.setContentDescription(host.getString(R.string.stats_ui_previous_month));
         ImageView next = host.ink.iconButton("chevron", host.pageNext);
-        next.setContentDescription("Next month");
+        next.setContentDescription(host.getString(R.string.stats_ui_next_month));
         head.addView(previous);
         head.addView(next);
         col.addView(head);
@@ -184,16 +200,18 @@ final class StatsScreen implements Screen {
             longest = Math.max(longest, streak);
             if (n > best) { best = n; bestDay = i + 1; }
         }
-        col.addView(MonthGrid.create(f, month, first, minutes, s.goal, today, null));
+        LinearLayout grid = MonthGrid.create(f, month, first, minutes, s.goal, today, null);
+        for (int i = 0; i < grid.getChildCount(); i++) MainActivity.item(grid.getChildAt(i));
+        col.addView(grid);
         int elapsed = month.equals(YearMonth.from(today)) ? today.getDayOfMonth()
                 : month.isAfter(YearMonth.from(today)) ? 0 : minutes.length;
-        col.addView(Ledger.create(f, new String[]{"Read", "Days read", "Goal met",
-                        bestDay == 0 ? "Best day" : "Best day · " + bestDay, "Average a day", "Longest streak"},
-                new String[]{Stats.hm(total), read + " of " + elapsed, s.hasGoal() ? quantity(met, "day") : "No goal",
-                        Stats.hm(best), Stats.hm(elapsed == 0 ? 0 : Math.round(total / (float) elapsed)), quantity(longest, "day")}),
+        col.addView(Ledger.create(f, new String[]{host.getString(R.string.stats_ui_read), host.getString(R.string.stats_ui_days_read), host.getString(R.string.stats_ui_goal_met),
+                        bestDay == 0 ? host.getString(R.string.stats_ui_best_day) : host.getString(R.string.stats_ui_best_day_number, bestDay), host.getString(R.string.stats_ui_average_a_day), host.getString(R.string.stats_ui_longest_streak)},
+                new String[]{Stats.hm(host, total), host.getString(R.string.stats_ui_days_read_of, read, elapsed), s.hasGoal() ? quantity(host, R.plurals.stats_ui_days, met) : host.getString(R.string.stats_ui_no_goal),
+                        Stats.hm(host, best), Stats.hm(host, elapsed == 0 ? 0 : Math.round(total / (float) elapsed)), quantity(host, R.plurals.stats_ui_days, longest)}),
                 host.ink.m(-1, -2, 0, 8, 0, 0));
-        col.addView(host.ink.faint(s.hasGoal() ? "Filled: goal met. Outlined: some reading. Small number: minutes."
-                : "Filled: 30+ minutes. Outlined: some reading. Small number: minutes.", 13),
+        col.addView(host.ink.faint(s.hasGoal() ? host.getString(R.string.stats_ui_calendar_legend_with_goal)
+                : host.getString(R.string.stats_ui_calendar_legend_without_goal), 13),
                 host.ink.m(-1, -2, 0, 4, 0, 0));
     }
 }

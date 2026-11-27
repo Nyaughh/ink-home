@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Apps, Home and setup -->
+    <string name="reader_activity_label">Ink Home reader</string>
+    <string name="notification_listener_label">Ink Home status bar</string>
+    <string name="app_clear_search">Clear search for %1$s</string>
+    <string name="app_unhide_description">Show %1$s in Apps</string>
+    <string name="ui_switcher">Switcher</string>
+    <string name="ui_search_apps">Search apps</string>
+    <string name="ui_list_view">List view</string>
+    <string name="ui_grid_view">Grid view</string>
+    <string name="ui_apps">Apps</string>
+    <string name="ui_all">All</string>
+    <string name="ui_recent">Recent</string>
+    <string name="ui_hidden">Hidden</string>
+    <string name="ui_no_matches">No matches.</string>
+    <string name="ui_no_hidden_apps">No hidden apps.</string>
+    <string name="ui_no_recent_apps">No recent apps.</string>
+    <string name="ui_no_apps_available">No apps available.</string>
+    <string name="ui_reading">Reading</string>
+    <string name="ui_hidden_apps">Hidden apps</string>
+    <string name="ui_reading_apps">Reading apps</string>
+    <string name="ui_tap_an_app_to_show_it_in">Tap an app to show it in Apps again.</string>
+    <string name="ui_time_in_these_apps_counts_as_reading">Time in these apps counts as reading. Your book reader always counts.</string>
+    <string name="ui_counts">Counts</string>
+    <string name="ui_off">Off</string>
+    <string name="ui_your_book_reader_always_counts">Your book reader always counts</string>
+    <string name="display_mono">Mono e-ink</string>
+    <string name="display_colour">Colour e-ink</string>
+    <string name="display_emissive">LCD or OLED</string>
+    <string name="display_detected">%1$s · %2$s</string>
+    <string name="display_confirmed">%1$s · Confirmed</string>
+    <string name="display_needs_confirmation">%1$s · Confirm or change</string>
+    <string name="ui_display_type">Display type</string>
+    <string name="ui_show_your_books">Show your books</string>
+    <string name="ui_file_access_allowed">File access allowed</string>
+    <string name="ui_allow_ink_home_to_read_book_files">Allow Ink Home to read book files.</string>
+    <string name="ui_count_reading_time">Count reading time</string>
+    <string name="ui_usage_access_allowed">Usage access allowed</string>
+    <string name="ui_allow_access_to_reading_app_usage">Allow access to reading app usage.</string>
+    <string name="ui_show_notifications">Show notifications</string>
+    <string name="ui_notification_access_allowed">Notification access allowed</string>
+    <string name="ui_allow_notifications_in_the_control_panel">Allow notifications in the control panel.</string>
+    <string name="ui_make_ink_home_the_home_screen">Make Ink Home the home screen</string>
+    <string name="ui_ink_home_is_your_home_screen">Ink Home is your home screen</string>
+    <string name="ui_choose_ink_home_as_the_default_home">Choose Ink Home as the default home app.</string>
+    <string name="ui_confirm_your_display">Confirm your display</string>
+    <string name="ui_ink_dot_optional">Ink dot (optional)</string>
+    <string name="ui_on">On</string>
+    <string name="ui_floating_screen_refresh_control">Floating screen refresh control</string>
+    <string name="ui_dismiss_setup_on_home">Dismiss setup on Home</string>
+    <string name="ui_reopen_this_checklist_in_updates_about">Reopen this checklist in Updates &amp; about.</string>
+    <string name="ui_let_ink_home_read_your_book_files">Let Ink Home read your book files for covers, titles and progress.</string>
+    <string name="ui_allow_file_access">Allow file access</string>
+    <string-array name="display_choices">
+        <item>Automatic</item>
+        <item>@string/display_mono</item>
+        <item>@string/display_colour</item>
+        <item>@string/display_emissive</item>
+    </string-array>
+    <plurals name="setup_remaining">
+        <item quantity="one">%1$s · %2$d step remaining</item>
+        <item quantity="other">%1$s · %2$d steps remaining</item>
+    </plurals>
+
+    <!-- Launcher actions and navigation -->
+    <string name="launcher_percent_duration_read">"%1$d%%  ·  %2$s read"</string>
+    <string name="launcher_today_goal">Today %1$d / %2$d min</string>
+    <string name="launcher_today_duration">Today %1$s</string>
+    <string name="launcher_open_stats_description">%1$s. Open Stats</string>
+    <string name="launcher_notification_count">Notifications · %1$d</string>
+    <string name="launcher_notifications_more">+ %1$d more</string>
+    <string name="launcher_book_row_status">"%1$s  ·  %2$s"</string>
+    <string name="launcher_metadata_read_time">%1$s · %2$s read</string>
+    <string name="launcher_duration_read">%1$s read</string>
+    <string name="launcher_metadata_pair">%1$s · %2$s</string>
+    <string name="launcher_label_percent">%1$s · %2$d%%</string>
+    <string name="launcher_percent">%1$d%%</string>
+    <string name="launcher_selected_choice">"%1$s   %2$s"</string>
+    <string name="launcher_page">Page %1$s</string>
+    <string name="launcher_last_read">Last read %1$s</string>
+    <string name="launcher_added_to">Added to %1$s</string>
+    <string name="launcher_no_reader">No app can open %1$s files</string>
+    <string name="launcher_cannot_open">Couldn\'t open %1$s</string>
+    <string name="launcher_minutes_a_day">%1$d minutes a day</string>
+    <string name="launcher_update_available">Ink Home %1$s is available</string>
+    <string name="launcher_downloading">Downloading %1$s…</string>
+    <string name="launcher_sleep_chapter">%1$s · Chapter %2$d</string>
+    <string name="launcher_sleep_today">%1$s · %2$d min today</string>
+    <string name="launcher_ink_shell">Ink shell</string>
+    <string name="launcher_turn_off_ink_shell">Turn off Ink shell</string>
+    <string name="launcher_open_android_accessibility_settings">Open Android accessibility settings</string>
+    <string name="launcher_finished">Finished</string>
+    <string name="launcher_started">Started</string>
+    <string name="launcher_not_started">Not started</string>
+    <string name="launcher_home">Home</string>
+    <string name="launcher_settings">Settings</string>
+    <string name="launcher_close_menu">Close menu</string>
+    <string name="launcher_open_menu">Open menu</string>
+    <string name="launcher_library">Library</string>
+    <string name="launcher_stats">Stats</string>
+    <string name="launcher_apps">Apps</string>
+    <string name="launcher_search">Search</string>
+    <string name="launcher_clean_screen">Clean screen</string>
+    <string name="launcher_wi_fi">Wi-Fi</string>
+    <string name="launcher_control_panel">Control panel</string>
+    <string name="launcher_date_pattern">EEEE, d MMMM</string>
+    <string name="launcher_charged">Charged</string>
+    <string name="launcher_charging">Charging</string>
+    <string name="launcher_on_battery">On battery</string>
+    <string name="launcher_off">Off</string>
+    <string name="launcher_not_connected">Not connected</string>
+    <string-array name="launcher_wifi_signal_levels">
+        <item>Very weak</item>
+        <item>Weak</item>
+        <item>Fair</item>
+        <item>Good</item>
+        <item>Strong</item>
+    </string-array>
+    <string name="launcher_bluetooth">Bluetooth</string>
+    <string name="launcher_device_settings">Device settings</string>
+    <string name="launcher_gentle_refresh">Gentle refresh</string>
+    <string name="launcher_rotation">Rotation</string>
+    <string name="launcher_portrait">Portrait</string>
+    <string name="launcher_follow_system">Follow system</string>
+    <string name="launcher_quiet">Quiet</string>
+    <string name="launcher_allow_access">Allow access</string>
+    <string name="launcher_on">On</string>
+    <string name="launcher_ink_dot">Ink dot</string>
+    <string name="launcher_light">Light</string>
+    <string name="launcher_display_settings">Display settings</string>
+    <string name="launcher_notifications">Notifications</string>
+    <string name="launcher_clear_all">Clear all</string>
+    <string name="launcher_notifications_cleared">Notifications cleared</string>
+    <string name="launcher_switcher">Switcher</string>
+    <string name="launcher_notification_listener_is_unavailable">Notification listener is unavailable</string>
+    <string name="launcher_device_settings_unavailable">Device settings unavailable</string>
+    <string name="launcher_volume">Volume</string>
+    <string name="launcher_open_notifications_hint">Swipe down from the top edge to see notifications</string>
+    <string name="launcher_clock_24_pattern">HH:mm</string>
+    <string name="launcher_newest_in_your_library">Newest in your library</string>
+    <string name="launcher_up_next">Up next</string>
+    <string name="launcher_no_book_yet">No book yet</string>
+    <string name="launcher_opening_your_library">Opening your library…</string>
+    <string name="launcher_empty_library_hint">Copy EPUB, PDF, MOBI or CBZ files over USB or BooxDrop and they\'ll appear here.</string>
+    <string name="launcher_finding_books_on_this_tablet">Finding books on this tablet.</string>
+    <string name="launcher_favorites">Favorites</string>
+    <string name="launcher_empty_favorites_hint">Long-press an app in Apps to add it here.</string>
+    <string name="launcher_new_collection">New collection</string>
+    <string name="launcher_rename">Rename</string>
+    <string name="launcher_delete_collection">Delete collection</string>
+    <string name="launcher_rename_collection">Rename collection</string>
+    <string name="launcher_collection_deleted">Collection deleted</string>
+    <string name="launcher_sort_by">Sort by</string>
+    <string name="launcher_show">Show</string>
+    <string name="launcher_view">View</string>
+    <string name="launcher_grid">Grid</string>
+    <string name="launcher_list">List</string>
+    <string name="launcher_sort_and_filter">Sort and filter</string>
+    <string name="launcher_book_details">Book details</string>
+    <string name="launcher_book_actions">Book actions</string>
+    <string name="launcher_continue_reading">Continue reading</string>
+    <string name="launcher_open_book">Open book</string>
+    <string name="launcher_action_open_with">Open with…</string>
+    <string name="launcher_action_add_to_collection">Add to collection…</string>
+    <string name="launcher_action_remove_from_this_collection">Remove from this collection</string>
+    <string name="launcher_action_mark_as_not_finished">Mark as not finished</string>
+    <string name="launcher_action_mark_as_finished">Mark as finished</string>
+    <string name="launcher_action_remove_from_reading">Remove from Reading</string>
+    <string name="launcher_action_details">Details</string>
+    <string name="launcher_removed_from_collection">Removed from collection</string>
+    <string name="launcher_removed_from_reading">Removed from Reading</string>
+    <string name="launcher_marked_as_not_finished">Marked as not finished</string>
+    <string name="launcher_marked_as_finished">Marked as finished</string>
+    <string name="launcher_new_collection_ellipsis">New collection…</string>
+    <string name="launcher_add_to_collection">Add to collection</string>
+    <string name="launcher_ink_home_reader">Ink Home reader</string>
+    <string name="launcher_open_with">Open with</string>
+    <string name="launcher_ask_every_time">Ask every time</string>
+    <string name="launcher_open_books_with">Open books with</string>
+    <string name="launcher_open_pdfs_and_comics_with">Open PDFs and comics with</string>
+    <string name="launcher_neoreader">NeoReader</string>
+    <string name="launcher_no_goal_just_show_time_read">No goal, just show time read</string>
+    <string name="launcher_daily_goal">Daily goal</string>
+    <string name="launcher_search_apps">Search apps</string>
+    <string name="launcher_action_open">Open</string>
+    <string name="launcher_action_remove_from_favorites">Remove from favorites</string>
+    <string name="launcher_action_add_to_favorites">Add to favorites</string>
+    <string name="launcher_action_move_to_first_favorite">Move to first favorite</string>
+    <string name="launcher_action_exclude_reading_time">Don\'t count as reading</string>
+    <string name="launcher_action_count_time_as_reading">Count time as reading</string>
+    <string name="launcher_action_show_in_apps">Show in Apps</string>
+    <string name="launcher_action_hide_from_apps">Hide from Apps</string>
+    <string name="launcher_action_app_info">App info</string>
+    <string name="launcher_neoreader_always_counts">NeoReader always counts</string>
+    <string name="launcher_sleep_picture_updated">Sleep picture updated</string>
+    <string name="launcher_picture_read_error">Couldn\'t read that picture</string>
+    <string name="launcher_choose_a_picture">Choose a picture</string>
+    <string name="launcher_no_pictures_found">No pictures found</string>
+    <string name="launcher_empty_pictures_hint">Copy JPG or PNG files into the Pictures folder over USB, then come back here.</string>
+    <string name="launcher_update_wifi_required">Connect to Wi-Fi to check for updates</string>
+    <string name="launcher_checking_for_updates">Checking for updates…</string>
+    <string name="launcher_install_the_new_version">Install the new version?</string>
+    <string name="launcher_install">Install</string>
+    <string name="launcher_update_check_error">Couldn\'t reach GitHub. Try again later.</string>
+    <string name="launcher_ink_home_is_up_to_date">Ink Home is up to date</string>
+    <string name="launcher_update_install_permission">Allow Ink Home to install updates, then tap Install again</string>
+    <string name="launcher_update_checksum_error">The download didn\'t match its checksum, so it wasn\'t installed</string>
+    <string name="launcher_update_failed_try_again_later">Update failed. Try again later.</string>
+    <string name="launcher_screen_redrawn">Redrew the window. Strong clean is in Display &amp; refresh.</string>
+    <string name="launcher_clock_12_pattern">h:mm</string>
+
+    <!-- Library and search -->
+    <string-array name="library_sort_labels">
+        <item>Recently read</item>
+        <item>Title</item>
+        <item>Author</item>
+        <item>Recently added</item>
+        <item>Progress</item>
+    </string-array>
+    <string-array name="library_type_labels">
+        <item>All types</item>
+        <item>Books</item>
+        <item>Comics</item>
+        <item>PDFs</item>
+    </string-array>
+    <string name="library_ui_sort_filter">Sorted by %1$s</string>
+    <string name="library_ui_type_filter">%1$s only</string>
+    <string name="library_ui_search_books">Search books</string>
+    <string name="library_ui_new_collection">New collection</string>
+    <string name="library_ui_sort_and_filter">Sort and filter</string>
+    <string name="library_ui_list_view">List view</string>
+    <string name="library_ui_grid_view">Grid view</string>
+    <string name="library_ui_library">Library</string>
+    <string name="library_ui_reading">Reading</string>
+    <string name="library_ui_all">All</string>
+    <string name="library_ui_finished">Finished</string>
+    <string name="library_ui_collections">Collections</string>
+    <string name="library_ui_allow_file_access">Allow file access</string>
+    <string name="library_ui_file_access_description">Ink Home needs it to list your books.</string>
+    <string name="library_ui_looking_for_books">Looking for books…</string>
+    <string name="library_ui_empty_collection">This collection is empty. Long-press a book and choose Add to collection.</string>
+    <string name="library_ui_empty_reading">Books you open show up here, with your progress and time read.</string>
+    <string name="library_ui_empty_finished">Finished books show up here. Long-press a book to mark it finished.</string>
+    <string name="library_ui_empty_library">No books found. Copy EPUB, PDF, MOBI, FB2, DJVU, CBZ or CBR files to the tablet.</string>
+    <string name="library_ui_close_book_details">Close book details</string>
+    <string name="library_ui_book_details">Book details</string>
+    <string name="library_ui_search_hint">Search titles, authors and files</string>
+    <string name="library_ui_cancel">Cancel</string>
+    <string name="library_ui_no_matches">No matches.</string>
+
+    <!-- Settings -->
+    <string name="settings_ui_appearance_summary">Text %1$d%% · Interface %2$d%%</string>
+    <string name="settings_ui_display_summary">%1$s · %2$s</string>
+    <string name="settings_ui_goal_summary">%1$d minute daily goal</string>
+    <string name="settings_ui_version">Version %1$s</string>
+    <string name="settings_ui_product_version">Ink Home %1$s</string>
+    <string name="settings_ui_install_version">Install version %1$s</string>
+    <string name="settings_ui_minutes">%1$d min</string>
+    <string name="settings_ui_settings_unavailable">%1$s settings are unavailable</string>
+    <string name="settings_ui_space_free">%1$s free</string>
+    <string name="settings_ui_selected_category">"●  %1$s"</string>
+    <string name="settings_ui_appearance">Appearance</string>
+    <string name="settings_ui_display_refresh">Display &amp; refresh</string>
+    <string name="settings_ui_reading">Reading</string>
+    <string name="settings_ui_library">Library</string>
+    <string name="settings_ui_system_shell">System shell</string>
+    <string name="settings_ui_controls">Controls</string>
+    <string name="settings_ui_device">Device</string>
+    <string name="settings_ui_updates_about">Updates &amp; about</string>
+    <string name="settings_ui_set_up_ink_home">Set up Ink Home</string>
+    <string name="settings_ui_font_licences">Font licences</string>
+    <string name="settings_ui_ink_dot">Ink dot</string>
+    <string name="settings_ui_boox_apps">Boox apps</string>
+    <string name="settings_ui_settings">Settings</string>
+    <string name="settings_ui_scroll">Scroll</string>
+    <string name="settings_ui_pages">Pages</string>
+    <string name="settings_ui_daily_goal_off">Daily goal off</string>
+    <string name="settings_ui_looking_for_books">Looking for books…</string>
+    <string name="settings_ui_allow_file_access">Allow file access</string>
+    <string name="settings_ui_ink_home_status_strip">Ink Home status strip</string>
+    <string name="settings_ui_system_status_strip">System status strip</string>
+    <string name="settings_ui_reversed_page_buttons">Reversed page buttons</string>
+    <string name="settings_ui_normal_page_buttons">Normal page buttons</string>
+    <string name="settings_ui_home_layout">Home layout</string>
+    <string name="settings_ui_text_size">Text size</string>
+    <string name="settings_ui_interface_size">Interface size</string>
+    <string name="settings_ui_clock">Clock</string>
+    <string name="settings_ui_theme">Theme</string>
+    <string name="settings_ui_accent">Accent</string>
+    <string name="settings_ui_wallpaper">Wallpaper</string>
+    <string name="settings_ui_none">None</string>
+    <string name="settings_ui_display_type">Display type</string>
+    <string name="settings_ui_long_lists">Long lists</string>
+    <string name="settings_ui_motion">Motion</string>
+    <string name="settings_ui_strong_clean_now">Strong clean now</string>
+    <string name="settings_ui_flashes_the_screen">Flashes the screen</string>
+    <string name="settings_ui_full_refresh_in_the_reader">Full refresh in the reader</string>
+    <string name="settings_ui_app_icons">App icons</string>
+    <string name="settings_ui_smooth_text_updates">Smooth text updates</string>
+    <string name="settings_ui_book_covers">Book covers</string>
+    <string name="settings_ui_clean_screen_after_reading">Clean screen after reading</string>
+    <string name="settings_ui_open_books_with">Open books with</string>
+    <string name="settings_ui_open_pdfs_and_comics_with">Open PDFs and comics with</string>
+    <string name="settings_ui_off">Off</string>
+    <string name="settings_ui_daily_goal">Daily goal</string>
+    <string name="settings_ui_week_starts_on">Week starts on</string>
+    <string name="settings_ui_apps_that_count_as_reading">Apps that count as reading</string>
+    <string name="settings_ui_reading_time_access">Reading time access</string>
+    <string name="settings_ui_allowed">Allowed</string>
+    <string name="settings_ui_allow">Allow</string>
+    <string name="settings_ui_look_for_new_books">Look for new books</string>
+    <string name="settings_ui_searching">…</string>
+    <string name="settings_ui_file_access">File access</string>
+    <string name="settings_ui_ink_shell">Ink shell</string>
+    <string name="settings_ui_on_turn_off">On · Turn off</string>
+    <string name="settings_ui_off_set_up">Off · Set up</string>
+    <string name="settings_ui_status_strip">Status strip</string>
+    <string name="settings_ui_sleep_screen">Sleep screen</string>
+    <string name="settings_ui_current_book">Current book</string>
+    <string name="settings_ui_your_picture">Your picture</string>
+    <string name="settings_ui_notification_access">Notification access</string>
+    <string name="settings_ui_default_home_app">Default home app</string>
+    <string name="settings_ui_ink_home">Ink Home</string>
+    <string name="settings_ui_choose">Choose</string>
+    <string name="settings_ui_hidden_apps">Hidden apps</string>
+    <string name="settings_ui_choose_which_apps_to_show">Choose which apps to show</string>
+    <string name="settings_ui_on">On</string>
+    <string name="settings_ui_quiet">Quiet</string>
+    <string name="settings_ui_requires_notification_access">Requires notification access</string>
+    <string name="settings_ui_show_ink_dot">Show Ink dot</string>
+    <string name="settings_ui_size">Size</string>
+    <string name="settings_ui_tuck_against_the_edge">Tuck against the edge</string>
+    <string name="settings_ui_dot_in_each_app">Dot in each app</string>
+    <string name="settings_ui_show_tuck_or_hide">Show, tuck or hide</string>
+    <string name="settings_ui_boox_navigation_ball">Boox Navigation Ball</string>
+    <string name="settings_ui_its_accessibility_service_is_enabled">Its accessibility service is enabled</string>
+    <string name="settings_ui_navigation_ball_settings_are_unavailable">Navigation Ball settings are unavailable</string>
+    <string name="settings_ui_lock_to_portrait">Lock to portrait</string>
+    <string name="settings_ui_page_buttons">Page buttons</string>
+    <string name="settings_ui_swipe_to_turn_pages">Swipe to turn pages</string>
+    <string name="settings_ui_wi_fi">Wi-Fi</string>
+    <string name="settings_ui_bluetooth">Bluetooth</string>
+    <string name="settings_ui_sound">Sound</string>
+    <string name="settings_ui_date_and_time">Date and time</string>
+    <string name="settings_ui_storage">Storage</string>
+    <string name="settings_ui_android_apps">Android apps</string>
+    <string name="settings_ui_all_android_settings">All Android settings</string>
+    <string name="settings_ui_check_for_updates">Check for updates</string>
+    <string name="settings_ui_ready">Ready</string>
+    <string name="settings_ui_check_automatically">Check automatically</string>
+    <string name="settings_ui_source_sans_3_literata">Source Sans 3 · Literata</string>
+    <string name="settings_ui_the_font_licence_could_not_be_opened">The font licence could not be opened.</string>
+    <string-array name="settings_ui_home_layouts">
+        <item>Cover</item>
+        <item>Shelf</item>
+        <item>Minimal</item>
+    </string-array>
+    <string-array name="settings_ui_clock_modes">
+        <item>Auto</item>
+        <item>12-hour</item>
+        <item>24-hour</item>
+    </string-array>
+    <string-array name="settings_ui_system_themes">
+        <item>Paper</item>
+        <item>Night</item>
+        <item>Follow system</item>
+    </string-array>
+    <string-array name="settings_ui_eink_themes">
+        <item>Paper</item>
+        <item>Night</item>
+    </string-array>
+    <string-array name="settings_ui_accents">
+        <item>Vermilion</item>
+        <item>Cobalt</item>
+        <item>Forest</item>
+        <item>Ochre</item>
+    </string-array>
+    <string-array name="settings_ui_list_modes">
+        <item>Pages</item>
+        <item>Scroll</item>
+    </string-array>
+    <string-array name="settings_ui_motion_modes">
+        <item>Off</item>
+        <item>Subtle</item>
+    </string-array>
+    <string-array name="settings_ui_refresh_intervals">
+        <item>Off</item>
+        <item>1 page</item>
+        <item>4 pages</item>
+        <item>8 pages</item>
+        <item>16 pages</item>
+    </string-array>
+    <string-array name="settings_ui_weekdays">
+        <item>Sunday</item>
+        <item>Monday</item>
+    </string-array>
+    <string-array name="settings_ui_status_strips">
+        <item>Ink Home</item>
+        <item>System</item>
+    </string-array>
+    <string-array name="settings_ui_dot_sizes">
+        <item>Small</item>
+        <item>Medium</item>
+        <item>Large</item>
+    </string-array>
+    <string-array name="settings_ui_dot_modes">
+        <item>Show</item>
+        <item>Tuck</item>
+        <item>Hide</item>
+    </string-array>
+    <string-array name="settings_ui_page_button_modes">
+        <item>Normal</item>
+        <item>Reversed</item>
+    </string-array>
+    <plurals name="settings_ui_book_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+
+    <!-- Statistics, wallpaper, sleep and permissions -->
+    <string name="stats_ui_wallpaper_description">A picture behind your home screen, in greyscale and faded so text stays sharp.</string>
+    <string name="stats_ui_all_time">All time</string>
+    <string name="stats_ui_file_access_description">Allow file access so Ink Home can find books on your device.</string>
+    <string name="stats_ui_notification_access_description">Allow notification access to see notifications in the control panel.</string>
+    <string name="stats_ui_usage_access_description">Allow usage access so Ink Home can count time in your reading apps.</string>
+    <string name="stats_ui_reading_time_access_description">Allow usage access to count the minutes spent in reading apps.</string>
+    <string name="stats_ui_location_access_description">Android requires location access to show your Wi-Fi network name in the control panel.</string>
+    <string name="stats_ui_average_a_day">Average a day</string>
+    <string name="stats_ui_best_day">Best day</string>
+    <string name="stats_ui_best_day_number">Best day · %1$d</string>
+    <string name="stats_ui_best_streak">Streak · best %1$d</string>
+    <string name="stats_ui_book">Book</string>
+    <string name="stats_ui_calendar">Calendar</string>
+    <string name="stats_ui_home_app_description">Choose Ink Home to open it when you press Home.</string>
+    <string name="stats_ui_choose_your_home_app">Choose your home app</string>
+    <string name="stats_ui_count_reading_time">Count reading time</string>
+    <string name="stats_ui_days_read">Days read</string>
+    <string name="stats_ui_days_read_of">%1$d of %2$d</string>
+    <string name="stats_ui_fill_the_screen_crop_edges">Fill the screen (crop edges)</string>
+    <string name="stats_ui_calendar_legend_without_goal">Filled: 30+ minutes. Outlined: some reading. Small number: minutes.</string>
+    <string name="stats_ui_filled_bars_met_the_goal">Filled bars met the goal</string>
+    <string name="stats_ui_calendar_legend_with_goal">Filled: goal met. Outlined: some reading. Small number: minutes.</string>
+    <string name="stats_ui_finished_in_year">Finished in %1$d</string>
+    <string name="stats_ui_goal_exceeded">Goal met · %1$d min over</string>
+    <string name="stats_ui_goal_met">Goal met</string>
+    <string name="stats_ui_goal_minutes">Goal %1$d min</string>
+    <string name="stats_ui_goal_remaining">%1$d min to go</string>
+    <string name="stats_ui_sleep_instructions_boox">In Boox Storage, open Pictures › Ink Home, long-press “Ink Home sleep” and choose Set as screensaver. Boox keeps a copy, so set it again after each update.</string>
+    <string name="stats_ui_in_progress">In progress</string>
+    <string name="stats_ui_sleep_screen_description">Ink Home can make your sleep screen the book you\'re reading, or any picture on the tablet.</string>
+    <string name="stats_ui_loading_reading_time">Loading reading time…</string>
+    <string name="stats_ui_longest_streak">Longest streak</string>
+    <string name="stats_ui_making_picture">Making picture…</string>
+    <string name="stats_ui_making_sleep_picture">Making sleep picture…</string>
+    <string name="stats_ui_medium">Medium</string>
+    <string name="stats_ui_min_today">min today</string>
+    <string name="stats_ui_most_read">Most read</string>
+    <string name="stats_ui_next_month">Next month</string>
+    <string name="stats_ui_no_goal">No goal</string>
+    <string name="stats_ui_off">Off</string>
+    <string name="stats_ui_most_read_empty">Open a book from Ink Home to see its reading time here.</string>
+    <string name="stats_ui_overview">Overview</string>
+    <string name="stats_ui_pick_a_picture_below">Pick a picture below</string>
+    <string name="stats_ui_picture">Picture</string>
+    <string name="stats_ui_picture_ready">Picture ready</string>
+    <string name="stats_ui_previous_month">Previous month</string>
+    <string name="stats_ui_read">Read</string>
+    <string name="stats_ui_reading_time">Reading time</string>
+    <string name="stats_ui_remove_wallpaper">Remove wallpaper</string>
+    <string name="stats_ui_set_a_goal">Set a goal</string>
+    <string name="stats_ui_show_notifications">Show notifications</string>
+    <string name="stats_ui_show_the_whole_picture">Show the whole picture</string>
+    <string name="stats_ui_show_the_wi_fi_name">Show the Wi-Fi name</string>
+    <string name="stats_ui_show_your_books">Show your books</string>
+    <string name="stats_ui_sleep_screen">Sleep screen</string>
+    <string name="stats_ui_strength">Strength</string>
+    <string name="stats_ui_strength_level">Strength · %1$s</string>
+    <string name="stats_ui_strong">Strong</string>
+    <string name="stats_ui_subtle">Subtle</string>
+    <string name="stats_ui_sleep_instructions_generic">The image is saved in Pictures › Ink Home as “Ink Home sleep.png”. Choose it in your device’s sleep screen settings if supported.</string>
+    <string name="stats_ui_access_page_unavailable">This access page is unavailable on your device.</string>
+    <string name="stats_ui_this_month">This month</string>
+    <string name="stats_ui_this_week">This week</string>
+    <string name="stats_ui_turn_on_reading_time">Turn on reading time</string>
+    <string name="stats_ui_use_this_picture">Use this picture</string>
+    <string name="stats_ui_wallpaper">Wallpaper</string>
+    <string name="stats_ui_wallpaper_set">Wallpaper set</string>
+    <plurals name="stats_ui_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="stats_ui_books">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+
+    <!-- Reader, Folio widgets and book formatting -->
+    <string name="reader_ui_open_error">Couldn\'t open this book</string>
+    <string name="reader_ui_chapter_error">This chapter couldn\'t be read.</string>
+    <string name="reader_ui_opening">Opening…</string>
+    <string name="reader_ui_type_sample">Aa</string>
+    <string name="reader_ui_close_book">Close book</string>
+    <string name="reader_ui_contents">Contents</string>
+    <string name="reader_ui_text_settings">Text settings</string>
+    <string name="reader_ui_previous_chapter">Previous chapter</string>
+    <string name="reader_ui_next_chapter">Next chapter</string>
+    <string name="reader_ui_text">Text</string>
+    <string name="reader_ui_line_spacing">Line spacing</string>
+    <string name="reader_ui_margins">Margins</string>
+    <string name="reader_ui_alignment">Alignment</string>
+    <string name="reader_ui_page_footer_refresh_and_more">Page footer, refresh and more</string>
+    <string name="reader_ui_reader_settings">Reader settings</string>
+    <string name="reader_ui_page_footer">Page footer</string>
+    <string name="reader_ui_full_refresh">Full refresh</string>
+    <string name="reader_ui_footer_progress">%1$d%% · %2$d / %3$d</string>
+    <string name="reader_ui_page_in_chapter">Page %1$d of %2$d in this chapter</string>
+    <string name="reader_ui_chapter_position">Chapter %1$d of %2$d</string>
+    <string name="reader_ui_chapter_number">Chapter %1$d</string>
+    <string name="reader_ui_off">Off</string>
+    <string name="reader_ui_done">Done</string>
+    <string name="reader_ui_size_sample">A</string>
+    <string name="reader_ui_text_size">Text size</string>
+    <string name="reader_ui_font">Font</string>
+    <string name="reader_ui_size_heading">Text size · %1$d sp</string>
+    <string name="reader_ui_size_sp">%1$d sp</string>
+    <string name="reader_ui_label_value">%1$s, %2$s</string>
+    <string name="reader_ui_percent">%1$d%%</string>
+    <string name="reader_ui_increase">Increase %1$s</string>
+    <string name="reader_ui_decrease">Decrease %1$s</string>
+    <string name="reader_ui_remove_filter">Remove filter %1$s</string>
+    <string name="reader_ui_previous_page">Previous page</string>
+    <string name="reader_ui_next_page">Next page</string>
+    <string name="reader_ui_page_count">%1$d / %2$d</string>
+    <string name="reader_ui_clean_screen">Clean screen</string>
+    <string name="reader_ui_hold_for_refresh_options">Hold for refresh options</string>
+    <string name="reader_ui_home">Home</string>
+    <string name="reader_ui_settings">Settings</string>
+    <string name="reader_ui_open_menu">Open menu</string>
+    <string name="reader_ui_close_menu">Close menu</string>
+    <string name="reader_ui_back">Back</string>
+    <string name="reader_ui_open_stats">%1$s. Open Stats</string>
+    <string name="reader_ui_status">%1$s, %2$s, Wi-Fi %3$s, battery %4$d percent. Open control panel</string>
+    <string name="reader_ui_status_charging">%1$s, %2$s, Wi-Fi %3$s, battery %4$d percent, charging. Open control panel</string>
+    <string name="reader_ui_wifi_off">off</string>
+    <string name="reader_ui_wifi_connected">connected</string>
+    <string name="reader_ui_reading_time">Reading time</string>
+    <string name="reader_ui_short_minutes">%1$dm</string>
+    <string name="reader_ui_goal_met">%1$s, goal met</string>
+    <string name="reader_ui_today">%1$s, today</string>
+    <string-array name="reader_ui_fonts">
+        <item>Literata</item>
+        <item>Source Sans</item>
+        <item>System serif</item>
+        <item>System sans</item>
+    </string-array>
+    <string-array name="reader_ui_spacing_options">
+        <item>Compact</item>
+        <item>Standard</item>
+        <item>Loose</item>
+    </string-array>
+    <string-array name="reader_ui_margin_options">
+        <item>Narrow</item>
+        <item>Standard</item>
+        <item>Wide</item>
+    </string-array>
+    <string-array name="reader_ui_alignment_options">
+        <item>Justified</item>
+        <item>Left</item>
+    </string-array>
+    <string-array name="reader_ui_footer_options">
+        <item>Off</item>
+        <item>Progress</item>
+        <item>Chapter and progress</item>
+    </string-array>
+    <string-array name="reader_ui_menu_labels">
+        <item>Home</item>
+        <item>Library</item>
+        <item>Stats</item>
+        <item>Apps</item>
+        <item>Search</item>
+        <item>Clean screen</item>
+        <item>Wi-Fi</item>
+        <item>Control panel</item>
+    </string-array>
+    <plurals name="reader_ui_refresh_pages">
+        <item quantity="one">%1$d page</item>
+        <item quantity="other">%1$d pages</item>
+    </plurals>
+    <plurals name="reader_ui_notifications">
+        <item quantity="one">%1$d notification</item>
+        <item quantity="other">%1$d notifications</item>
+    </plurals>
+    <plurals name="reader_ui_chart_goal">
+        <item quantity="one">, goal %1$d minute</item>
+        <item quantity="other">, goal %1$d minutes</item>
+    </plurals>
+    <plurals name="reader_ui_chart_day">
+        <item quantity="one">, %1$s %2$d minute</item>
+        <item quantity="other">, %1$s %2$d minutes</item>
+    </plurals>
+    <plurals name="reader_ui_date_minutes">
+        <item quantity="one">%1$s, %2$d minute</item>
+        <item quantity="other">%1$s, %2$d minutes</item>
+    </plurals>
+    <string name="reader_ui_book_progress_pages">"%1$d%%  ·  p. %2$s"</string>
+    <string name="reader_ui_pages_of">%1$d of %2$d</string>
+    <string name="reader_ui_size_bytes">%1$d B</string>
+    <string name="reader_ui_size_kb">%1$d KB</string>
+    <string name="reader_ui_size_mb">%1$.1f MB</string>
+    <string name="reader_ui_size_gb">%1$.1f GB</string>
+    <string name="reader_ui_just_now">just now</string>
+    <plurals name="reader_ui_minutes_ago">
+        <item quantity="one">%1$d min ago</item>
+        <item quantity="other">%1$d min ago</item>
+    </plurals>
+    <string name="reader_ui_yesterday">yesterday</string>
+    <string name="reader_ui_duration_minutes">%1$d min</string>
+    <string name="reader_ui_duration_hours">%1$d h</string>
+    <string name="reader_ui_duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="reader_ui_comic">Comic</string>
+    <plurals name="reader_ui_hour_ago">
+        <item quantity="one">%1$d hour ago</item>
+        <item quantity="other">%1$d hours ago</item>
+    </plurals>
+    <plurals name="reader_ui_day_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <plurals name="reader_ui_week_ago">
+        <item quantity="one">%1$d week ago</item>
+        <item quantity="other">%1$d weeks ago</item>
+    </plurals>
+    <plurals name="reader_ui_month_ago">
+        <item quantity="one">%1$d month ago</item>
+        <item quantity="other">%1$d months ago</item>
+    </plurals>
+
+    <!-- Services and system surfaces -->
+    <string name="service_ui_all_ink_home_controls">All Ink Home controls</string>
+    <string name="service_ui_allow_usage_access">Allow usage access</string>
+    <string name="service_ui_android_could_not_close_the_app">Android could not close the app</string>
+    <string name="service_ui_available_memory">%1$s available memory</string>
+    <string name="service_ui_bluetooth">Bluetooth</string>
+    <string name="service_ui_choice_selected">"●   %1$s"</string>
+    <string name="service_ui_choice_unselected">"○   %1$s"</string>
+    <string name="service_ui_close">Close</string>
+    <string name="service_ui_close_all">Close all</string>
+    <string name="service_ui_close_app">Close %1$s</string>
+    <string name="service_ui_continue">Continue</string>
+    <string name="service_ui_control_panel">Control panel</string>
+    <string name="service_ui_done">Done</string>
+    <string name="service_ui_enter_a_name">Enter a name</string>
+    <string name="service_ui_finish_later">Finish later</string>
+    <string name="service_ui_gentle_refresh">Gentle refresh</string>
+    <string name="service_ui_gentle_refresh_unavailable">Gentle refresh unavailable</string>
+    <string name="service_ui_hide_dot">Hide dot</string>
+    <string name="service_ui_hide_in_this_app">Hide in this app</string>
+    <string name="service_ui_ink_dot">Ink dot</string>
+    <string name="service_ui_ink_dot_clean_screen">Ink dot. Clean screen</string>
+    <string name="service_ui_ink_dot_is_on">Ink dot is on</string>
+    <string name="service_ui_ink_home">Ink Home</string>
+    <string name="service_ui_ink_home_asleep">Ink Home · asleep</string>
+    <string name="service_ui_install_failed">Update didn\'t install</string>
+    <string name="service_ui_install_failed_reason">Update didn\'t install: %1$s</string>
+    <string name="service_ui_loading_recent_apps">Loading recent apps…</string>
+    <string name="service_ui_no_recent_apps">No recent apps.</string>
+    <string name="service_ui_open_ink_dot_settings">Open Ink dot settings</string>
+    <string name="service_ui_open_ink_home_control_panel">Open Ink Home control panel</string>
+    <string name="service_ui_overlay_permission_settings_unavailable">Overlay permission settings unavailable</string>
+    <string name="service_ui_save">Save</string>
+    <string name="service_ui_settings">Settings</string>
+    <string name="service_ui_settings_unavailable">Settings unavailable</string>
+    <string name="service_ui_show_dot">Show dot</string>
+    <string name="service_ui_show_recently_opened_apps_and_when_you_used_them">Show recently opened apps and when you used them.</string>
+    <string name="service_ui_skip">Skip</string>
+    <string name="service_ui_sleeping">Sleeping</string>
+    <string name="service_ui_strong_clean">Strong clean</string>
+    <string name="service_ui_switcher">Switcher</string>
+    <string name="service_ui_tuck_to_edge">Tuck to edge</string>
+    <string name="service_ui_undo">Undo</string>
+    <string name="service_ui_wi_fi">Wi-Fi</string>
+</resources>

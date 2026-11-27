@@ -207,16 +207,16 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
         LinearLayout rows = new LinearLayout(overlay);
         rows.setOrientation(LinearLayout.VERTICAL);
         menu.addView(rows);
-        row(rows, "Strong clean", this::strongClean);
-        row(rows, isTucked() ? "Show dot" : "Tuck to edge", () -> setTuck(!isTucked()));
-        if (shell) row(rows, "Hide in this app", () -> ShellService.setDotPolicy(this, foreground, 2));
-        else row(rows, "Hide dot", () -> prefs(this).edit().putBoolean("dotEnabled", false).apply());
+        row(rows, getString(R.string.service_ui_strong_clean), this::strongClean);
+        row(rows, isTucked() ? getString(R.string.service_ui_show_dot) : getString(R.string.service_ui_tuck_to_edge), () -> setTuck(!isTucked()));
+        if (shell) row(rows, getString(R.string.service_ui_hide_in_this_app), () -> ShellService.setDotPolicy(this, foreground, 2));
+        else row(rows, getString(R.string.service_ui_hide_dot), () -> prefs(this).edit().putBoolean("dotEnabled", false).apply());
         if (shell) {
-            row(rows, "Control panel", ShellService::openPanel);
-            row(rows, "Ink Home", () -> ShellService.open(this, Intent.ACTION_MAIN));
-            row(rows, "Switcher", () -> ShellService.open(this, ShellService.SWITCHER));
+            row(rows, getString(R.string.service_ui_control_panel), ShellService::openPanel);
+            row(rows, getString(R.string.service_ui_ink_home), () -> ShellService.open(this, Intent.ACTION_MAIN));
+            row(rows, getString(R.string.service_ui_switcher), () -> ShellService.open(this, ShellService.SWITCHER));
         }
-        row(rows, "Settings", () -> startActivity(settingsIntent(this)));
+        row(rows, getString(R.string.service_ui_settings), () -> startActivity(settingsIntent(this)));
         int width = Math.min(folio.u(252), area.width()-placement.width-folio.u(12));
         if (width <= 0) { menu = null; return; }
         rows.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
@@ -244,7 +244,7 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
     @Override public void clean() {
         closeMenu();
         if (dot != null && !Epd.requestGentleRefresh(dot))
-            showNotice("Gentle refresh unavailable");
+            showNotice(getString(R.string.service_ui_gentle_refresh_unavailable));
     }
 
     private void strongClean() {

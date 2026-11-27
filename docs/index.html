@@ -10,7 +10,7 @@
     --paper: #f3f2ee;
     --ink: #141414;
     --grey: #5c5c5c;
-    --faint: #8f8f8f;
+    --faint: #595753;
     --rule: #cfcdc6;
     --bezel: #2a2a2a;
   }
@@ -24,7 +24,7 @@
     -webkit-font-smoothing: antialiased;
   }
   main { max-width: 760px; margin: 0 auto; padding: 72px 20px 48px; }
-  h1, h2 { font-family: Georgia, "Iowan Old Style", "Times New Roman", serif; font-weight: 700; letter-spacing: -0.01em; }
+  h1, h2 { font-family: inherit; font-weight: 700; letter-spacing: -0.01em; }
   h1 { font-size: 52px; line-height: 1.05; margin: 0 0 14px; }
   h2 { font-size: 26px; margin: 0 0 14px; }
   p { margin: 0 0 14px; }
@@ -39,13 +39,13 @@
   .meta { color: var(--faint); font-size: 14px; }
   hr { border: 0; border-top: 1px solid var(--rule); margin: 56px 0; }
 
-  .shots { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 56px 0 0; }
+  .shots { max-width: 390px; margin: 40px auto 0; }
   figure { margin: 0; }
   .device {
     background: var(--bezel); border-radius: 22px; padding: 18px 14px 34px;
     box-shadow: inset 0 0 0 1px #3a3a3a;
   }
-  .device img { display: block; width: 100%; height: auto; border-radius: 2px; background: #fff; filter: grayscale(1); }
+  .device img { display: block; width: 100%; height: auto; border-radius: 2px; background: #fff; }
   figcaption { color: var(--grey); font-size: 14px; margin-top: 10px; text-align: center; }
 
   .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 26px 36px; }
@@ -78,13 +78,10 @@
     <a class="button" href="https://github.com/Nyaughh/ink-home/releases/latest/download/ink-home.apk">Download for Android</a>
     <a class="button ghost" href="https://github.com/Nyaughh/ink-home">Source on GitHub</a>
   </div>
-  <p class="meta">Android 11 or newer · built on a 6″ Boox · about 220&nbsp;KB · updates itself</p>
+  <p class="meta">Android 11 or newer Â· built on a 6â€³ Boox Â· about 220&nbsp;KB Â· updates itself</p>
 
   <div class="shots">
-    <figure><div class="device"><img src="shots/home.png" alt="Ink Home showing the current book's cover, progress and favorite apps" width="758" height="1024"></div><figcaption>Your book, front and centre</figcaption></figure>
-    <figure><div class="device"><img src="shots/library.png" alt="The library as a grid of book covers with progress bars" width="758" height="1024"></div><figcaption>A library with real covers</figcaption></figure>
-    <figure><div class="device"><img src="shots/menu.png" alt="The bottom menu with Home, Library, Reading, Apps, Search, Refresh, Wi-Fi and Quick panel" width="758" height="1024"></div><figcaption>Everything one tap away</figcaption></figure>
-    <figure><div class="device"><img src="shots/reading.png" alt="Reading time for today, the week, the month and all time" width="758" height="1024"></div><figcaption>Time read, without the guilt</figcaption></figure>
+    <figure><div class="device"><img src="shots/phase4-home-c69.png" alt="The Home screen with the current book, Up next list, favourite apps and navigation dock" width="758" height="1024"></div><figcaption>Boox C69 device capture from Phase 4 of the 2.0 redesign.</figcaption></figure>
   </div>
 
   <hr>
@@ -95,9 +92,11 @@
     <div><h3>A real library</h3><p>Covers pulled from EPUB, PDF and CBZ files. Reading, All, Finished and Collections, with search, sort and filters.</p></div>
     <div><h3>Reading time</h3><p>Minutes per day and per book, streaks, a weekly chart and a monthly calendar. A daily goal is there if you want one.</p></div>
     <div><h3>A built-in reader</h3><p>EPUB and TXT laid out natively for e-ink: tap, swipe or page keys, contents, text settings, and a full refresh every few pages. Or use NeoReader, KOReader or any other app.</p></div>
-    <div><h3>Made for e-ink</h3><p>Black and white, no animation, pages instead of scrolling, page buttons that turn them, and a true full refresh to clear ghosting.</p></div>
+    <div><h3>Made for e-ink</h3><p>Turn pages with hardware keys or the on-screen arrows. Clean screen requests a gentle update on compatible firmware. For persistent ghosting, choose Strong clean now in Display &amp; refresh.</p></div>
     <div><h3>Its own status bar</h3><p>Clock, Wi-Fi, battery and notifications, plus a quick panel with only what your tablet's hardware has.</p></div>
-    <div><h3>Sleep screen and wallpaper</h3><p>Make the sleep screen your current book or any picture. Add a faded wallpaper behind home.</p></div>
+    <div><h3>Sleep screen and wallpaper</h3><p>Generate sleep artwork sized to your panel, then select it in your device’s screensaver settings. On Boox, select the image again after changing it.</p></div>
+    <div><h3>An optional Ink dot</h3><p>Tap the floating dot for a gentle refresh, or hold it for Strong clean. When gentle refresh is unavailable, the dot tells you. Inside Ink Home, Clean screen falls back to redrawing the window.</p></div>
+    <div><h3>Display choices</h3><p>Choose monochrome e-ink, colour e-ink or LCD/OLED in Display &amp; refresh. On LCD and OLED, lists default to scrolling and the theme can follow Android.</p></div>
     <div><h3>Small and private</h3><p>No accounts, no tracking, no ads. It only goes online to check for its own updates.</p></div>
   </div>
 
@@ -118,7 +117,7 @@ adb shell cmd package set-home-activity dev.inkhome/.MainActivity</pre>
   <hr>
 
   <h2>Updates</h2>
-  <p>Ink Home checks this project's releases about twice a day when you're on Wi-Fi. When there's a new version it asks first, downloads it, checks it against the published SHA-256, and hands it to Android to install. Android only accepts it if it's signed by the same key as the version you have. You can turn the check off in Settings › Updates.</p>
+  <p>Ink Home checks this project's releases about twice a day when you're on Wi-Fi. When there's a new version it asks first, downloads it, checks the SHA-256 when the release includes a checksum, and hands it to Android to install. Android only accepts it if it's signed by the same key as the version you have. You can turn the check off in Settings â€º Updates.</p>
 
   <hr>
 
@@ -127,6 +126,7 @@ adb shell cmd package set-home-activity dev.inkhome/.MainActivity</pre>
   <pre>git clone https://github.com/Nyaughh/ink-home
 cd ink-home
 ./gradlew assembleRelease</pre>
+  <p>For development, run <code>./gradlew assembleDebug test</code>. Open <strong>Ink Home dev</strong> from your apps. It has its own permissions and settings and installs alongside the release.</p>
   <p class="note">Builds without the release key are signed with your debug key, so they can't update an installed official copy.</p>
 </main>
 <footer>

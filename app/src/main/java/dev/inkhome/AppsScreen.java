@@ -25,7 +25,7 @@ final class AppsScreen implements Screen {
     @Override public void build(MainActivity host) {
         if ("switcher".equals(host.sub)) {
             LinearLayout page = host.page();
-            page.addView(host.header("Switcher", null, host::onBackPressed));
+            page.addView(host.header(host.getString(R.string.ui_switcher), null, host::onBackPressed));
             Switcher.show(host, page, host.apps, "");
             return;
         }
@@ -42,23 +42,23 @@ final class AppsScreen implements Screen {
         ImageView search = host.ink.iconButton("search", () -> host.searchApps(query, value -> {
             query = value.trim(); reset(host);
         }));
-        search.setContentDescription("Search apps");
+        search.setContentDescription(host.getString(R.string.ui_search_apps));
         ImageView layout = host.ink.iconButton(grid ? "list" : "grid", () -> { grid = !grid; reset(host); });
-        layout.setContentDescription(grid ? "List view" : "Grid view");
+        layout.setContentDescription(grid ? host.getString(R.string.ui_list_view) : host.getString(R.string.ui_grid_view));
         View[] actions = tab == 1 ? new View[]{search} : new View[]{search, layout};
-        LinearLayout header = host.header("Apps", tab == 1 ? null : String.valueOf(apps.size()), null, actions);
+        LinearLayout header = host.header(host.getString(R.string.ui_apps), tab == 1 ? null : String.valueOf(apps.size()), null, actions);
         col.addView(header);
         if (!query.isEmpty()) {
             TextView clear = host.ink.pill(query + "  ×", false);
-            clear.setContentDescription("Clear search for " + query);
+            clear.setContentDescription(host.getString(R.string.app_clear_search, query));
             clear.setOnClickListener(v -> { query = ""; reset(host); });
             col.addView(clear, host.ink.m(-2, -2, MainActivity.PAD, 0, 0, 0));
         }
-        col.addView(host.tabs(new String[]{"All", "Recent", "Hidden"}, tab, i -> { tab = i; reset(host); }),
+        col.addView(host.tabs(new String[]{host.getString(R.string.ui_all), host.getString(R.string.ui_recent), host.getString(R.string.ui_hidden)}, tab, i -> { tab = i; reset(host); }),
                 host.ink.m(-1, -2, MainActivity.PAD, 0, MainActivity.PAD, 0));
         if (tab == 1) { Switcher.show(host, col, apps, filter); return; }
         if (tab == 2 && apps.stream().anyMatch(MainActivity::booxShellApp)) {
-            TextView group = host.ink.pill(SettingsScreen.BOOX, false);
+            TextView group = host.ink.pill(host.getString(R.string.settings_ui_boox_apps), false);
             group.setOnClickListener(v -> host.openSettingsPage(SettingsScreen.BOOX));
             col.addView(group, host.ink.m(-2, -2, MainActivity.PAD, 0, 0, 0));
             apps.removeIf(MainActivity::booxShellApp);
@@ -79,8 +79,8 @@ final class AppsScreen implements Screen {
         body.setGravity(Gravity.TOP);
         body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(8), 0);
         if (apps.isEmpty()) {
-            body.addView(host.ink.muted(!query.isEmpty() ? "No matches." : tab == 2 ? "No hidden apps."
-                    : tab == 1 ? "No recent apps." : "No apps available.", 15));
+            body.addView(host.ink.muted(!query.isEmpty() ? host.getString(R.string.ui_no_matches) : tab == 2 ? host.getString(R.string.ui_no_hidden_apps)
+                    : tab == 1 ? host.getString(R.string.ui_no_recent_apps) : host.getString(R.string.ui_no_apps_available), 15));
             return;
         }
         if (grid) {
@@ -96,6 +96,14 @@ final class AppsScreen implements Screen {
             String name = host.displayLabel(app);
             char initial = name.isEmpty() ? '#' : Character.toUpperCase(name.charAt(0));
             initials.putIfAbsent(Character.isLetter(initial) ? initial : '#', row);
+        }
+        if (!host.store.listScroll()) {
+            body.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+                if (b - t == ob - ot) return;
+                int footer = apps.size() > 8 ? host.ink.dp(40) : 0;
+                int height = Math.max(host.ink.dp(48), Math.min(host.ink.dp(52), (b - t - footer) / 8));
+                for (int i = 0; i < list.getChildCount(); i++) list.getChildAt(i).setMinimumHeight(height);
+            });
         }
         body.addView(host.scrollable(list), new LinearLayout.LayoutParams(0, -1, 1));
         if (tab == 1 || initials.size() <= 3) return;
@@ -121,7 +129,7 @@ final class AppsScreen implements Screen {
         TextView label = host.ink.oneLine(host.ink.body(host.displayLabel(app)));
         if (tile) box.addView(label); else box.addView(label, host.ink.weight(1));
         if (!tile && reading) {
-            TextView tag = host.ink.faint("Reading", 12);
+            TextView tag = host.ink.faint(host.getString(R.string.ui_reading), 12);
             tag.setPadding(host.ink.dp(4), 0, host.ink.dp(4), 0);
             tag.setBackground(host.ink.stroke(host.ink.PAPER, 0, host.ink.TEXT));
             box.addView(tag);
@@ -131,7 +139,7 @@ final class AppsScreen implements Screen {
             if (tab == 2) { host.store.setHidden(app.key, false); host.render(); }
             else host.launch(app);
         });
-        if (tab == 2) box.setContentDescription("Show " + host.displayLabel(app) + " in Apps");
+        if (tab == 2) box.setContentDescription(host.getString(R.string.app_unhide_description, host.displayLabel(app)));
         box.setOnLongClickListener(v -> { host.appMenu(app); return true; });
         return box;
     }

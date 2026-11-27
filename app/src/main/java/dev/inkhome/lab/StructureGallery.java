@@ -66,7 +66,7 @@ public final class StructureGallery {
 
     private void draw() {
         sample.removeAllViews();
-        String home = destination < 0 ? "Settings" : Structure.menuLabels()[destination];
+        String home = destination < 0 ? "Settings" : structure.menuLabels()[destination];
         sample.addView(structure.statusStrip("9:41", 2, 3, 76, false, () -> selectDestination(7)));
         sample.addView(structure.appBar(detail == null ? home : detail, detail == null ? "3" : null,
                 detail == null ? null : () -> show(null),

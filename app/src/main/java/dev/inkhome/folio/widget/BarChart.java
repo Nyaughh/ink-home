@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.TypedValue;
@@ -24,17 +25,24 @@ public final class BarChart extends View {
         this.minutes = minutes.clone();
         this.goal = Math.max(0, goal);
         int max = Math.max(1, goal);
-        StringBuilder summary = new StringBuilder("Reading time");
-        if (goal > 0) summary.append(", goal ").append(goal).append(" minutes");
+        StringBuilder summary = new StringBuilder(f.context.getString(R.string.reader_ui_reading_time));
+        if (goal > 0) summary.append(getResources().getQuantityString(
+                R.plurals.reader_ui_chart_goal, goal, goal));
         for (int i = 0; i < minutes.length; i++) {
             max = Math.max(max, minutes[i]);
-            summary.append(", ").append(days[i]).append(" ").append(minutes[i]).append(" minutes");
+            summary.append(getResources().getQuantityString(
+                    R.plurals.reader_ui_chart_day, minutes[i], days[i], minutes[i]));
         }
         maximum = max;
         setContentDescription(summary.toString());
         fontSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
                 Tokens.Type.MIN_CHART_SIZE * f.uiScale * f.textScale, getResources().getDisplayMetrics());
         setMinimumHeight(Math.max(f.u(92), Math.round(fontSize * 5)));
+    }
+
+    public int heightForSpace(int available) {
+        int minimum = Math.max(folio.u(64), Math.round(fontSize * 5));
+        return available >= minimum ? Math.min(available, getMinimumHeight()) : getMinimumHeight();
     }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {

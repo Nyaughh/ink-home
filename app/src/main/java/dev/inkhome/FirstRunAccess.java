@@ -38,17 +38,17 @@ final class FirstRunAccess {
             switch (step) {
                 case FILES:
                     if (host.hasFileAccess()) continue;
-                    explain(step, "Show your books", "Allow file access so Ink Home can find books on your device.",
+                    explain(step, host.getString(R.string.stats_ui_show_your_books), host.getString(R.string.stats_ui_file_access_description),
                             new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, app));
                     return;
                 case USAGE:
                     if (Stats.hasAccess(host)) continue;
-                    explain(step, "Count reading time", "Allow usage access so Ink Home can count time in your reading apps.",
+                    explain(step, host.getString(R.string.stats_ui_count_reading_time), host.getString(R.string.stats_ui_usage_access_description),
                             new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, app));
                     return;
                 case LISTENER:
                     if (SetupScreen.notificationsAllowed(host)) continue;
-                    explain(step, "Show notifications", "Allow notification access to see notifications in the control panel.",
+                    explain(step, host.getString(R.string.stats_ui_show_notifications), host.getString(R.string.stats_ui_notification_access_description),
                             new Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
                                     .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
                                             new ComponentName(host, Notifs.class).flattenToString()));
@@ -60,13 +60,13 @@ final class FirstRunAccess {
                         save(step + 1);
                         if (launch(roles.createRequestRoleIntent(RoleManager.ROLE_HOME))) return;
                     }
-                    explain(step, "Choose your home app", "Choose Ink Home to open it when you press Home.",
+                    explain(step, host.getString(R.string.stats_ui_choose_your_home_app), host.getString(R.string.stats_ui_home_app_description),
                             new Intent(Settings.ACTION_HOME_SETTINGS));
                     return;
                 case WIFI_NAME:
                     if (host.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
                             == PackageManager.PERMISSION_GRANTED) continue;
-                    explain(step, "Show the Wi-Fi name", "Android requires location access to show your Wi-Fi network name in the control panel.", null);
+                    explain(step, host.getString(R.string.stats_ui_show_the_wi_fi_name), host.getString(R.string.stats_ui_location_access_description), null);
                     return;
             }
         }
@@ -82,7 +82,7 @@ final class FirstRunAccess {
                 host.requestPermissions(new String[] { Manifest.permission.ACCESS_COARSE_LOCATION,
                         Manifest.permission.ACCESS_FINE_LOCATION }, 4601);
             } else if (!launch(settings)) {
-                host.toast("This access page is unavailable on your device.");
+                host.toast(host.getString(R.string.stats_ui_access_page_unavailable));
                 resume();
             }
         }, () -> {

@@ -16,8 +16,8 @@ final class HomeScreen implements Screen {
         boolean setupShown = SetupScreen.addHomeCallout(host, col);
         if (!host.hasFileAccess()) {
             if (!setupShown) col.addView(dev.inkhome.folio.widget.Callout.create(host.ink.folio,
-                    "Show your books", "Let Ink Home read your book files for covers, titles and progress.",
-                    "Allow file access", v -> host.requestFileAccess()));
+                    host.getString(R.string.ui_show_your_books), host.getString(R.string.ui_let_ink_home_read_your_book_files),
+                    host.getString(R.string.ui_allow_file_access), v -> host.requestFileAccess()));
         } else if (layout.equals("minimal")) {
             host.homeMinimal(col, reading);
         } else if (layout.equals("shelf")) {

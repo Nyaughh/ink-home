@@ -47,6 +47,7 @@ final class DataWidgets {
         Glyph glyph = new Glyph(name);
         glyph.setTint(color);
         image.setImageDrawable(glyph);
+        image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         image.setScaleType(ImageView.ScaleType.FIT_CENTER);
         return image;
     }

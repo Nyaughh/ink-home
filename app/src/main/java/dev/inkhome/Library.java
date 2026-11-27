@@ -59,13 +59,12 @@ final class Library {
         int percent() { return progress < 0 ? -1 : Math.round(progress * 100f); }
 
         /** "42%  ·  p. 120 of 300" style line, or the format when nothing is known yet. */
-        String progressLine() {
-            if (finished) return "Finished";
+        String progressLine(Context c) {
+            if (finished) return c.getString(R.string.launcher_finished);
             int pc = percent();
-            if (pc < 0) return started() ? "Started" : "Not started";
-            String s = pc + "%";
-            if (!pages.isEmpty()) s += "  ·  p. " + pages;
-            return s;
+            if (pc < 0) return c.getString(started() ? R.string.launcher_started : R.string.launcher_not_started);
+            return pages.isEmpty() ? c.getString(R.string.reader_ui_percent, pc)
+                    : c.getString(R.string.reader_ui_book_progress_pages, pc, pages);
         }
     }
 
@@ -169,7 +168,7 @@ final class Library {
                         float total = Float.parseFloat(pq[1].trim());
                         if (total > 0) {
                             b.progress = Math.max(0f, Math.min(1f, cur0 / total));
-                            if (total > 1) b.pages = Math.round(cur0) + " of " + Math.round(total);
+                            if (total > 1) b.pages = c.getString(R.string.reader_ui_pages_of, Math.round(cur0), Math.round(total));
                         }
                     } catch (NumberFormatException ignored) { }
                 }
@@ -235,23 +234,28 @@ final class Library {
         return t.replace('_', ' ').replaceAll("\\s+", " ").trim();
     }
 
-    static String humanSize(long b) {
-        if (b < 1024) return b + " B";
-        if (b < 1024 * 1024) return (b / 1024) + " KB";
-        if (b < 1024L * 1024 * 1024) return String.format(Locale.ROOT, "%.1f MB", b / (1024.0 * 1024.0));
-        return String.format(Locale.ROOT, "%.1f GB", b / (1024.0 * 1024.0 * 1024.0));
+    static String humanSize(Context c, long b) {
+        if (b < 1024) return c.getString(R.string.reader_ui_size_bytes, b);
+        if (b < 1024 * 1024) return c.getString(R.string.reader_ui_size_kb, b / 1024);
+        if (b < 1024L * 1024 * 1024) return c.getString(R.string.reader_ui_size_mb, b / (1024.0 * 1024.0));
+        return c.getString(R.string.reader_ui_size_gb, b / (1024.0 * 1024.0 * 1024.0));
     }
 
-    static String ago(long t) {
+    static String ago(Context c, long t) {
         if (t <= 0) return "";
         long m = (System.currentTimeMillis() - t) / 60000;
-        if (m < 1) return "just now";
-        if (m < 60) return m + " min ago";
+        if (m < 1) return c.getString(R.string.reader_ui_just_now);
+        if (m < 60) return agoQuantity(c, R.plurals.reader_ui_minutes_ago, (int) m);
         long h = m / 60;
-        if (h < 24) return h + (h == 1 ? " hour ago" : " hours ago");
+        if (h < 24) return agoQuantity(c, R.plurals.reader_ui_hour_ago, (int) h);
         long d = h / 24;
-        if (d < 7) return d == 1 ? "yesterday" : d + " days ago";
-        if (d < 60) return (d / 7) + (d / 7 == 1 ? " week ago" : " weeks ago");
-        return (d / 30) + " months ago";
+        if (d == 1) return c.getString(R.string.reader_ui_yesterday);
+        if (d < 7) return agoQuantity(c, R.plurals.reader_ui_day_ago, (int) d);
+        if (d < 60) return agoQuantity(c, R.plurals.reader_ui_week_ago, (int) (d / 7));
+        return agoQuantity(c, R.plurals.reader_ui_month_ago, (int) (d / 30));
+    }
+
+    private static String agoQuantity(Context c, int resource, int count) {
+        return c.getResources().getQuantityString(resource, count, count);
     }
 }

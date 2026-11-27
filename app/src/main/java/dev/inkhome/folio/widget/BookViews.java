@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -27,7 +28,7 @@ public final class BookViews {
         track.topMargin = f.u(4);
         info.addView(bar, track);
         s.flex(row, info);
-        row.addView(s.text(Math.max(0, Math.min(100, percent)) + "%", TypeScale.META));
+        row.addView(s.text(f.context.getString(R.string.reader_ui_percent, Math.max(0, Math.min(100, percent))), TypeScale.META));
         s.action(row, null, open);
         block.addView(row);
         if (!last) s.rule(block, false);

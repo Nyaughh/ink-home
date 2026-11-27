@@ -6,13 +6,13 @@ The integrated Phase 0 debug APK is 1,262,843 bytes (+962,676 bytes including th
 
 | Spike | Evidence and outstanding test |
 | --- | --- |
-| S1 · Waveforms | Physical observation pending. Compare line grids, inverse fills, cover and grey ramp in Ink lab. A framebuffer capture cannot measure ghosting. |
-| S2 · Reflection | The planning probe found the Onyx methods in the firmware. Runtime discovery and invocation from the target-35 debug package still need testing. |
-| S3 · Accessibility overlay | Stacking and full-panel cleaning from an accessibility window require a service test in another app. |
-| S4 · Standby | The current secure screensaver component is Google's DeskClock. Whether Boox uses Android dreams at standby is unverified. |
-| S5 · Owner | Onyx status-bar suppression, app hiding and silent updates remain unverified. |
-| S6 · Page keys | Delivery to an accessibility service while another app has focus remains unverified. |
-| S7 · Ink dot | The enabled accessibility service list contains com.onyx.floatingbutton/.service.FloatButtonAccessibilityService. This identifies the Boox service, but cannot confirm whether its ball is visible. Cross-app cleaning, persistence and mode changes require overlay testing. |
+| S1 · Waveforms | Aarin confirmed a visible blackout and successful clean using GC 98. The comparative physical results for GU 2, Regal 6, inverse-fill ghosting and recommended cadence are pending. |
+| S2 · Reflection | The target-35 debug package invoked refreshScreen(98) from app and accessibility overlays on the C69. Other signatures and update modes require individual verification. |
+| S3 · Accessibility overlay | The top-center strip attached at y=0 over NeoReader. Taps reached the debug service in Chromium and Android Settings. Four clean calls returned. Whether a full-width overlay can fully conceal the Boox status bar is unverified. |
+| S4 · Standby | The configured secure component was DeskClock. This firmware provides no dreams shell command implementation. Its ordinary standby picture remains the manual sleep-image workflow. |
+| S5 · Owner | No physical owner provision or policy change. Reversible removal was not demonstrated on the C69. Status-bar suppression, hiding apps and silent updates remain unverified. |
+| S6 · Page keys | No key events recorded during the service test. Physical presses and navigation on a loaded page were not confirmed. Production does not filter page keys in other apps. |
+| S7 · Ink dot | Verified native full clean, move, tuck, return to foreground and complete service shutdown as detailed below. Cross-app refresh mode changes were not demonstrated. The Boox service was detected, but detection cannot establish whether its own ball is visible. |
 
 The approved side-by-side install succeeded. ActivityManager reported dev.inkhome.dev/dev.inkhome.MainActivity as resumed on the C69. No grants or settings changes were made.
 

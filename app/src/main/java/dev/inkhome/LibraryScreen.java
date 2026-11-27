@@ -5,15 +5,14 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.Arrays;
 import android.view.View;
+import dev.inkhome.folio.paging.PageLayout;
 import dev.inkhome.folio.widget.Chip;
 import java.util.List;
 
 
 final class LibraryScreen implements Screen {
     static final String[] SORT_KEYS = {"recent", "title", "author", "added", "progress"};
-    static final String[] SORT_LABELS = {"Recently read", "Title", "Author", "Recently added", "Progress"};
     static final String[] TYPE_KEYS = {"all", "book", "comic", "pdf"};
-    static final String[] TYPE_LABELS = {"All types", "Books", "Comics", "PDFs"};
 
     @Override
     public void build(MainActivity host) {
@@ -29,10 +28,10 @@ final class LibraryScreen implements Screen {
         ImageView options = host.ink.iconButton(collections ? "plus" : "filter", () -> {
             if (collections) host.newCollection(); else host.libraryOptions();
         });
-        search.setContentDescription("Search books");
-        options.setContentDescription(collections ? "New collection" : "Sort and filter");
-        view.setContentDescription(host.store.libraryGrid() ? "List view" : "Grid view");
-        String title = host.libCollection != null ? host.libCollection : "Library";
+        search.setContentDescription(host.getString(R.string.library_ui_search_books));
+        options.setContentDescription(collections ? host.getString(R.string.library_ui_new_collection) : host.getString(R.string.library_ui_sort_and_filter));
+        view.setContentDescription(host.store.libraryGrid() ? host.getString(R.string.library_ui_list_view) : host.getString(R.string.library_ui_grid_view));
+        String title = host.libCollection != null ? host.libCollection : host.getString(R.string.library_ui_library);
         String count = host.booksLoaded ? String.valueOf(host.books.size()) : null;
         View[] actions = collections ? new View[]{search, options} : new View[]{search, options, view};
         col.addView(host.header(title, count, back, actions));
@@ -42,13 +41,18 @@ final class LibraryScreen implements Screen {
         body.setPadding(margin, 0, margin, 0);
         col.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
 
+        LinearLayout tabRow = null;
+        View tabs = null;
         if (host.libCollection == null) {
             String[] keys = {"reading", "all", "finished", "collections"};
-            body.addView(host.tabs(new String[]{"Reading", "All", "Finished", "Collections"}, Arrays.asList(keys).indexOf(host.libTab),
-                    i -> { host.libraryDetail = null; host.libTab = keys[i]; host.pages.put("lib", 0); host.render(); }));
+            tabs = host.tabs(new String[]{host.getString(R.string.library_ui_reading), host.getString(R.string.library_ui_all), host.getString(R.string.library_ui_finished), host.getString(R.string.library_ui_collections)}, Arrays.asList(keys).indexOf(host.libTab),
+                    i -> { host.libraryDetail = null; host.libTab = keys[i]; host.pages.put("lib", 0); host.render(); });
+            tabRow = host.ink.row();
+            tabRow.addView(tabs, new LinearLayout.LayoutParams(0, -2, 1));
+            body.addView(tabRow);
         }
         if (!host.hasFileAccess()) {
-            body.addView(host.note("Allow file access", "Ink Home needs it to list your books.", host::requestFileAccess), host.ink.m(-1, -2, 0, 16, 0, 0));
+            body.addView(host.note(host.getString(R.string.library_ui_allow_file_access), host.getString(R.string.library_ui_file_access_description), host::requestFileAccess), host.ink.m(-1, -2, 0, 16, 0, 0));
             return;
         }
         if (host.libCollection == null && host.libTab.equals("collections")) {
@@ -59,13 +63,13 @@ final class LibraryScreen implements Screen {
 
         LinearLayout filters = host.ink.row();
         int type = Arrays.asList(TYPE_KEYS).indexOf(host.store.libraryType());
-        if (type > 0) filters.addView(Chip.create(host.ink.folio, TYPE_LABELS[type] + " only", v -> {
+        if (type > 0) filters.addView(Chip.create(host.ink.folio, host.getString(R.string.library_ui_type_filter, host.getResources().getStringArray(R.array.library_type_labels)[type]), v -> {
             host.store.setLibraryType("all");
             host.pages.put("lib", 0);
             host.render();
         }));
         int sort = Arrays.asList(SORT_KEYS).indexOf(host.store.librarySort());
-        if (sort > 0) filters.addView(Chip.create(host.ink.folio, "Sorted by " + SORT_LABELS[sort].toLowerCase(java.util.Locale.ROOT), v -> {
+        if (sort > 0) filters.addView(Chip.create(host.ink.folio, host.getString(R.string.library_ui_sort_filter, host.getResources().getStringArray(R.array.library_sort_labels)[sort].toLowerCase(java.util.Locale.ROOT)), v -> {
             host.store.setLibrarySort("recent");
             host.pages.put("lib", 0);
             host.render();
@@ -82,11 +86,11 @@ final class LibraryScreen implements Screen {
         }
         if (list.isEmpty()) {
             String msg;
-            if (!host.booksLoaded) msg = "Looking for books…";
-            else if (host.libCollection != null) msg = "This collection is empty. Long-press a book and choose Add to collection.";
-            else if (host.libTab.equals("reading")) msg = "Books you open show up here, with your progress and time read.";
-            else if (host.libTab.equals("finished")) msg = "Finished books show up here. Long-press a book to mark it finished.";
-            else msg = "No books found. Copy EPUB, PDF, MOBI, FB2, DJVU, CBZ or CBR files to the tablet.";
+            if (!host.booksLoaded) msg = host.getString(R.string.library_ui_looking_for_books);
+            else if (host.libCollection != null) msg = host.getString(R.string.library_ui_empty_collection);
+            else if (host.libTab.equals("reading")) msg = host.getString(R.string.library_ui_empty_reading);
+            else if (host.libTab.equals("finished")) msg = host.getString(R.string.library_ui_empty_finished);
+            else msg = host.getString(R.string.library_ui_empty_library);
             TextView t = host.ink.muted(msg, 15);
             t.setLineSpacing(0, 1.2f);
             t.setPadding(0, host.ink.dp(18), 0, 0);
@@ -102,14 +106,20 @@ final class LibraryScreen implements Screen {
             bounds.leftMargin = host.ink.dp(host.ink.folio.windowClass().gutter);
             panes.addView(info, bounds);
             View close = host.ink.iconButton("close", () -> { host.libraryDetail = null; host.render(); });
-            close.setContentDescription("Close book details");
-            info.addView(host.header("Book details", null, null, close));
+            close.setContentDescription(host.getString(R.string.library_ui_close_book_details));
+            info.addView(host.header(host.getString(R.string.library_ui_book_details), null, null, close));
             info.addView(host.scrollable(host.bookInformation(detail, true), "detail:" + detail.path),
                     new LinearLayout.LayoutParams(-1, 0, 1));
             // The most recently bound pager owns the hardware keys.
             panes.addView(host.bookPages(list, host.store.libraryGrid()), 0, new LinearLayout.LayoutParams(0, -1, 3));
             return;
         }
-        body.addView(host.bookPages(list, host.store.libraryGrid()), new LinearLayout.LayoutParams(-1, 0, 1f));
+        View books = host.bookPages(list, host.store.libraryGrid());
+        if (tabRow != null && books instanceof PageLayout) {
+            tabs.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            ((PageLayout) books).offerInlinePager(tabRow, tabs.getMeasuredWidth(),
+                    host.store.libraryGrid() ? 8 : 6);
+        }
+        body.addView(books, new LinearLayout.LayoutParams(-1, 0, 1f));
     }
 }

@@ -63,7 +63,7 @@
         <activity
             android:name=".ReaderActivity"
             android:exported="false"
-            android:label="Ink Home reader"
+            android:label="@string/reader_activity_label"
             android:taskAffinity="${applicationId}.reader"
             android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|screenLayout|smallestScreenSize"
@@ -97,7 +97,7 @@
         <service
             android:name=".Notifs"
             android:exported="true"
-            android:label="Ink Home status bar"
+            android:label="@string/notification_listener_label"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />

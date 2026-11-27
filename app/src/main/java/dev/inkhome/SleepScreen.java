@@ -105,11 +105,11 @@ final class SleepScreen {
         } else {
             tp.setTypeface(Type.sans(c, 700));
             tp.setTextSize(24);
-            cv.drawText("Sleeping", width / 2, height / 2, tp);
+            cv.drawText(c.getString(R.string.service_ui_sleeping), width / 2, height / 2, tp);
         }
         tp.setTypeface(Type.sans(c, 500));
         tp.setTextSize(13);
-        cv.drawText("Ink Home · asleep", width / 2, height - 26 - tp.descent(), tp);
+        cv.drawText(c.getString(R.string.service_ui_ink_home_asleep), width / 2, height - 26 - tp.descent(), tp);
         return save(c, out);
     }
 

@@ -2,9 +2,11 @@
 
 A calm, reading-first home screen for e-ink Android tablets.
 
-**[Website](https://inkhome.lh3k.dev)** · **[Download](https://github.com/Nyaughh/ink-home/releases/latest/download/ink-home.apk)** for Android 11 and newer
+**[Website](https://inkhome.lh3k.dev)** Â· **[Download](https://github.com/Nyaughh/ink-home/releases/latest/download/ink-home.apk)** for Android 11 and newer
 
-![Ink Home showing the current book, its progress and favorite apps](docs/shots/home.png)
+![Ink Home showing the current book, its progress and favorite apps](docs/shots/phase4-home-c69.png)
+
+*Home on the Boox C69, captured during Phase 4 of the 2.0 redesign. The download above opens the latest published release.*
 
 - **Your current book**: cover, title, progress and the app it opens in, read
   straight from NeoReader's library or tracked for any other reader.
@@ -23,18 +25,23 @@ A calm, reading-first home screen for e-ink Android tablets.
   navigation menu under the chevron. Tap the status strip for device controls.
 - Swipe sideways, press a page key or use the arrow buttons to move through
   paged lists. In Settings, text size and interface size can be adjusted separately.
-- **Made for e-ink**: black and white, no animation, pages instead of
-  scrolling (scrolling is a setting), hardware page buttons, and a true full
-  refresh through the Onyx firmware to clear ghosting.
+- **Made for e-ink**: paged lists and hardware page keys, monochrome or colour covers, and adjustable refresh on compatible Onyx firmware. LCD and OLED devices default to scrolling and can follow the system theme.
 - **Status bar and quick panel**: clock, Wi-Fi, battery and notifications,
   with only the controls the hardware has.
-- **Sleep screen and wallpaper**: your current book or any picture as the
-  sleep screen; a faded wallpaper behind home.
+- **Sleep screen and wallpaper**: generate a panel-sized picture from your current book or an image. Choose it in your device’s screensaver settings. Boox copies the image, so select it again after changing the artwork. Home can also show a faded wallpaper.
 - **Updates**: checks this repository's releases and installs new versions
   after asking.
 
 Ink Home is plain Java on the Android framework, with no libraries. It has no
 accounts, tracking or ads, and only goes online to check for its own updates.
+
+## Screen refresh and the Ink dot
+
+On e-ink, **Clean screen** in the dock menu and control panel requests a gentle grey update. Pressing Home while already on Home uses the same action. If the firmware cannot take the request, Ink Home redraws its window. For persistent ghosting, choose **Settings › Display & refresh › Strong clean now**. This requests a flashing full refresh and falls back to a black-and-white flash inside Ink Home.
+
+The optional Ink dot provides a gentle refresh over other apps. Enable display-over-other-apps access for the standalone dot. Tap the dot to refresh, or hold it for **Strong clean** and positioning options. If gentle refresh is unavailable, the dot shows a notice. The display firmware determines how much of the panel a request refreshes.
+
+The optional Ink Shell accessibility service adds a floating clock with panel shortcuts. It receives window-change events and uses the foreground app’s package name for per-app dot settings. Its Android service declaration disables access to window contents. The launcher works with Shell turned off.
 
 ## Install
 
@@ -56,11 +63,11 @@ adb shell cmd package set-home-activity dev.inkhome/.MainActivity
 
 About twice a day on Wi-Fi, Ink Home reads the latest release here. If it's
 newer, it asks, downloads `ink-home.apk`, checks it against
-`ink-home.apk.sha256`, and passes it to Android's installer. Android only
+`ink-home.apk.sha256` when that asset is present, and passes it to Android's installer. Android only
 accepts an update signed with the same key as the installed app. The check can
 be turned off in Settings > Updates.
 
-## Building
+## Development and release builds
 
 You need JDK 17 and the Android SDK.
 
@@ -78,6 +85,6 @@ points to (or `../keys/keystore.properties`): `storeFile`, `storePassword`,
 `keyAlias` and `keyPassword`. Without it they're signed with your debug key,
 which can't update an official install.
 
-To publish a release: bump `versionCode` and `versionName` in
+For a release, bump `versionCode` and `versionName` in
 `app/build.gradle`, build, then attach `ink-home.apk` and its `.sha256` to a
 GitHub release tagged `v<versionName>`.

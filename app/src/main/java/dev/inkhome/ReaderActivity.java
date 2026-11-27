@@ -128,7 +128,7 @@ public class ReaderActivity extends Activity {
                 });
             } catch (Exception ex) {
                 ui.post(() -> {
-                    sheets.notice("Couldn't open this book", null, this::finish);
+                    sheets.notice(getString(R.string.reader_ui_open_error), null, this::finish);
                 });
             }
         });
@@ -242,7 +242,7 @@ public class ReaderActivity extends Activity {
                 Spanned raw = book.chapter(ch, getResources(), w, h);
                 sl = ChapterPages.layout(raw, tp, w, h, spacing, justify, starts);
             } catch (Exception e) {
-                String message = "This chapter couldn't be read.";
+                String message = getString(R.string.reader_ui_chapter_error);
                 sl = StaticLayout.Builder.obtain(message, 0, message.length(), tp, w).build();
                 starts.clear();
                 starts.add(0);
@@ -335,7 +335,7 @@ public class ReaderActivity extends Activity {
             c.drawColor(ink.PAPER);
             int w = getWidth();
             if (book == null || layout == null || laidOutChapter != chapter) {
-                String s = book == null ? "Opening…" : "";
+                String s = book == null ? getString(R.string.reader_ui_opening) : "";
                 c.drawText(s, (w - small.measureText(s)) / 2f, getHeight() / 2f, small);
                 return;
             }
@@ -355,8 +355,7 @@ public class ReaderActivity extends Activity {
         private void drawFooter(Canvas canvas, int left, String mode) {
             int width = layout.getWidth();
             float baseline = getHeight() - ink.dp(8) - small.descent();
-            String progress = Math.round(book.progress(chapter, chapterFraction()) * 100)
-                    + "% · " + (page + 1) + " / " + pageStarts.size();
+            String progress = getString(R.string.reader_ui_footer_progress, Math.round(book.progress(chapter, chapterFraction()) * 100), page + 1, pageStarts.size());
             float progressX = Math.max(0, width - small.measureText(progress));
             canvas.save();
             canvas.clipRect(left, getHeight() - footerPx(), left + width, getHeight());
@@ -412,13 +411,13 @@ public class ReaderActivity extends Activity {
         top.setPadding(ink.dp(10), ink.dp(10), ink.dp(10), ink.dp(10));
         top.setClickable(true);
         ImageView back = barIcon("back", this::finish);
-        back.setContentDescription("Close book");
+        back.setContentDescription(getString(R.string.reader_ui_close_book));
         top.addView(back);
         TextView title = ink.oneLine(ink.medium(book.title.isEmpty() ? Library.titleFromName(file.getName()) : book.title, 16));
         title.setPadding(ink.dp(8), 0, ink.dp(8), 0);
         top.addView(title, ink.weight(1));
-        top.addView(barLabel("Contents", "Contents", this::showChapters));
-        top.addView(barLabel("Aa", "Text settings", this::showTextSettings));
+        top.addView(barLabel(getString(R.string.reader_ui_contents), getString(R.string.reader_ui_contents), this::showChapters));
+        top.addView(barLabel(getString(R.string.reader_ui_type_sample), getString(R.string.reader_ui_text_settings), this::showTextSettings));
         LinearLayout topWrap = ink.col();
         topWrap.addView(top);
         topWrap.addView(ink.hair());
@@ -434,20 +433,19 @@ public class ReaderActivity extends Activity {
         prev.setAlpha(chapter > 0 ? 1f : 0.3f);
         chapters.addView(prev);
         prev.setEnabled(chapter > 0);
-        prev.setContentDescription("Previous chapter");
+        prev.setContentDescription(getString(R.string.reader_ui_previous_chapter));
         LinearLayout description = ink.col();
         TextView name = ink.oneLine(ink.medium(chapterName(chapter), 15));
         name.setGravity(Gravity.CENTER);
         description.addView(name);
-        TextView position = ink.medium("Page " + (page + 1) + " of " + Math.max(1, pageStarts.size())
-                + " in this chapter", 13);
+        TextView position = ink.medium(getString(R.string.reader_ui_page_in_chapter, page + 1, Math.max(1, pageStarts.size())), 13);
         position.setGravity(Gravity.CENTER);
         description.addView(position);
         chapters.addView(description, ink.weight(1));
         ImageView next = barIcon("chevron", () -> { if (chapter < book.spine.size() - 1) { chapter++; pendingOffset = 0; hideMenu(); loadChapter(); } });
         next.setAlpha(chapter < book.spine.size() - 1 ? 1f : 0.3f);
         next.setEnabled(chapter < book.spine.size() - 1);
-        next.setContentDescription("Next chapter");
+        next.setContentDescription(getString(R.string.reader_ui_next_chapter));
         chapters.addView(next);
         bottom.addView(chapters);
 
@@ -489,7 +487,7 @@ public class ReaderActivity extends Activity {
     /** Contents entry for a chapter, or "Chapter n" when the book has no contents list. */
     private String chapterName(int ch) {
         String t = book.chapterTitle(ch);
-        return t.isEmpty() ? "Chapter " + (ch + 1) + " of " + book.spine.size() : t;
+        return t.isEmpty() ? getString(R.string.reader_ui_chapter_position, ch + 1, book.spine.size()) : t;
     }
 
     /** Open the contents on the page containing the current chapter. */
@@ -504,7 +502,7 @@ public class ReaderActivity extends Activity {
                 targets.add(t.chapter);
             }
         } else {
-            for (int i = 0; i < book.spine.size(); i++) { names.add("Chapter " + (i + 1)); targets.add(i); }
+            for (int i = 0; i < book.spine.size(); i++) { names.add(getString(R.string.reader_ui_chapter_number, i + 1)); targets.add(i); }
             current = chapter;
         }
         ContentsSheet contents = new ContentsSheet(ink.folio, names, current, w -> {
@@ -514,7 +512,7 @@ public class ReaderActivity extends Activity {
             hideMenu();
             loadChapter();
         }, () -> refreshController.changed(root, Change.PAGE));
-        sheets.paged("Contents", contents);
+        sheets.paged(getString(R.string.reader_ui_contents), contents);
     }
 
     private static final String[] FONT_IDS = {"literata", "source_sans", "system_serif", "system_sans"};
@@ -550,10 +548,10 @@ public class ReaderActivity extends Activity {
     }
 
     private void showTextSettings() {
-        TextSheet panel = openTextPanel("Text", false);
+        TextSheet panel = openTextPanel(getString(R.string.reader_ui_text), false);
         Typeface[] faces = new Typeface[FONT_IDS.length];
         for (int i = 0; i < faces.length; i++) faces[i] = readerTypeface(FONT_IDS[i]);
-        panel.fonts(new String[]{"Literata", "Source Sans", "System serif", "System sans"}, faces,
+        panel.fonts(getResources().getStringArray(R.array.reader_ui_fonts), faces,
                 java.util.Arrays.asList(FONT_IDS).indexOf(store.readerFont()), i -> {
                     store.setReaderFont(FONT_IDS[i]);
                     textChanged();
@@ -570,37 +568,41 @@ public class ReaderActivity extends Activity {
             if (Math.abs(spacing[i] - store.readerLineSpacing()) < .001f) lineChoice = i;
             if (margins[i] == store.readerMargin()) marginChoice = i;
         }
-        panel.pictured("Line spacing", false, new String[]{"Compact", "Standard", "Loose"}, lineChoice, i -> {
+        panel.pictured(getString(R.string.reader_ui_line_spacing), false, getResources().getStringArray(R.array.reader_ui_spacing_options), lineChoice, i -> {
             store.setReaderLineSpacing(spacing[i]);
             textChanged();
         });
-        panel.pictured("Margins", true, new String[]{"Narrow", "Standard", "Wide"}, marginChoice, i -> {
+        panel.pictured(getString(R.string.reader_ui_margins), true, getResources().getStringArray(R.array.reader_ui_margin_options), marginChoice, i -> {
             store.setReaderMargin(margins[i]);
             textChanged();
         });
-        panel.heading("Alignment");
-        panel.control(new Segmented(ink.folio, "Alignment", new String[]{"Justified", "Left"},
+        panel.heading(getString(R.string.reader_ui_alignment));
+        panel.control(new Segmented(ink.folio, getString(R.string.reader_ui_alignment), getResources().getStringArray(R.array.reader_ui_alignment_options),
                 store.readerJustify() ? 0 : 1, i -> {
                     store.setReaderJustify(i == 0);
                     textChanged();
                 }));
-        panel.control(barLabel("Page footer, refresh and more", "Page footer, refresh and more", this::showMoreSettings));
+        panel.control(barLabel(getString(R.string.reader_ui_page_footer_refresh_and_more), getString(R.string.reader_ui_page_footer_refresh_and_more), this::showMoreSettings));
     }
 
     private void showMoreSettings() {
-        TextSheet panel = openTextPanel("Reader settings", true);
-        panel.heading("Page footer");
-        panel.control(new Segmented(ink.folio, "Page footer", new String[]{"Off", "Progress", "Chapter and progress"},
+        TextSheet panel = openTextPanel(getString(R.string.reader_ui_reader_settings), true);
+        panel.heading(getString(R.string.reader_ui_page_footer));
+        panel.control(new Segmented(ink.folio, getString(R.string.reader_ui_page_footer), getResources().getStringArray(R.array.reader_ui_footer_options),
                 java.util.Arrays.asList(FOOTER_IDS).indexOf(store.readerFooter()), i -> {
                     store.setReaderFooter(FOOTER_IDS[i]);
                     textChanged();
                 }));
         int[] rates = {0, 1, 4, 8, 16};
-        String[] labels = {"Off", "1 page", "4 pages", "8 pages", "16 pages"};
+        String[] labels = new String[rates.length];
+        labels[0] = getString(R.string.reader_ui_off);
+        for (int i = 1; i < rates.length; i++) {
+            labels[i] = getResources().getQuantityString(R.plurals.reader_ui_refresh_pages, rates[i], rates[i]);
+        }
         int current = 3;
         for (int i = 0; i < rates.length; i++) if (rates[i] == store.readerRefreshEvery()) current = i;
-        panel.heading("Full refresh");
-        panel.control(new Stepper(ink.folio, "Full refresh", labels, current, i -> {
+        panel.heading(getString(R.string.reader_ui_full_refresh));
+        panel.control(new Stepper(ink.folio, getString(R.string.reader_ui_full_refresh), labels, current, i -> {
             store.setReaderRefreshEvery(rates[i]);
             refreshController.fast(panel);
         }));

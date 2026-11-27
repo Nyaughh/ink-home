@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -43,16 +44,21 @@ public final class MonthGrid {
                 labels.setMinimumHeight(f.u(40));
                 labels.setBackground(DataWidgets.shape(f, useAccent ? f.palette.accent : met ? f.palette.inverse : f.palette.paper,
                         count > 0 && !met ? f.hairline : 0, false));
+                cell.setScreenReaderFocusable(true);
+                labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
                 cell.addView(labels, -1, -2);
                 labels.addView(Type.text(f, String.valueOf(index + 1), TypeScale.LABEL, color));
-                labels.addView(Type.text(f, count + "m", TypeScale.META, color));
+                labels.addView(Type.text(f, f.context.getString(R.string.reader_ui_short_minutes, count), TypeScale.META, color));
                 if (date.equals(today)) {
                     View underline = new View(f.context);
                     underline.setBackgroundColor(f.palette.strong);
                     cell.addView(underline, -1, f.u(3));
                 }
-                cell.setContentDescription(date + ", " + count + " minutes" + (met ? ", goal met" : "")
-                        + (date.equals(today) ? ", today" : ""));
+                String description = f.context.getResources().getQuantityString(
+                        R.plurals.reader_ui_date_minutes, count, date, count);
+                if (goal > 0 && met) description = f.context.getString(R.string.reader_ui_goal_met, description);
+                if (date.equals(today)) description = f.context.getString(R.string.reader_ui_today, description);
+                cell.setContentDescription(description);
                 if (select != null) {
                     DataWidgets.action(cell, v -> select.accept(date));
                     cell.setForeground(DataWidgets.focus(f));

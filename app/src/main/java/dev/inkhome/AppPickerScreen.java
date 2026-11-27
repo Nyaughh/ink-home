@@ -12,10 +12,10 @@ final class AppPickerScreen implements Screen {
 
     void build(MainActivity host, LinearLayout col) {
         boolean hiddenMode = "hidden".equals(host.sub);
-        col.addView(host.header(hiddenMode ? "Hidden apps" : "Reading apps", null, host::onBackPressed));
+        col.addView(host.header(hiddenMode ? host.getString(R.string.ui_hidden_apps) : host.getString(R.string.ui_reading_apps), null, host::onBackPressed));
         LinearLayout list = host.ink.col();
         list.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), host.ink.dp(16));
-        TextView hint = host.ink.muted(hiddenMode ? "Tap an app to show it in Apps again." : "Time in these apps counts as reading. Your book reader always counts.", 14);
+        TextView hint = host.ink.muted(hiddenMode ? host.getString(R.string.ui_tap_an_app_to_show_it_in) : host.getString(R.string.ui_time_in_these_apps_counts_as_reading), 14);
         hint.setPadding(0, 0, 0, host.ink.dp(12));
         list.addView(hint);
         list.addView(host.ink.hair());
@@ -31,10 +31,10 @@ final class AppPickerScreen implements Screen {
             r.addView(host.ink.oneLine(host.ink.body(host.displayLabel(a))), host.ink.weight(1));
             if (!hiddenMode) {
                 boolean on = reading.contains(a.pkg);
-                r.addView(host.ink.pill(on ? "Counts" : "Off", on));
+                r.addView(host.ink.pill(on ? host.getString(R.string.ui_counts) : host.getString(R.string.ui_off), on));
                 r.setOnClickListener(v -> {
                     if (a.pkg.equals(MainActivity.NEOREADER_PKG) || a.pkg.equals(host.store.bookReader()) || a.pkg.equals(host.store.pdfReader())) {
-                        host.toast("Your book reader always counts");
+                        host.toast(host.getString(R.string.ui_your_book_reader_always_counts));
                         return;
                     }
                     host.store.setReadingApp(a.pkg, !on);
@@ -46,7 +46,7 @@ final class AppPickerScreen implements Screen {
             list.addView(MainActivity.item(r), new LinearLayout.LayoutParams(-1, host.ink.dp(58)));
         }
         if (shown == 0) {
-            TextView t = host.ink.muted("No hidden apps.", 15);
+            TextView t = host.ink.muted(host.getString(R.string.ui_no_hidden_apps), 15);
             t.setPadding(0, host.ink.dp(16), 0, 0);
             list.addView(t);
         }

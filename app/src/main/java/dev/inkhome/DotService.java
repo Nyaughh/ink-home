@@ -60,7 +60,7 @@ public final class DotService extends Service {
                         Uri.parse("package:" + activity.getPackageName())));
                 return;
             } catch (ActivityNotFoundException unavailable) {
-                activity.toast("Overlay permission settings unavailable");
+                activity.toast(activity.getString(R.string.service_ui_overlay_permission_settings_unavailable));
             }
         }
         resume(activity);
@@ -92,10 +92,10 @@ public final class DotService extends Service {
     @android.annotation.SuppressLint("ForegroundServiceType")
     @Override public int onStartCommand(Intent intent, int flags, int id) {
         NotificationManager nm = getSystemService(NotificationManager.class);
-        nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Ink dot", NotificationManager.IMPORTANCE_LOW));
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL, getString(R.string.service_ui_ink_dot), NotificationManager.IMPORTANCE_LOW));
         Notification note = new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(R.drawable.ic_launcher).setContentTitle("Ink dot is on")
-                .setContentText("Open Ink dot settings").setOngoing(true).setOnlyAlertOnce(true)
+                .setSmallIcon(R.drawable.ic_launcher).setContentTitle(getString(R.string.service_ui_ink_dot_is_on))
+                .setContentText(getString(R.string.service_ui_open_ink_dot_settings)).setOngoing(true).setOnlyAlertOnce(true)
                 .setContentIntent(PendingIntent.getActivity(this, 0, settingsIntent(this), PendingIntent.FLAG_IMMUTABLE))
                 .build();
         startForeground(NOTIFICATION, note, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST);

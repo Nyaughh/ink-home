@@ -27,7 +27,9 @@ public final class Ledger {
                 LinearLayout cell = DataWidgets.column(f);
                 cell.setMinimumHeight(f.u(46));
                 cell.setGravity(Gravity.CENTER_VERTICAL);
-                cell.setPadding(f.u(6), 0, f.u(6), 0);
+                // Give enlarged figures more of their column before wrapping onto another line.
+                int inset = f.u(f.textScale > 1f ? 2 : 6);
+                cell.setPadding(inset, 0, inset, 0);
                 int index = start + col;
                 if (index < labels.length) {
                     cell.addView(DataWidgets.label(f, labels[index], TypeScale.META));

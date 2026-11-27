@@ -16,6 +16,9 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
     final Folio folio;
     private final Pager pager;
     private final LinearLayout header;
+    private Pager inlinePager;
+    private int tabWidth, preferredCapacity;
+    private boolean useInlinePager;
     private final IntConsumer remember;
     private final Runnable changed;
     private final int footerHeight;
@@ -45,6 +48,14 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
             header.addView(pager, new LayoutParams(-2, -1));
             addView(header, new LayoutParams(-1, folio.u(40)));
         }
+    }
+
+    /** Use spare space beside Library tabs when a footer would cost a row. */
+    public final void offerInlinePager(LinearLayout tabRow, int tabWidth, int preferredCapacity) {
+        this.tabWidth = tabWidth;
+        this.preferredCapacity = preferredCapacity;
+        inlinePager = new Pager(folio, true, this::previous, this::next);
+        tabRow.addView(inlinePager, new LayoutParams(-2, -2));
     }
 
     final void install(View area) {
@@ -84,6 +95,18 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
         lastHeight = height;
         lastExtent = extent;
         pages = paginate(width, height, footerHeight);
+        useInlinePager = false;
+        if (inlinePager != null && pages.count() > 1 && pages.end(0) < preferredCapacity) {
+            Pagination inlinePages = paginate(width, height, 0);
+            if (inlinePages.end(0) > pages.end(0)) {
+                inlinePager.bind(inlinePages.count() - 1, inlinePages.count());
+                inlinePager.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED);
+                if (tabWidth + inlinePager.getMeasuredWidth() <= width) {
+                    useInlinePager = true;
+                    pages = inlinePages;
+                }
+            }
+        }
         if (pendingItem >= 0) {
             page = pages.pageAt(pendingItem);
             pendingItem = -1;
@@ -116,7 +139,8 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
         remember.accept(page);
         overflow.scrollTo(0, 0);
         show(pages.start(page), pages.end(page));
-        pager.bind(page, pages.count());
+        pager.bind(page, useInlinePager ? 0 : pages.count());
+        if (inlinePager != null) inlinePager.bind(page, useInlinePager ? pages.count() : 0);
     }
 
     @Override public boolean onInterceptTouchEvent(MotionEvent e) {

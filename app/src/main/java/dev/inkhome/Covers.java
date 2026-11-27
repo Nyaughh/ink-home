@@ -58,7 +58,7 @@ final class Covers {
     /** Cached cover if one exists, else a generated one. Safe on the UI thread once extract() has run. */
     static Bitmap get(Context c, Library.Book b, boolean real) {
         DisplayClass display = DisplayProbe.displayClass(c);
-        String k = key(display, b, real);
+        String k = key(c, display, b, real);
         Bitmap hit = MEM.get(k);
         if (hit != null) return hit;
         Bitmap bmp = null;
@@ -76,8 +76,9 @@ final class Covers {
         return bmp;
     }
 
-    private static String key(DisplayClass display, Library.Book book, boolean real) {
-        return display.name() + (real ? ":real:" : ":generated:") + book.key();
+    private static String key(Context c, DisplayClass display, Library.Book book, boolean real) {
+        String locale = book.kind == Library.Kind.COMIC ? c.getResources().getConfiguration().getLocales().toLanguageTags() : "";
+        return locale + display.name() + (real ? ":real:" : ":generated:") + book.key();
     }
 
     /** Drops in-memory covers, e.g. after titles were updated from EPUB metadata. */
@@ -116,7 +117,7 @@ final class Covers {
                 try (FileOutputStream fo = new FileOutputStream(staged)) {
                     if (!out.compress(Bitmap.CompressFormat.PNG, 100, fo)) return;
                 }
-                if (staged.renameTo(new File(d, b.key() + ".png"))) MEM.put(key(display, b, true), out);
+                if (staged.renameTo(new File(d, b.key() + ".png"))) MEM.put(key(c, display, b, true), out);
             } finally {
                 if (staged.exists()) staged.delete();
             }
@@ -275,7 +276,7 @@ final class Covers {
         label.setColor(0xFF333333);
         label.setTextSize(20);
         label.setTypeface(Type.sans(context, 600));
-        String kind = b.kind == Library.Kind.COMIC ? "Comic" : b.format();
+        String kind = b.kind == Library.Kind.COMIC ? context.getString(R.string.reader_ui_comic) : b.format();
         c.drawText(kind, 24, 52, label);
 
         TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);

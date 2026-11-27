@@ -330,8 +330,8 @@ public class MainActivity extends Activity {
     }
 
     void shellAccessSheet(boolean enabled) {
-        sheets.message("Ink shell", getString(R.string.ink_shell_description),
-                enabled ? "Turn off Ink shell" : "Open Android accessibility settings", () -> {
+        sheets.message(getString(R.string.launcher_ink_shell), getString(R.string.ink_shell_description),
+                getString(enabled ? R.string.launcher_turn_off_ink_shell : R.string.launcher_open_android_accessibility_settings), () -> {
                     if (enabled) {
                         ShellService.disable();
                         openSettingsPage(SettingsScreen.SHELL);
@@ -511,13 +511,13 @@ public class MainActivity extends Activity {
 
     /** "42%" / "1 h 10 min read" / "Not started": the most useful one-line status for a book. */
     private String bookStatus(Library.Book b) {
-        if (b.finished) return "Finished";
+        if (b.finished) return getString(R.string.launcher_finished);
         int pc = b.percent();
         int mins = bookMinutes(b);
-        if (pc >= 0 && mins > 0) return pc + "%  ·  " + Stats.hm(mins) + " read";
-        if (pc >= 0) return pc + "%";
-        if (mins > 0) return Stats.hm(mins) + " read";
-        return b.started() ? "Started" : "Not started";
+        if (pc >= 0 && mins > 0) return getString(R.string.launcher_percent_duration_read, pc, Stats.hm(this, mins));
+        if (pc >= 0) return getString(R.string.launcher_percent, pc);
+        if (mins > 0) return getString(R.string.launcher_duration_read, Stats.hm(this, mins));
+        return getString(b.started() ? R.string.launcher_started : R.string.launcher_not_started);
     }
 
     // ================================================================== navigation
@@ -577,24 +577,24 @@ public class MainActivity extends Activity {
         ImageView left = ink.icon(inSettings ? "home" : "settings", 24);
         left.setPadding(ink.dp(12), ink.dp(12), ink.dp(12), ink.dp(12));
         left.setBackground(ink.pressable());
-        left.setContentDescription(inSettings ? "Home" : "Settings");
+        left.setContentDescription(getString(inSettings ? R.string.launcher_home : R.string.launcher_settings));
         left.setOnClickListener(v -> go(inSettings ? Screen.HOME : Screen.SETTINGS));
         dock.addView(left, new LinearLayout.LayoutParams(ink.dp(52), dockHeight));
 
         int today = stats == null ? 0 : stats.today();
         int goal = store.dailyGoal();
-        String label = goal > 0 ? "Today " + today + " / " + goal + " min" : "Today " + Stats.hm(today);
+        String label = goal > 0 ? getString(R.string.launcher_today_goal, today, goal) : getString(R.string.launcher_today_duration, Stats.hm(this, today));
         TextView mid = ink.center(ink.oneLine(ink.text(label, TypeScale.BODY, ink.TEXT)));
         mid.setGravity(Gravity.CENTER);
         mid.setBackground(ink.pressable());
-        mid.setContentDescription(label + ". Open Stats");
+        mid.setContentDescription(getString(R.string.launcher_open_stats_description, label));
         mid.setOnClickListener(v -> go(Screen.STATS));
         dock.addView(mid, new LinearLayout.LayoutParams(0, dockHeight, 1f));
 
         ImageView right = ink.icon(menuOpen ? "down" : "up", 24);
         right.setPadding(ink.dp(12), ink.dp(12), ink.dp(12), ink.dp(12));
         right.setBackground(ink.pressable());
-        right.setContentDescription(menuOpen ? "Close menu" : "Open menu");
+        right.setContentDescription(getString(menuOpen ? R.string.launcher_close_menu : R.string.launcher_open_menu));
         right.setOnClickListener(v -> { if (menuOpen) closePanel(); else openMenu(); });
         dock.addView(right, new LinearLayout.LayoutParams(ink.dp(52), dockHeight));
     }
@@ -613,14 +613,14 @@ public class MainActivity extends Activity {
         sheet.setClickable(true);
         sheet.setPadding(ink.dp(12), ink.dp(14), ink.dp(12), ink.dp(10));
         Object[][] items = {
-                {"home", "Home", (Runnable) () -> go(Screen.HOME), Screen.HOME},
-                {"library", "Library", (Runnable) () -> go(Screen.LIBRARY), Screen.LIBRARY},
-                {"stats", "Stats", (Runnable) () -> go(Screen.STATS), Screen.STATS},
-                {"apps", "Apps", (Runnable) () -> go(Screen.APPS), Screen.APPS},
-                {"search", "Search", (Runnable) () -> { go(Screen.LIBRARY); libSearch = ""; render(); }, null},
-                {"clean", "Clean screen", (Runnable) () -> { closePanel(); ui.postDelayed(this::cleanScreen, 120); }, null},
-                {"wifi", "Wi-Fi", (Runnable) this::openWifi, null},
-                {"tune", "Control panel", (Runnable) () -> { closePanel(); openPanel(); }, null},
+                {"home", getString(R.string.launcher_home), (Runnable) () -> go(Screen.HOME), Screen.HOME},
+                {"library", getString(R.string.launcher_library), (Runnable) () -> go(Screen.LIBRARY), Screen.LIBRARY},
+                {"stats", getString(R.string.launcher_stats), (Runnable) () -> go(Screen.STATS), Screen.STATS},
+                {"apps", getString(R.string.launcher_apps), (Runnable) () -> go(Screen.APPS), Screen.APPS},
+                {"search", getString(R.string.launcher_search), (Runnable) () -> { go(Screen.LIBRARY); libSearch = ""; render(); }, null},
+                {"clean", getString(R.string.launcher_clean_screen), (Runnable) () -> { closePanel(); ui.postDelayed(this::cleanScreen, 120); }, null},
+                {"wifi", getString(R.string.launcher_wi_fi), (Runnable) this::openWifi, null},
+                {"tune", getString(R.string.launcher_control_panel), (Runnable) () -> { closePanel(); openPanel(); }, null},
         };
         LinearLayout line = null;
         for (int i = 0; i < items.length; i++) {
@@ -765,55 +765,55 @@ public class MainActivity extends Activity {
         top.setGravity(Gravity.BOTTOM);
         LinearLayout left = ink.col();
         left.addView(ink.text(timeText(now), TypeScale.DISPLAY, ink.TEXT));
-        TextView date = ink.muted(new SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now), 15);
+        TextView date = ink.muted(new SimpleDateFormat(getString(R.string.launcher_date_pattern), Locale.getDefault()).format(now), 15);
         date.setPadding(0, ink.dp(6), 0, 0);
         left.addView(date);
         top.addView(left, ink.weight(1));
         LinearLayout right = ink.col();
         right.setGravity(Gravity.END);
-        right.addView(ink.text(bat.percent + "%", TypeScale.FIGURE, ink.TEXT));
-        TextView bs = ink.muted(bat.charging ? (bat.percent >= 100 ? "Charged" : "Charging") : "On battery", 14);
+        right.addView(ink.text(getString(R.string.launcher_percent, bat.percent), TypeScale.FIGURE, ink.TEXT));
+        TextView bs = ink.muted(bat.charging ? (bat.percent >= 100 ? getString(R.string.launcher_charged) : getString(R.string.launcher_charging)) : getString(R.string.launcher_on_battery), 14);
         bs.setPadding(0, ink.dp(6), 0, 0);
         right.addView(bs);
         top.addView(right);
         p.addView(top);
         p.addView(ink.progress(bat.percent / 100f, 4), ink.m(-1, -2, 0, 14, 0, 16));
 
-        String wifiState = !wifi.enabled ? "Off" : !wifi.connected ? "Not connected"
+        String wifiState = !wifi.enabled ? getString(R.string.launcher_off) : !wifi.connected ? getString(R.string.launcher_not_connected)
                 : wifi.name != null ? wifi.name
-                : new String[]{"Very weak", "Weak", "Fair", "Good", "Strong"}[Math.max(0, Math.min(4, wifi.level))];
+                : getResources().getStringArray(R.array.launcher_wifi_signal_levels)[Math.max(0, Math.min(4, wifi.level))];
         int notes = Notifs.count();
         Capabilities caps = DisplayProbe.capabilities(this);
         List<View> tiles = new ArrayList<>();
         if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_WIFI)) {
-            tiles.add(panelTile("wifi", "Wi-Fi", wifiState, wifi.connected, this::openWifi));
+            tiles.add(panelTile("wifi", getString(R.string.launcher_wi_fi), wifiState, wifi.connected, this::openWifi));
         }
         if (caps.bluetooth) {
-            tiles.add(panelTile("bluetooth", "Bluetooth", "Device settings", false,
+            tiles.add(panelTile("bluetooth", getString(R.string.launcher_bluetooth), getString(R.string.launcher_device_settings), false,
                     () -> panelSettings(Settings.ACTION_BLUETOOTH_SETTINGS)));
         }
-        tiles.add(panelTile("clean", "Clean screen", "Gentle refresh", false, () -> {
+        tiles.add(panelTile("clean", getString(R.string.launcher_clean_screen), getString(R.string.launcher_gentle_refresh), false, () -> {
             closePanel();
             ui.post(this::cleanScreen);
         }));
         if (caps.rotation) {
             boolean locked = store.portraitLocked();
-            tiles.add(panelTile("rotate", "Rotation", locked ? "Portrait" : "Follow system", locked, () -> {
+            tiles.add(panelTile("rotate", getString(R.string.launcher_rotation), getString(locked ? R.string.launcher_portrait : R.string.launcher_follow_system), locked, () -> {
                 store.setPortraitLocked(!locked);
                 ActivityWindow.applyOrientation(this, store);
                 openPanel();
             }));
         }
         boolean quiet = store.quiet() && Notifs.count() >= 0;
-        tiles.add(panelTile("quiet", "Quiet", notes < 0 ? "Allow access" : quiet ? "On" : "Off", quiet,
+        tiles.add(panelTile("quiet", getString(R.string.launcher_quiet), notes < 0 ? getString(R.string.launcher_allow_access) : getString(quiet ? R.string.launcher_on : R.string.launcher_off), quiet,
                 () -> { if (changeQuiet(!quiet)) openPanel(); }));
         if (DotService.available(this)) {
             boolean enabled = DotService.enabled(this) && DotService.permitted(this);
-            tiles.add(panelTile("clean", "Ink dot", enabled ? "On" : "Off", enabled,
+            tiles.add(panelTile("clean", getString(R.string.launcher_ink_dot), getString(enabled ? R.string.launcher_on : R.string.launcher_off), enabled,
                     () -> { DotService.setEnabled(this, !enabled); openPanel(); }));
         }
         if (caps.frontlight) {
-            tiles.add(panelTile("light", "Light", "Display settings", false,
+            tiles.add(panelTile("light", getString(R.string.launcher_light), getString(R.string.launcher_display_settings), false,
                     () -> panelSettings(Settings.ACTION_DISPLAY_SETTINGS)));
         }
         for (int i = 0; i < tiles.size(); i += 2) {
@@ -823,19 +823,19 @@ public class MainActivity extends Activity {
 
         List<Notifs.Item> list = Notifs.items();
         LinearLayout nh = ink.row();
-        String caption = notes < 0 ? "Notifications" : "Notifications · " + notes;
+        String caption = notes < 0 ? getString(R.string.launcher_notifications) : getString(R.string.launcher_notification_count, notes);
         nh.addView(ink.text(caption, TypeScale.LABEL, ink.TEXT), ink.weight(1));
         if (notes < 0) {
-            nh.addView(Button.create(ink.folio, "Allow access", Button.Style.TEXT, v -> openNotifications()));
+            nh.addView(Button.create(ink.folio, getString(R.string.launcher_allow_access), Button.Style.TEXT, v -> openNotifications()));
         }
         p.addView(nh, ink.m(-1, -2, 0, 8, 0, 0));
         if (!list.isEmpty()) {
-            TextView clear = ink.text("Clear all", TypeScale.META, ink.TEXT2);
+            TextView clear = ink.text(getString(R.string.launcher_clear_all), TypeScale.META, ink.TEXT2);
             clear.setPadding(ink.dp(10), 0, 0, ink.dp(8));
             clear.setOnClickListener(v -> {
                 List<Notifs.Item> removed = Notifs.stageClear();
                 closePanel();
-                if (!removed.isEmpty()) sheets.notice("Notifications cleared",
+                if (!removed.isEmpty()) sheets.notice(getString(R.string.launcher_notifications_cleared),
                         () -> Notifs.finishClear(removed, false), () -> Notifs.finishClear(removed, true));
             });
             nh.addView(clear);
@@ -848,7 +848,7 @@ public class MainActivity extends Activity {
                 r.setBackground(i < shown - 1 ? ink.listRow(14) : ink.pressable());
                 LinearLayout top1 = ink.row();
                 top1.addView(ink.oneLine(ink.faint(it.app, 12)), ink.weight(1));
-                top1.addView(ink.faint(Library.ago(it.when), 12));
+                top1.addView(ink.faint(Library.ago(this, it.when), 12));
                 r.addView(top1);
                 TextView t = ink.oneLine(ink.medium(it.title, 15));
                 t.setPadding(0, ink.dp(4), 0, 0);
@@ -869,7 +869,7 @@ public class MainActivity extends Activity {
                 card.addView(r);
             }
             if (list.size() > shown) {
-                TextView more = ink.muted("+ " + (list.size() - shown) + " more", 13);
+                TextView more = ink.muted(getString(R.string.launcher_notifications_more, list.size() - shown), 13);
                 more.setPadding(ink.dp(14), ink.dp(8), ink.dp(14), ink.dp(10));
                 more.setOnClickListener(v -> openNotifications());
                 card.addView(more);
@@ -879,8 +879,8 @@ public class MainActivity extends Activity {
 
         p.addView(ink.hair());
         LinearLayout shortcuts = ink.row();
-        shortcuts.addView(Button.create(ink.folio, "Settings", Button.Style.TEXT, v -> openSettingsPage(null)), ink.weight(1));
-        shortcuts.addView(Button.create(ink.folio, "Switcher", Button.Style.TEXT, v -> {
+        shortcuts.addView(Button.create(ink.folio, getString(R.string.launcher_settings), Button.Style.TEXT, v -> openSettingsPage(null)), ink.weight(1));
+        shortcuts.addView(Button.create(ink.folio, getString(R.string.launcher_switcher), Button.Style.TEXT, v -> {
             pages.clear();
             libSearch = null;
             libraryDetail = null;
@@ -913,13 +913,13 @@ public class MainActivity extends Activity {
     boolean changeQuiet(boolean enabled) {
         if (Notifs.setQuiet(enabled)) return true;
         if (!SetupScreen.notificationsAllowed(this)) panelSettings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
-        else toast("Notification listener is unavailable");
+        else toast(getString(R.string.launcher_notification_listener_is_unavailable));
         return false;
     }
 
     private void panelSettings(String action) {
         closePanel();
-        if (!start(new Intent(action).setPackage("com.android.settings"))) toast("Device settings unavailable");
+        if (!start(new Intent(action).setPackage("com.android.settings"))) toast(getString(R.string.launcher_device_settings_unavailable));
     }
 
     private void addTiles(LinearLayout parent, View first, View second) {
@@ -946,10 +946,10 @@ public class MainActivity extends Activity {
         // A bounded number of stops keeps unusually fine-grained volume scales usable.
         int stops = Math.min(10, max);
         String[] values = new String[stops + 1];
-        for (int i = 0; i <= stops; i++) values[i] = Math.round(i * 100f / stops) + "%";
+        for (int i = 0; i <= stops; i++) values[i] = getString(R.string.launcher_percent, Math.round(i * 100f / stops));
         int selected = Math.round(stops * audio.getStreamVolume(stream) / (float) max);
-        panel.addView(ink.text("Volume", TypeScale.LABEL, ink.TEXT));
-        panel.addView(new LevelBar(ink.folio, "Volume", values, selected, index -> {
+        panel.addView(ink.text(getString(R.string.launcher_volume), TypeScale.LABEL, ink.TEXT));
+        panel.addView(new LevelBar(ink.folio, getString(R.string.launcher_volume), values, selected, index -> {
             try {
                 audio.setStreamVolume(stream, Math.round(index * max / (float) stops), 0);
             } catch (SecurityException denied) {
@@ -973,7 +973,7 @@ public class MainActivity extends Activity {
             Object sbm = getSystemService("statusbar");
             sbm.getClass().getMethod("expandNotificationsPanel").invoke(sbm);
         } catch (Throwable t) {
-            toast("Swipe down from the top edge to see notifications");
+            toast(getString(R.string.launcher_open_notifications_hint));
         }
     }
 
@@ -1016,13 +1016,13 @@ public class MainActivity extends Activity {
     }
 
     private String freeStorage() {
-        return Library.humanSize(new StatFs(Environment.getDataDirectory().getPath()).getAvailableBytes());
+        return Library.humanSize(this, new StatFs(Environment.getDataDirectory().getPath()).getAvailableBytes());
     }
 
     private String timeText(Date d) {
         String c = store.clock();
-        if (c.equals("24")) return new SimpleDateFormat("HH:mm", Locale.getDefault()).format(d);
-        if (c.equals("12")) return new SimpleDateFormat("h:mm", Locale.getDefault()).format(d);
+        if (c.equals("24")) return new SimpleDateFormat(getString(R.string.launcher_clock_24_pattern), Locale.getDefault()).format(d);
+        if (c.equals("12")) return new SimpleDateFormat(getString(R.string.launcher_clock_12_pattern), Locale.getDefault()).format(d);
         return android.text.format.DateFormat.getTimeFormat(this).format(d);
     }
 
@@ -1090,7 +1090,7 @@ public class MainActivity extends Activity {
         LinearLayout info = ink.col();
         info.setPadding(ink.dp(20), ink.dp(2), 0, 0);
         if (reading.isEmpty()) {
-            TextView n = ink.faint("Newest in your library", 13);
+            TextView n = ink.faint(getString(R.string.launcher_newest_in_your_library), 13);
             n.setPadding(0, 0, 0, ink.dp(8));
             info.addView(n);
         }
@@ -1116,11 +1116,12 @@ public class MainActivity extends Activity {
         LinearLayout status = ink.row();
         status.setPadding(0, ink.dp(6), 0, 0);
         int percent = b.percent();
-        String progress = b.finished ? "Finished" : percent >= 0 ? percent + "%" : b.started() ? "Started" : "Not started";
+        String progress = b.finished ? getString(R.string.launcher_finished) : percent >= 0 ? getString(R.string.launcher_percent, percent) : getString(b.started() ? R.string.launcher_started : R.string.launcher_not_started);
         status.addView(ink.text(progress, TypeScale.META, ink.TEXT));
         int minutes = bookMinutes(b);
-        String when = minutes > 0 ? Stats.hm(minutes) + " read" : "";
-        if (b.lastRead > 0) when += (when.isEmpty() ? "" : " · ") + Library.ago(b.lastRead);
+        String when = minutes > 0 ? getString(R.string.launcher_duration_read, Stats.hm(this, minutes)) : "";
+        if (b.lastRead > 0) when = when.isEmpty() ? Library.ago(this, b.lastRead)
+                : getString(R.string.launcher_metadata_pair, when, Library.ago(this, b.lastRead));
         TextView activity = ink.oneLine(ink.text(when, TypeScale.META, ink.TEXT2));
         activity.setGravity(Gravity.END);
         status.addView(activity, ink.weight(1));
@@ -1156,7 +1157,7 @@ public class MainActivity extends Activity {
     /** Page whole rows in the space between the hero and favorites. */
     private View homeBookList(List<Library.Book> list) {
         LinearLayout head = ink.row();
-        head.addView(ink.text("Up next", TypeScale.LABEL, ink.TEXT), ink.weight(1));
+        head.addView(ink.text(getString(R.string.launcher_up_next), TypeScale.LABEL, ink.TEXT), ink.weight(1));
         View listView = cells("home", head, list.size(), 0, 52, i -> homeBookRow(list.get(i)));
         listView.setTag("list");
         return listView;
@@ -1168,7 +1169,7 @@ public class MainActivity extends Activity {
         r.addView(ink.cover(Covers.get(this, bk, store.realCovers())), ink.m(ink.dp(30), ink.dp(43), 0, 0, 12, 0));
         LinearLayout t = ink.col();
         t.addView(ink.oneLine(ink.text(bk.title, TypeScale.BODY_LG, ink.TEXT)));
-        String meta = (bk.author.isEmpty() ? bk.format() : bk.author) + "  ·  " + bookStatus(bk);
+        String meta = getString(R.string.launcher_book_row_status, bk.author.isEmpty() ? bk.format() : bk.author, bookStatus(bk));
         TextView m = ink.oneLine(ink.muted(meta, 12));
         m.setPadding(0, ink.dp(3), 0, 0);
         t.addView(m);
@@ -1181,9 +1182,9 @@ public class MainActivity extends Activity {
 
     private View emptyHero() {
         return dev.inkhome.folio.widget.EmptyState.create(ink.folio,
-                booksLoaded ? "No book yet" : "Opening your library…",
-                booksLoaded ? "Copy EPUB, PDF, MOBI or CBZ files over USB or BooxDrop and they'll appear here."
-                        : "Finding books on this tablet.", "Library", v -> go(Screen.LIBRARY));
+                booksLoaded ? getString(R.string.launcher_no_book_yet) : getString(R.string.launcher_opening_your_library),
+                booksLoaded ? getString(R.string.launcher_empty_library_hint)
+                        : getString(R.string.launcher_finding_books_on_this_tablet), getString(R.string.launcher_library), v -> go(Screen.LIBRARY));
     }
 
     void homeShelf(LinearLayout col, List<Library.Book> reading) {
@@ -1225,9 +1226,9 @@ public class MainActivity extends Activity {
         List<App> favs = favoriteApps();
         LinearLayout right = col.findViewWithTag("homeRight");
         if (right != null) col = right;
-        col.addView(new Structure(ink.folio).sectionHead("Favorites", false, null));
+        col.addView(new Structure(ink.folio).sectionHead(getString(R.string.launcher_favorites), false, null));
         if (favs.isEmpty()) {
-            TextView h = ink.muted("Long-press an app in Apps to add it here.", 14);
+            TextView h = ink.muted(getString(R.string.launcher_empty_favorites_hint), 14);
             h.setPadding(0, ink.dp(14), 0, ink.dp(10));
             col.addView(h);
             return;
@@ -1327,12 +1328,12 @@ public class MainActivity extends Activity {
             info.addView(ink.oneLine(ink.text(b.title, TypeScale.BODY_LG, ink.TEXT)));
             int mins = bookMinutes(b);
             String meta = b.author.isEmpty() ? b.format() : b.author;
-            if (mins > 0) meta += " · " + Stats.hm(mins) + " read";
+            if (mins > 0) meta = getString(R.string.launcher_metadata_read_time, meta, Stats.hm(this, mins));
             info.addView(ink.oneLine(ink.text(meta, TypeScale.META, ink.TEXT2)));
             if (b.finished || b.progress >= 0)
                 info.addView(ink.progress(b.finished ? 1 : b.progress, 3), ink.m(ink.dp(150), -2, 0, 4, 0, 0));
             row.addView(info, ink.weight(1));
-            String status = b.finished ? "Finished" : b.percent() >= 0 ? b.percent() + "%" : "";
+            String status = b.finished ? getString(R.string.launcher_finished) : b.percent() >= 0 ? getString(R.string.launcher_percent, b.percent()) : "";
             row.addView(ink.text(status, TypeScale.META, ink.TEXT));
             row.setOnClickListener(v -> openBook(b));
             row.setOnLongClickListener(v -> { bookMenu(b); return true; });
@@ -1362,7 +1363,7 @@ public class MainActivity extends Activity {
     }
 
     void newCollection() {
-        askText("New collection", "", name -> {
+        askText(getString(R.string.launcher_new_collection), "", name -> {
             Map<String, List<String>> collections = store.collections();
             if (!collections.containsKey(name)) collections.put(name, new ArrayList<>());
             store.setCollections(collections);
@@ -1380,7 +1381,7 @@ public class MainActivity extends Activity {
             r.setBackground(ink.listRow(0));
             if (i == names.size()) {
                 r.addView(ink.icon("plus", 18));
-                TextView t = ink.medium("New collection", 16);
+                TextView t = ink.medium(getString(R.string.launcher_new_collection), 16);
                 t.setPadding(ink.dp(12), 0, 0, 0);
                 r.addView(t);
                 r.setOnClickListener(v -> newCollection());
@@ -1394,9 +1395,9 @@ public class MainActivity extends Activity {
             r.addView(ink.icon("chevron", 14), ink.m(ink.dp(14), ink.dp(14), 10, 0, 0, 0));
             r.setOnClickListener(v -> { libCollection = name; pages.put("lib", 0); render(); });
             r.setOnLongClickListener(v -> {
-                choose(name, new String[]{"Rename", "Delete collection"}, -1, w -> {
+                choose(name, new String[]{getString(R.string.launcher_rename), getString(R.string.launcher_delete_collection)}, -1, w -> {
                     Map<String, List<String>> m = store.collections();
-                    if (w == 0) askText("Rename collection", name, nn -> {
+                    if (w == 0) askText(getString(R.string.launcher_rename_collection), name, nn -> {
                         Map<String, List<String>> out = new LinkedHashMap<>();
                         for (Map.Entry<String, List<String>> e : m.entrySet()) out.put(e.getKey().equals(name) ? nn : e.getKey(), e.getValue());
                         store.setCollections(out);
@@ -1406,7 +1407,7 @@ public class MainActivity extends Activity {
                         m.remove(name);
                         store.setCollections(m);
                         render();
-                        sheets.notice("Collection deleted", () -> {
+                        sheets.notice(getString(R.string.launcher_collection_deleted), () -> {
                             store.setCollections(cols);
                             render();
                         }, null);
@@ -1421,13 +1422,13 @@ public class MainActivity extends Activity {
     void libraryOptions() {
         LinearLayout options = ink.col();
         options.setPadding(ink.dp(16), ink.dp(4), ink.dp(16), ink.dp(12));
-        libraryChoices(options, "Sort by", LibraryScreen.SORT_LABELS, LibraryScreen.SORT_KEYS,
+        libraryChoices(options, getString(R.string.launcher_sort_by), getResources().getStringArray(R.array.library_sort_labels), LibraryScreen.SORT_KEYS,
                 store.librarySort(), store::setLibrarySort);
-        libraryChoices(options, "Show", LibraryScreen.TYPE_LABELS, LibraryScreen.TYPE_KEYS,
+        libraryChoices(options, getString(R.string.launcher_show), getResources().getStringArray(R.array.library_type_labels), LibraryScreen.TYPE_KEYS,
                 store.libraryType(), store::setLibraryType);
-        libraryChoices(options, "View", new String[]{"Grid", "List"}, new String[]{"grid", "list"},
+        libraryChoices(options, getString(R.string.launcher_view), new String[]{getString(R.string.launcher_grid), getString(R.string.launcher_list)}, new String[]{"grid", "list"},
                 store.libraryGrid() ? "grid" : "list", key -> store.setLibraryGrid(key.equals("grid")));
-        sheets.custom("Sort and filter", options);
+        sheets.custom(getString(R.string.launcher_sort_and_filter), options);
     }
 
     private void libraryChoices(LinearLayout options, String title, String[] labels,
@@ -1436,7 +1437,7 @@ public class MainActivity extends Activity {
         for (int i = 0; i < labels.length; i++) {
             String key = keys[i];
             boolean selected = key.equals(current);
-            TextView choice = ink.body((selected ? "●   " : "○   ") + labels[i]);
+            TextView choice = ink.body(getString(R.string.launcher_selected_choice, selected ? "●" : "○", labels[i]));
             choice.setSelected(selected);
             choice.setGravity(Gravity.CENTER_VERTICAL);
             choice.setMinHeight(ink.dp(44));
@@ -1460,7 +1461,7 @@ public class MainActivity extends Activity {
             render();
             return;
         }
-        sheets.custom(details ? "Book details" : "Book actions", bookInformation(b, details));
+        sheets.custom(getString(details ? R.string.launcher_book_details : R.string.launcher_book_actions), bookInformation(b, details));
     }
 
     LinearLayout bookInformation(Library.Book b, boolean details) {
@@ -1477,26 +1478,26 @@ public class MainActivity extends Activity {
         heading.addView(labels, ink.weight(1));
         body.addView(heading);
         if (details) {
-            if (!b.pages.isEmpty()) body.addView(ink.body("Page " + b.pages));
-            if (b.lastRead > 0) body.addView(ink.body("Last read " + Library.ago(b.lastRead)));
-            body.addView(ink.body(b.format() + " · " + Library.humanSize(b.size)));
+            if (!b.pages.isEmpty()) body.addView(ink.body(getString(R.string.launcher_page, b.pages)));
+            if (b.lastRead > 0) body.addView(ink.body(getString(R.string.launcher_last_read, Library.ago(this, b.lastRead))));
+            body.addView(ink.body(getString(R.string.launcher_metadata_pair, b.format(), Library.humanSize(this, b.size))));
             TextView path = ink.text(b.path, TypeScale.META, ink.TEXT2);
             path.setTextIsSelectable(true);
             body.addView(path);
         }
-        String open = b.started() ? "Continue reading" : "Open book";
+        String open = getString(b.started() ? R.string.launcher_continue_reading : R.string.launcher_open_book);
         body.addView(dev.inkhome.folio.widget.Button.create(ink.folio, open,
                 dev.inkhome.folio.widget.Button.Style.PRIMARY, v -> { sheets.dismiss(); openBook(b); }),
                 ink.m(-1, -2, 0, 12, 0, 4));
-        List<String> actions = new ArrayList<>();
-        actions.add("Open with…");
-        actions.add("Add to collection…");
-        if (libCollection != null) actions.add("Remove from this collection");
-        actions.add(b.finished ? "Mark as not finished" : "Mark as finished");
-        if (b.started() && !b.finished) actions.add("Remove from Reading");
-        if (!details) actions.add("Details");
-        for (String action : actions) {
-            body.addView(new Structure(ink.folio).listRow(null, action, null, null, 44, false, () -> {
+        List<MenuAction> actions = new ArrayList<>();
+        actions.add(MenuAction.OPEN_WITH);
+        actions.add(MenuAction.ADD_TO_COLLECTION);
+        if (libCollection != null) actions.add(MenuAction.REMOVE_FROM_THIS_COLLECTION);
+        actions.add(b.finished ? MenuAction.MARK_AS_NOT_FINISHED : MenuAction.MARK_AS_FINISHED);
+        if (b.started() && !b.finished) actions.add(MenuAction.REMOVE_FROM_READING);
+        if (!details) actions.add(MenuAction.DETAILS);
+        for (MenuAction action : actions) {
+            body.addView(new Structure(ink.folio).listRow(null, getString(action.label), null, null, 44, false, () -> {
                 sheets.dismiss();
                 bookSheetAction(action, b);
             }));
@@ -1504,11 +1505,34 @@ public class MainActivity extends Activity {
         return body;
     }
 
-    private void bookSheetAction(String action, Library.Book b) {
+    private enum MenuAction {
+        OPEN_WITH(R.string.launcher_action_open_with),
+        ADD_TO_COLLECTION(R.string.launcher_action_add_to_collection),
+        REMOVE_FROM_THIS_COLLECTION(R.string.launcher_action_remove_from_this_collection),
+        MARK_AS_NOT_FINISHED(R.string.launcher_action_mark_as_not_finished),
+        MARK_AS_FINISHED(R.string.launcher_action_mark_as_finished),
+        REMOVE_FROM_READING(R.string.launcher_action_remove_from_reading),
+        DETAILS(R.string.launcher_action_details),
+        OPEN(R.string.launcher_action_open),
+        REMOVE_FROM_FAVORITES(R.string.launcher_action_remove_from_favorites),
+        ADD_TO_FAVORITES(R.string.launcher_action_add_to_favorites),
+        MOVE_TO_FIRST_FAVORITE(R.string.launcher_action_move_to_first_favorite),
+        EXCLUDE_READING_TIME(R.string.launcher_action_exclude_reading_time),
+        COUNT_TIME_AS_READING(R.string.launcher_action_count_time_as_reading),
+        SHOW_IN_APPS(R.string.launcher_action_show_in_apps),
+        HIDE_FROM_APPS(R.string.launcher_action_hide_from_apps),
+        APP_INFO(R.string.launcher_action_app_info);
+
+        final int label;
+
+        MenuAction(int label) { this.label = label; }
+    }
+
+    private void bookSheetAction(MenuAction action, Library.Book b) {
         switch (action) {
-            case "Open with…": openWith(b); break;
-            case "Add to collection…": addToCollection(b); break;
-            case "Remove from this collection": {
+            case OPEN_WITH: openWith(b); break;
+            case ADD_TO_COLLECTION: addToCollection(b); break;
+            case REMOVE_FROM_THIS_COLLECTION: {
                 Map<String, List<String>> m = store.collections();
                 List<String> l = m.get(libCollection);
                 if (l == null || !l.contains(b.path)) break;
@@ -1517,7 +1541,7 @@ public class MainActivity extends Activity {
                 l.remove(position);
                 store.setCollections(m);
                 render();
-                sheets.notice("Removed from collection", () -> {
+                sheets.notice(getString(R.string.launcher_removed_from_collection), () -> {
                     Map<String, List<String>> current = store.collections();
                     List<String> members = current.get(collection);
                     if (members != null && !members.contains(b.path)) {
@@ -1528,21 +1552,22 @@ public class MainActivity extends Activity {
                 }, null);
                 break;
             }
-            case "Remove from Reading": {
+            case REMOVE_FROM_READING: {
                 long previous = store.dismissedAt(b.path);
                 store.dismiss(b.path);
                 render();
-                sheets.notice("Removed from Reading", () -> {
+                sheets.notice(getString(R.string.launcher_removed_from_reading), () -> {
                     store.setDismissedAt(b.path, previous);
                     render();
                 }, null);
                 break;
             }
-            case "Details": showBookSheet(b, true); break;
-            default:
+            case DETAILS: showBookSheet(b, true); break;
+            case MARK_AS_NOT_FINISHED:
+            case MARK_AS_FINISHED:
                 boolean previous = b.finished;
                 setBookFinished(b, !previous);
-                sheets.notice(previous ? "Marked as not finished" : "Marked as finished",
+                sheets.notice(getString(previous ? R.string.launcher_marked_as_not_finished : R.string.launcher_marked_as_finished),
                         () -> setBookFinished(b, previous), null);
         }
     }
@@ -1557,22 +1582,22 @@ public class MainActivity extends Activity {
     private void addToCollection(Library.Book b) {
         Map<String, List<String>> m = store.collections();
         List<String> names = new ArrayList<>(m.keySet());
-        names.add("New collection…");
-        choose("Add to collection", names.toArray(new String[0]), -1, w -> {
+        names.add(getString(R.string.launcher_new_collection_ellipsis));
+        choose(getString(R.string.launcher_add_to_collection), names.toArray(new String[0]), -1, w -> {
             if (w == names.size() - 1) {
-                askText("New collection", "", name -> {
+                askText(getString(R.string.launcher_new_collection), "", name -> {
                     Map<String, List<String>> mm = store.collections();
                     List<String> l = mm.containsKey(name) ? mm.get(name) : new ArrayList<>();
                     if (!l.contains(b.path)) l.add(b.path);
                     mm.put(name, l);
                     store.setCollections(mm);
-                    toast("Added to " + name);
+                    toast(getString(R.string.launcher_added_to, name));
                 });
             } else {
                 List<String> l = m.get(names.get(w));
                 if (!l.contains(b.path)) l.add(b.path);
                 store.setCollections(m);
-                toast("Added to " + names.get(w));
+                toast(getString(R.string.launcher_added_to, names.get(w)));
             }
         });
     }
@@ -1645,7 +1670,7 @@ public class MainActivity extends Activity {
         List<String> labels = new ArrayList<>();
         List<Intent> intents = new ArrayList<>();
         if (builtInCanOpen(b)) {
-            labels.add("Ink Home reader");
+            labels.add(getString(R.string.launcher_ink_home_reader));
             intents.add(ReaderActivity.intent(this, b.file));
         }
         for (ResolveInfo ri : candidates) {
@@ -1656,14 +1681,14 @@ public class MainActivity extends Activity {
             labels.add(String.valueOf(ri.loadLabel(getPackageManager())));
             intents.add(explicit);
         }
-        if (intents.isEmpty()) { toast("No app can open " + b.format() + " files"); return; }
-        choose("Open with", labels.toArray(new String[0]), -1, w -> {
+        if (intents.isEmpty()) { toast(getString(R.string.launcher_no_reader, b.format())); return; }
+        choose(getString(R.string.launcher_open_with), labels.toArray(new String[0]), -1, w -> {
             Intent intent = intents.get(w);
             if (intent.getComponent() != null && "org.koreader.launcher".equals(intent.getComponent().getPackageName())) {
                 grantUriPermission("org.koreader.launcher", intent.getData(), Intent.FLAG_GRANT_READ_URI_PERMISSION);
             }
             if (start(intent)) store.markOpened(b.path);
-            else toast("Couldn't open " + labels.get(w));
+            else toast(getString(R.string.launcher_cannot_open, labels.get(w)));
         });
     }
 
@@ -1685,31 +1710,31 @@ public class MainActivity extends Activity {
         List<String> labels = new ArrayList<>();
         List<String> pkgs = new ArrayList<>();
         if (booksKind) {
-            labels.add("Ink Home reader");
+            labels.add(getString(R.string.launcher_ink_home_reader));
             pkgs.add(Store.BUILT_IN);
         }
         for (ResolveInfo ri : readers) {
             labels.add(String.valueOf(ri.loadLabel(getPackageManager())));
             pkgs.add(ri.activityInfo.packageName);
         }
-        labels.add("Ask every time");
+        labels.add(getString(R.string.launcher_ask_every_time));
         pkgs.add("ask");
         String cur = booksKind ? store.bookReader() : store.pdfReader();
         if (cur.isEmpty()) cur = booksKind ? Store.BUILT_IN : NEOREADER_PKG;
-        choose(booksKind ? "Open books with" : "Open PDFs and comics with", labels.toArray(new String[0]), pkgs.indexOf(cur), w -> {
+        choose(getString(booksKind ? R.string.launcher_open_books_with : R.string.launcher_open_pdfs_and_comics_with), labels.toArray(new String[0]), pkgs.indexOf(cur), w -> {
             if (booksKind) store.setBookReader(pkgs.get(w)); else store.setPdfReader(pkgs.get(w));
             render();
         });
     }
 
     String readerName(String pkg) {
-        if (pkg.equals(Store.BUILT_IN)) return "Ink Home reader";
+        if (pkg.equals(Store.BUILT_IN)) return getString(R.string.launcher_ink_home_reader);
         if (pkg.isEmpty()) pkg = NEOREADER_PKG;
-        if (pkg.equals("ask")) return "Ask every time";
+        if (pkg.equals("ask")) return getString(R.string.launcher_ask_every_time);
         try {
             return String.valueOf(getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(pkg, 0)));
         } catch (Exception e) {
-            return "NeoReader";
+            return getString(R.string.launcher_neoreader);
         }
     }
 
@@ -1721,10 +1746,10 @@ public class MainActivity extends Activity {
         String[] labels = new String[goals.length];
         int cur = 0;
         for (int i = 0; i < goals.length; i++) {
-            labels[i] = goals[i] == 0 ? "No goal, just show time read" : goals[i] + " minutes a day";
+            labels[i] = goals[i] == 0 ? getString(R.string.launcher_no_goal_just_show_time_read) : getString(R.string.launcher_minutes_a_day, goals[i]);
             if (goals[i] == store.dailyGoal()) cur = i;
         }
-        choose("Daily goal", labels, cur, w -> {
+        choose(getString(R.string.launcher_daily_goal), labels, cur, w -> {
             store.setDailyGoal(goals[w]);
             io.execute(() -> {
                 Stats st = Stats.refresh(this, store);
@@ -1800,24 +1825,26 @@ public class MainActivity extends Activity {
     }
 
     void searchApps(String initial, java.util.function.Consumer<String> result) {
-        sheets.prompt("Search apps", initial, result);
+        sheets.prompt(getString(R.string.launcher_search_apps), initial, result);
     }
 
     void appMenu(App a) {
         boolean fav = store.isFavorite(a.key);
         boolean reads = store.readingApps().contains(a.pkg);
-        List<String> opts = new ArrayList<>();
-        opts.add("Open");
-        opts.add(fav ? "Remove from favorites" : "Add to favorites");
-        if (fav) opts.add("Move to first favorite");
-        opts.add(reads ? "Don't count as reading" : "Count time as reading");
-        opts.add(store.hidden().contains(a.key) ? "Show in Apps" : "Hide from Apps");
-        opts.add("App info");
-        choose(displayLabel(a), opts.toArray(new String[0]), -1, w -> {
+        List<MenuAction> opts = new ArrayList<>();
+        opts.add(MenuAction.OPEN);
+        opts.add(fav ? MenuAction.REMOVE_FROM_FAVORITES : MenuAction.ADD_TO_FAVORITES);
+        if (fav) opts.add(MenuAction.MOVE_TO_FIRST_FAVORITE);
+        opts.add(reads ? MenuAction.EXCLUDE_READING_TIME : MenuAction.COUNT_TIME_AS_READING);
+        opts.add(store.hidden().contains(a.key) ? MenuAction.SHOW_IN_APPS : MenuAction.HIDE_FROM_APPS);
+        opts.add(MenuAction.APP_INFO);
+        String[] labels = new String[opts.size()];
+        for (int i = 0; i < opts.size(); i++) labels[i] = getString(opts.get(i).label);
+        choose(displayLabel(a), labels, -1, w -> {
             switch (opts.get(w)) {
-                case "Open": launch(a); break;
-                case "Add to favorites": case "Remove from favorites": store.toggleFavorite(a.key); render(); break;
-                case "Move to first favorite": {
+                case OPEN: launch(a); break;
+                case ADD_TO_FAVORITES: case REMOVE_FROM_FAVORITES: store.toggleFavorite(a.key); render(); break;
+                case MOVE_TO_FIRST_FAVORITE: {
                     List<String> l = store.favorites();
                     l.remove(a.key);
                     l.add(0, a.key);
@@ -1825,13 +1852,13 @@ public class MainActivity extends Activity {
                     render();
                     break;
                 }
-                case "Count time as reading": case "Don't count as reading":
-                    if (a.pkg.equals(NEOREADER_PKG)) { toast("NeoReader always counts"); break; }
+                case COUNT_TIME_AS_READING: case EXCLUDE_READING_TIME:
+                    if (a.pkg.equals(NEOREADER_PKG)) { toast(getString(R.string.launcher_neoreader_always_counts)); break; }
                     store.setReadingApp(a.pkg, !reads);
                     render();
                     break;
-                case "Show in Apps": store.setHidden(a.key, false); render(); break;
-                case "Hide from Apps": {
+                case SHOW_IN_APPS: store.setHidden(a.key, false); render(); break;
+                case HIDE_FROM_APPS: {
                     store.setHidden(a.key, true);
                     List<String> f = store.favorites();
                     f.remove(a.key);
@@ -1839,7 +1866,7 @@ public class MainActivity extends Activity {
                     render();
                     break;
                 }
-                case "App info": start(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + a.pkg))); break;
+                case APP_INFO: start(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + a.pkg))); break;
             }
         });
     }
@@ -1847,7 +1874,7 @@ public class MainActivity extends Activity {
     void launch(App a) {
         Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(a.cn)
                 .addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-        if (!start(i)) toast("Couldn't open " + a.label);
+        if (!start(i)) toast(getString(R.string.launcher_cannot_open, a.label));
     }
 
     // ================================================================== settings (scrolling, grouped)
@@ -1919,9 +1946,9 @@ public class MainActivity extends Activity {
 
         void scale(String label, int[] values, float current, java.util.function.IntConsumer change) {
             String[] labels = new String[values.length];
-            for (int i = 0; i < values.length; i++) labels[i] = values[i] + "%";
+            for (int i = 0; i < values.length; i++) labels[i] = getString(R.string.launcher_percent, values[i]);
             int percent = Math.round(current * 100);
-            control(label + " · " + percent + "%", new LevelBar(ink.folio, label, labels, settingIndex(values, percent),
+            control(getString(R.string.launcher_label_percent, label, percent), new LevelBar(ink.folio, label, labels, settingIndex(values, percent),
                     i -> change.accept(values[i])), false);
         }
     }
@@ -1963,13 +1990,13 @@ public class MainActivity extends Activity {
         }
         List<Library.Book> r = reading();
         Library.Book b = r.isEmpty() ? null : r.get(0);
-        String detail = b == null ? "" : b.progressLine();
+        String detail = b == null ? "" : b.progressLine(this);
         if (b != null) {
             double[] reader = store.readerProgress(b.path);
             if (reader != null && (long) reader[1] == b.lastRead) {
-                detail += " · Chapter " + (store.readerPosition(b.path)[0] + 1);
+                detail = getString(R.string.launcher_sleep_chapter, detail, store.readerPosition(b.path)[0] + 1);
             }
-            if (stats != null) detail += " · " + stats.today() + " min today";
+            if (stats != null) detail = getString(R.string.launcher_sleep_today, detail, stats.today());
         }
         boolean real = store.realCovers();
         String sig = size.key() + "|" + (b == null ? "none" : b.key() + b.title + b.author
@@ -1996,7 +2023,7 @@ public class MainActivity extends Activity {
             boolean ok = SleepScreen.writeImage(this, size, pic, fill);
             if (ok) store.rememberSleepImage(pic, fill, size);
             ui.post(() -> {
-                if (picked) toast(ok ? "Sleep picture updated" : "Couldn't read that picture");
+                if (picked) toast(getString(ok ? R.string.launcher_sleep_picture_updated : R.string.launcher_picture_read_error));
                 if (ok && !size.key().equals(SleepScreen.panel(this).key())) updateSleepPicture(false);
                 if ("sleep".equals(sub)) render();
             });
@@ -2007,10 +2034,10 @@ public class MainActivity extends Activity {
 
     /** Thumbnail grid of the pictures on the tablet. The selected one gets a dark frame. */
     void pictureGrid(LinearLayout body, String selected, FilePick pick) {
-        body.addView(ink.heading("Choose a picture"), ink.m(-1, -2, 0, 24, 0, 0));
+        body.addView(ink.heading(getString(R.string.launcher_choose_a_picture)), ink.m(-1, -2, 0, 24, 0, 0));
         List<File> pics = SleepScreen.pictures();
         if (pics.isEmpty()) {
-            body.addView(note("No pictures found", "Copy JPG or PNG files into the Pictures folder over USB, then come back here.", null));
+            body.addView(note(getString(R.string.launcher_no_pictures_found), getString(R.string.launcher_empty_pictures_hint), null));
             return;
         }
         LinearLayout line = null;
@@ -2052,9 +2079,9 @@ public class MainActivity extends Activity {
     /** Looks for a newer release on GitHub. Quiet unless asked, or unless there is something new. */
     void checkUpdates(boolean manual) {
         if (checkingUpdates) return;
-        if (!wifi().connected) { if (manual) toast("Connect to Wi-Fi to check for updates"); return; }
+        if (!wifi().connected) { if (manual) toast(getString(R.string.launcher_update_wifi_required)); return; }
         checkingUpdates = true;
-        if (manual) toast("Checking for updates…");
+        if (manual) toast(getString(R.string.launcher_checking_for_updates));
         io.execute(() -> {
             Updater.Release r = null;
             Exception err = null;
@@ -2066,11 +2093,11 @@ public class MainActivity extends Activity {
                 if (failed == null) store.setLastUpdateCheck(System.currentTimeMillis());
                 update = found;
                 if (found != null) {
-                    sheets.message("Ink Home " + found.version + " is available",
-                            found.notes.isEmpty() ? "Install the new version?" : found.notes.trim(),
-                            "Install", this::installUpdate);
+                    sheets.message(getString(R.string.launcher_update_available, found.version),
+                            found.notes.isEmpty() ? getString(R.string.launcher_install_the_new_version) : found.notes.trim(),
+                            getString(R.string.launcher_install), this::installUpdate);
                 } else if (manual) {
-                    toast(failed != null ? "Couldn't reach GitHub. Try again later." : "Ink Home is up to date");
+                    toast(failed != null ? getString(R.string.launcher_update_check_error) : getString(R.string.launcher_ink_home_is_up_to_date));
                 }
                 if (screen == Screen.SETTINGS && (sub == null || SettingsScreen.ABOUT.equals(sub))) render();
             });
@@ -2081,20 +2108,20 @@ public class MainActivity extends Activity {
         Updater.Release r = update;
         if (r == null) return;
         if (!getPackageManager().canRequestPackageInstalls()) {
-            toast("Allow Ink Home to install updates, then tap Install again");
+            toast(getString(R.string.launcher_update_install_permission));
             start(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
             return;
         }
-        toast("Downloading " + r.version + "…");
+        toast(getString(R.string.launcher_downloading, r.version));
         io.execute(() -> {
             try {
                 File apk = Updater.download(this, r);
                 Updater.install(this, apk);
             } catch (SecurityException e) {
-                ui.post(() -> toast("The download didn't match its checksum, so it wasn't installed"));
+                ui.post(() -> toast(getString(R.string.launcher_update_checksum_error)));
             } catch (Exception e) {
                 Log.w(TAG, "Update failed", e);
-                ui.post(() -> toast("Update failed. Try again later."));
+                ui.post(() -> toast(getString(R.string.launcher_update_failed_try_again_later)));
             }
         });
     }
@@ -2182,7 +2209,7 @@ public class MainActivity extends Activity {
         if (!ink.folio.displayClass.isEink()) return;
         if (!dev.inkhome.folio.epd.Epd.requestGentleRefresh(window)) {
             window.invalidate();
-            toast("Redrew the window. Strong clean is in Display & refresh.");
+            toast(getString(R.string.launcher_screen_redrawn));
         }
     }
 

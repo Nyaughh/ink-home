@@ -69,7 +69,8 @@ final class SheetHost {
             public long getItemId(int i) { return i; }
             public View getView(int i, View recycled, ViewGroup parent) {
                 TextView row = recycled == null ? ink.body("") : (TextView) recycled;
-                row.setText((checked < 0 ? "" : i == checked ? "●   " : "○   ") + labels[i]);
+                row.setText(checked < 0 ? labels[i] : activity.getString(
+                        i == checked ? R.string.service_ui_choice_selected : R.string.service_ui_choice_unselected, labels[i]));
                 row.setSelected(i == checked);
                 row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setMinHeight(ink.dp(48));
@@ -94,7 +95,7 @@ final class SheetHost {
         field.setImeOptions(EditorInfo.IME_ACTION_DONE);
         Runnable submit = () -> {
             String value = field.getText().toString().trim();
-            if (value.isEmpty()) { field.setError("Enter a name"); return; }
+            if (value.isEmpty()) { field.setError(activity.getString(R.string.service_ui_enter_a_name)); return; }
             dismiss();
             save.accept(value);
         };
@@ -103,7 +104,7 @@ final class SheetHost {
             submit.run();
             return true;
         });
-        present(title, padded(field), "Save", submit, field);
+        present(title, padded(field), activity.getString(R.string.service_ui_save), submit, field);
     }
 
     void message(String title, String message, String action, Runnable run) {
@@ -117,15 +118,15 @@ final class SheetHost {
     void accessStep(String title, String message, Runnable proceed, Runnable skip) {
         Ink ink = style.get();
         LinearLayout body = padded(ink.body(message));
-        body.addView(Button.create(ink.folio, "Continue", Button.Style.PRIMARY, v -> {
+        body.addView(Button.create(ink.folio, activity.getString(R.string.service_ui_continue), Button.Style.PRIMARY, v -> {
             dismiss();
             proceed.run();
         }), ink.m(-1, -2, 0, 12, 0, 4));
-        body.addView(Button.create(ink.folio, "Skip", Button.Style.SECONDARY, v -> {
+        body.addView(Button.create(ink.folio, activity.getString(R.string.service_ui_skip), Button.Style.SECONDARY, v -> {
             dismiss();
             skip.run();
         }));
-        body.addView(Button.create(ink.folio, "Finish later", Button.Style.TEXT, v -> dismiss()));
+        body.addView(Button.create(ink.folio, activity.getString(R.string.service_ui_finish_later), Button.Style.TEXT, v -> dismiss()));
         present(title, ink.scroller(body), null, null, null);
     }
 
@@ -134,7 +135,7 @@ final class SheetHost {
     }
 
     void custom(String title, View contents) {
-        present(title, style.get().scroller(contents), "Done", this::dismiss, null);
+        present(title, style.get().scroller(contents), activity.getString(R.string.service_ui_done), this::dismiss, null);
     }
 
     private LinearLayout padded(View child) {
@@ -162,7 +163,7 @@ final class SheetHost {
         header.setPadding(ink.dp(16), 0, 0, 0);
         header.addView(ink.text(title, TypeScale.TITLE_SM, ink.TEXT), ink.weight(1));
         View close = ink.iconButton("close", this::dismiss);
-        close.setContentDescription("Close");
+        close.setContentDescription(activity.getString(R.string.service_ui_close));
         header.addView(close);
         panel.addView(header);
         panel.addView(ink.hair());
@@ -232,7 +233,7 @@ final class SheetHost {
         row.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         row.addView(ink.text(text, TypeScale.BODY, ink.folio.palette.onInverse), ink.weight(1));
         if (undo != null) {
-            TextView button = ink.text("Undo", TypeScale.LABEL, ink.folio.palette.onInverse);
+            TextView button = ink.text(activity.getString(R.string.service_ui_undo), TypeScale.LABEL, ink.folio.palette.onInverse);
             button.setPadding(ink.dp(12), 0, 0, 0);
             button.setMinHeight(ink.dp(42));
             button.setGravity(Gravity.CENTER);

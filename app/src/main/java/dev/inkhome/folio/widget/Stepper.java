@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.view.Gravity;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -22,8 +23,8 @@ public final class Stepper extends LinearLayout {
         this.values = values.clone();
         this.selected = Math.max(0, Math.min(selected, values.length - 1));
         setGravity(Gravity.CENTER_VERTICAL);
-        minus = button(f, "minus", "Decrease " + label, () -> move(-1, changed));
-        plus = button(f, "plus", "Increase " + label, () -> move(1, changed));
+        minus = button(f, "minus", f.context.getString(R.string.reader_ui_decrease, label), () -> move(-1, changed));
+        plus = button(f, "plus", f.context.getString(R.string.reader_ui_increase, label), () -> move(1, changed));
         value = Type.text(f, "", TypeScale.BODY, f.palette.ink);
         value.setGravity(Gravity.CENTER);
         value.setMinWidth(f.u(56));

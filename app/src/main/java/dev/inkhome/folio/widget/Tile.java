@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -40,6 +41,6 @@ public final class Tile extends LinearLayout {
         title.setTextColor(color);
         state.setTextColor(color);
         state.setText(value);
-        setContentDescription(name + ", " + value);
+        setContentDescription(getContext().getString(R.string.reader_ui_label_value, name, value));
     }
 }

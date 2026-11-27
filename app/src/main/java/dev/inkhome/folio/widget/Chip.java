@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -19,7 +20,7 @@ public final class Chip {
         LinearLayout.LayoutParams close = new LinearLayout.LayoutParams(f.u(14), f.u(14));
         close.setMarginStart(f.u(6));
         chip.addView(DataWidgets.icon(f, "close", f.palette.ink), close);
-        chip.setContentDescription("Remove filter " + label);
+        chip.setContentDescription(f.context.getString(R.string.reader_ui_remove_filter, label));
         DataWidgets.action(chip, remove);
         chip.setForeground(DataWidgets.focus(f));
         return chip;

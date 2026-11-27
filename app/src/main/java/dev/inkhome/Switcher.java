@@ -33,11 +33,11 @@ final class Switcher {
             body.addView(host.homeBookRow(reading.get(0)));
         }
         if (!Stats.hasAccess(host)) {
-            body.addView(host.note("Allow usage access", "Show recently opened apps and when you used them.",
+            body.addView(host.note(host.getString(R.string.service_ui_allow_usage_access), host.getString(R.string.service_ui_show_recently_opened_apps_and_when_you_used_them),
                     () -> host.start(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))));
             return;
         }
-        TextView loading = host.ink.muted("Loading recent apps…", 15);
+        TextView loading = host.ink.muted(host.getString(R.string.service_ui_loading_recent_apps), 15);
         body.addView(loading);
         List<MainActivity.App> apps = new ArrayList<>(candidates);
         Set<String> hidden = host.store.hidden();
@@ -72,10 +72,10 @@ final class Switcher {
                                  Map<String, UsageStats> times, SharedPreferences dismissed) {
         ActivityManager manager = host.getSystemService(ActivityManager.class);
         boolean canClose = manager != null && Build.VERSION.SDK_INT < 34;
-        if (!apps.isEmpty() && canClose) body.addView(Button.create(host.ink.folio, "Close all", Button.Style.TEXT,
+        if (!apps.isEmpty() && canClose) body.addView(Button.create(host.ink.folio, host.getString(R.string.service_ui_close_all), Button.Style.TEXT,
                 v -> close(host, manager, apps, times, dismissed)));
         LinearLayout rows = host.ink.col();
-        if (apps.isEmpty()) rows.addView(host.ink.muted("No recent apps.", 15));
+        if (apps.isEmpty()) rows.addView(host.ink.muted(host.getString(R.string.service_ui_no_recent_apps), 15));
         for (MainActivity.App app : apps) {
             LinearLayout row = host.ink.row();
             row.setMinimumHeight(host.ink.dp(52));
@@ -84,14 +84,14 @@ final class Switcher {
                     host.ink.m(host.ink.dp(30), host.ink.dp(30), 0, 0, 12, 0));
             LinearLayout label = host.ink.col();
             label.addView(host.ink.oneLine(host.ink.body(host.displayLabel(app))));
-            label.addView(host.ink.faint(Library.ago(times.get(app.pkg).getLastTimeUsed()), 13));
+            label.addView(host.ink.faint(Library.ago(host, times.get(app.pkg).getLastTimeUsed()), 13));
             row.addView(label, host.ink.weight(1));
             row.setOnClickListener(v -> host.launch(app));
             row.setOnLongClickListener(v -> { host.appMenu(app); return true; });
             if (canClose) {
                 android.view.View close = host.ink.iconButton("close",
                         () -> close(host, manager, Collections.singletonList(app), times, dismissed));
-                close.setContentDescription("Close " + host.displayLabel(app));
+                close.setContentDescription(host.getString(R.string.service_ui_close_app, host.displayLabel(app)));
                 row.addView(close);
             }
             rows.addView(MainActivity.item(row));
@@ -100,7 +100,7 @@ final class Switcher {
         if (manager != null) {
             ActivityManager.MemoryInfo memory = new ActivityManager.MemoryInfo();
             manager.getMemoryInfo(memory);
-            body.addView(host.ink.faint(Formatter.formatFileSize(host, memory.availMem) + " available memory", 13));
+            body.addView(host.ink.faint(host.getString(R.string.service_ui_available_memory, Formatter.formatFileSize(host, memory.availMem)), 13));
         }
     }
 
@@ -113,7 +113,7 @@ final class Switcher {
                 editor.putLong(app.pkg, times.get(app.pkg).getLastTimeUsed());
             }
         } catch (SecurityException denied) {
-            host.toast("Android could not close the app");
+            host.toast(host.getString(R.string.service_ui_android_could_not_close_the_app));
         }
         editor.apply();
         host.render();

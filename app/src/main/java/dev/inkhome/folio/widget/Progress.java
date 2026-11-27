@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.view.View;
@@ -39,7 +40,7 @@ public final class Progress extends LinearLayout {
 
     public void setPercent(int value) {
         percent = Math.min(100, Math.max(0, value));
-        String description = percent + "%";
+        String description = getContext().getString(R.string.reader_ui_percent, percent);
         if (label != null) label.setText(description);
         setContentDescription(description);
         track.invalidate();

@@ -111,7 +111,8 @@ final class Updater {
                 }
             } else if (status != PackageInstaller.STATUS_SUCCESS) {
                 String msg = i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
-                new Store(c).setUpdateNotice("Update didn't install" + (msg == null ? "" : ": " + msg));
+                new Store(c).setUpdateNotice(msg == null ? c.getString(R.string.service_ui_install_failed)
+                        : c.getString(R.string.service_ui_install_failed_reason, msg));
                 if (onInstallFailure != null) onInstallFailure.run();
             }
         }

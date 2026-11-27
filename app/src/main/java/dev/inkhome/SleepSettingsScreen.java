@@ -16,12 +16,12 @@ final class SleepSettingsScreen implements Screen {
     }
 
     void build(MainActivity host, LinearLayout col) {
-        col.addView(host.header("Sleep screen", null, host::onBackPressed));
+        col.addView(host.header(host.getString(R.string.stats_ui_sleep_screen), null, host::onBackPressed));
         LinearLayout body = host.ink.col();
         body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), host.ink.dp(20));
         String mode = host.store.sleepMode();
         String[] keys = {"off", "book", "custom"};
-        body.addView(MainActivity.item(new Segmented(host.ink.folio, "Sleep screen", new String[]{"Off", "Book", "Picture"}, Arrays.asList(keys).indexOf(mode), i -> {
+        body.addView(MainActivity.item(new Segmented(host.ink.folio, host.getString(R.string.stats_ui_sleep_screen), new String[]{host.getString(R.string.stats_ui_off), host.getString(R.string.stats_ui_book), host.getString(R.string.stats_ui_picture)}, Arrays.asList(keys).indexOf(mode), i -> {
             host.store.setSleepMode(keys[i]);
             host.sleepSignature = "";
             host.updateSleepPicture("book".equals(keys[i]));
@@ -48,12 +48,12 @@ final class SleepSettingsScreen implements Screen {
             prev.addView(iv, new LinearLayout.LayoutParams(host.ink.dp(width), host.ink.dp(height)));
             LinearLayout how = host.ink.col();
             how.setPadding(host.ink.dp(18), 0, 0, 0);
-            how.addView(host.ink.medium(ready ? "Picture ready" : mode.equals("custom") ? "Pick a picture below" : "Making picture…", 16));
+            how.addView(host.ink.medium(ready ? host.getString(R.string.stats_ui_picture_ready) : mode.equals("custom") ? host.getString(R.string.stats_ui_pick_a_picture_below) : host.getString(R.string.stats_ui_making_picture), 16));
             // Boox copies the picture when it's set, so Ink Home can't apply or refresh it itself.
             boolean boox = host.findApp(MainActivity.BOOX_HOME) != null;
             String instructions = boox
-                    ? "In Boox Storage, open Pictures › Ink Home, long-press “Ink Home sleep” and choose Set as screensaver. Boox keeps a copy, so set it again after each update."
-                    : "The image is saved in Pictures › Ink Home as “Ink Home sleep.png”. Choose it in your device’s sleep screen settings if supported.";
+                    ? host.getString(R.string.stats_ui_sleep_instructions_boox)
+                    : host.getString(R.string.stats_ui_sleep_instructions_generic);
             TextView t = host.ink.muted(instructions, 14);
             t.setLineSpacing(0, 1.2f);
             t.setPadding(0, host.ink.dp(8), 0, 0);
@@ -61,15 +61,15 @@ final class SleepSettingsScreen implements Screen {
             prev.addView(how, host.ink.weight(1));
             body.addView(prev, host.ink.m(-1, -2, 0, 20, 0, 0));
         } else {
-            TextView t = host.ink.muted("Ink Home can make your sleep screen the book you're reading, or any picture on the tablet.", 14);
+            TextView t = host.ink.muted(host.getString(R.string.stats_ui_sleep_screen_description), 14);
             t.setLineSpacing(0, 1.2f);
             t.setPadding(0, host.ink.dp(18), 0, 0);
             body.addView(t);
         }
 
         if (mode.equals("custom")) {
-            host.pictureGrid(body, null, pic -> host.choose("Use this picture", new String[]{"Fill the screen (crop edges)", "Show the whole picture"}, -1, w -> {
-                host.toast("Making sleep picture…");
+            host.pictureGrid(body, null, pic -> host.choose(host.getString(R.string.stats_ui_use_this_picture), new String[]{host.getString(R.string.stats_ui_fill_the_screen_crop_edges), host.getString(R.string.stats_ui_show_the_whole_picture)}, -1, w -> {
+                host.toast(host.getString(R.string.stats_ui_making_sleep_picture));
                 host.writeSleepImage(pic, w == 0, true);
             }));
         }

@@ -19,7 +19,7 @@ final class SearchScreen implements Screen {
         head.setPadding(margin, host.ink.dp(8), margin, host.ink.dp(8));
         EditText q = new EditText(host);
         q.setText(host.libSearch);
-        q.setHint("Search titles, authors and files");
+        q.setHint(host.getString(R.string.library_ui_search_hint));
         q.setTypeface(host.ink.REGULAR);
         q.setTextColor(host.ink.TEXT);
         q.setHintTextColor(host.ink.TEXT3);
@@ -30,7 +30,7 @@ final class SearchScreen implements Screen {
         q.setBackground(host.ink.stroke(host.ink.PAPER, 0, host.ink.LINE));
         q.setPadding(host.ink.dp(14), host.ink.dp(10), host.ink.dp(14), host.ink.dp(10));
         head.addView(q, host.ink.weight(1));
-        TextView cancel = host.ink.medium("Cancel", 15);
+        TextView cancel = host.ink.medium(host.getString(R.string.library_ui_cancel), 15);
         cancel.setPadding(host.ink.dp(16), host.ink.dp(10), 0, host.ink.dp(10));
         cancel.setOnClickListener(v -> { host.libSearch = null; host.hideKeyboard(); host.render(); });
         head.addView(cancel);
@@ -43,7 +43,7 @@ final class SearchScreen implements Screen {
             results.addView(host.ink.hair());
             List<Library.Book> list = host.filterBooks(true);
             if (list.isEmpty() && !host.libSearch.trim().isEmpty()) {
-                TextView t = host.ink.muted("No matches.", 15);
+                TextView t = host.ink.muted(host.getString(R.string.library_ui_no_matches), 15);
                 t.setPadding(0, host.ink.dp(16), 0, 0);
                 results.addView(t);
             } else {

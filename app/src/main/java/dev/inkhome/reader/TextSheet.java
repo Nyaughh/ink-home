@@ -1,5 +1,6 @@
 package dev.inkhome.reader;
 
+import dev.inkhome.R;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
@@ -33,7 +34,7 @@ public final class TextSheet extends LinearLayout {
         setPadding(f.u(12), f.hairline, f.u(12), f.hairline);
         LinearLayout header = row();
         header.addView(Type.text(f, title, TypeScale.TITLE_SM, f.palette.ink), weight());
-        TextView done = label("Done");
+        TextView done = label(f.context.getString(R.string.reader_ui_done));
         done.setGravity(Gravity.CENTER);
         done.setMinHeight(f.u(44));
         done.setMinWidth(f.u(52));
@@ -78,22 +79,22 @@ public final class TextSheet extends LinearLayout {
     private LayoutParams weight() { return new LayoutParams(0, -2, 1); }
 
     public void sizes(int size, IntConsumer changed) {
-        TextView title = label("Text size · " + size + " sp");
+        TextView title = label(f.context.getString(R.string.reader_ui_size_heading, size));
         body.addView(title);
         String[] labels = new String[29];
-        for (int i = 0; i < labels.length; i++) labels[i] = (12 + i) + " sp";
+        for (int i = 0; i < labels.length; i++) labels[i] = f.context.getString(R.string.reader_ui_size_sp, 12 + i);
         LinearLayout sizes = row();
-        sizes.addView(label("A"));
-        sizes.addView(new LevelBar(f, "Text size", labels, size - 12, i -> {
-            title.setText("Text size · " + (12 + i) + " sp");
+        sizes.addView(label(f.context.getString(R.string.reader_ui_size_sample)));
+        sizes.addView(new LevelBar(f, f.context.getString(R.string.reader_ui_text_size), labels, size - 12, i -> {
+            title.setText(f.context.getString(R.string.reader_ui_size_heading, 12 + i));
             changed.accept(12 + i);
         }), weight());
-        sizes.addView(Type.text(f, "A", TypeScale.TITLE_SM, f.palette.ink));
+        sizes.addView(Type.text(f, f.context.getString(R.string.reader_ui_size_sample), TypeScale.TITLE_SM, f.palette.ink));
         body.addView(sizes);
     }
 
     public void fonts(String[] names, Typeface[] faces, int selected, IntConsumer changed) {
-        heading("Font");
+        heading(f.context.getString(R.string.reader_ui_font));
         TextView[] buttons = new TextView[names.length];
         LinearLayout group = null;
         for (int i = 0; i < names.length; i++) {
@@ -144,7 +145,7 @@ public final class TextSheet extends LinearLayout {
             };
             b.setSelected(i == selected);
             b.setBackground(new Shapes(f).stroke(i == selected ? f.palette.inverse : f.palette.paper, f.palette.ink));
-            b.setContentDescription(title + ", " + names[i]);
+            b.setContentDescription(f.context.getString(R.string.reader_ui_label_value, title, names[i]));
             b.setFocusable(true);
             b.setOnClickListener(v -> {
                 for (int j = 0; j < group.getChildCount(); j++) {

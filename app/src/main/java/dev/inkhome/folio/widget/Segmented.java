@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -37,7 +38,7 @@ public final class Segmented extends LinearLayout {
             option.setFocusable(true);
             option.setPadding(f.u(4), 0, f.u(4), 0);
             option.setMinHeight(f.u(34) - 2 * f.hairline);
-            option.setContentDescription(label + ", " + choices[i]);
+            option.setContentDescription(f.context.getString(R.string.reader_ui_label_value, label, choices[i]));
             option.setOnClickListener(v -> {
                 if (this.selected == index) return;
                 this.selected = index;

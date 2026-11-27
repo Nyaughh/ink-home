@@ -11,9 +11,29 @@ import java.io.File;
 import java.util.Arrays;
 
 final class SettingsScreen implements Screen {
+    // Saved navigation state uses these route keys across locale changes.
     static final String APPEARANCE = "Appearance", DISPLAY = "Display & refresh", READING = "Reading",
             LIBRARY = "Library", SHELL = "System shell", CONTROLS = "Controls", DEVICE = "Device",
             ABOUT = "Updates & about", SETUP = "Set up Ink Home", LICENCES = "Font licences", DOT = "Ink dot", BOOX = "Boox apps";
+
+    private static String categoryTitle(MainActivity host, String category) {
+        switch (category) {
+            case APPEARANCE: return host.getString(R.string.settings_ui_appearance);
+            case DISPLAY: return host.getString(R.string.settings_ui_display_refresh);
+            case READING: return host.getString(R.string.settings_ui_reading);
+            case LIBRARY: return host.getString(R.string.settings_ui_library);
+            case SHELL: return host.getString(R.string.settings_ui_system_shell);
+            case CONTROLS: return host.getString(R.string.settings_ui_controls);
+            case DEVICE: return host.getString(R.string.settings_ui_device);
+            case ABOUT: return host.getString(R.string.settings_ui_updates_about);
+            case SetupScreen.FROM_HOME:
+            case SETUP: return host.getString(R.string.settings_ui_set_up_ink_home);
+            case LICENCES: return host.getString(R.string.settings_ui_font_licences);
+            case DOT: return host.getString(R.string.settings_ui_ink_dot);
+            case BOOX: return host.getString(R.string.settings_ui_boox_apps);
+            default: return category;
+        }
+    }
 
     static String parent(String sub) {
         switch (sub) {
@@ -51,20 +71,29 @@ final class SettingsScreen implements Screen {
         if ("hidden".equals(category) || "reading".equals(category)) { new AppPickerScreen().build(host, col); return; }
         if ("sleep".equals(category)) { new SleepSettingsScreen().build(host, col); return; }
         if ("wallpaper".equals(category)) { new WallpaperScreen().build(host, col); return; }
-        col.addView(host.header(category == null ? "Settings" : SetupScreen.FROM_HOME.equals(category) ? SETUP : category, null,
-                category == null || (expanded && parent(category) == null && !SetupScreen.FROM_HOME.equals(category)) ? null : host::onBackPressed));
+        col.addView(host.header(category == null ? host.getString(R.string.settings_ui_settings) : categoryTitle(host, category), null,
+                category == null || (expanded && parent(category) == null && !SetupScreen.FROM_HOME.equals(category))
+                        ? null : host::onBackPressed));
         LinearLayout body = host.ink.col();
         body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), host.ink.dp(8));
         MainActivity.Rows g = host.new Rows(expanded || host.ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.COMPACT);
         if (category == null) {
-            category(host, g, APPEARANCE, "Text " + Math.round(host.store.textScale() * 100) + "% · Interface " + Math.round(host.store.uiScale() * 100) + "%");
-            category(host, g, DISPLAY, SetupScreen.displayName(host) + " · " + (host.store.listScroll() ? "Scroll" : "Pages"));
-            category(host, g, READING, host.store.dailyGoal() == 0 ? "Daily goal off" : host.store.dailyGoal() + " minute daily goal");
-            category(host, g, LIBRARY, host.hasFileAccess() ? (host.booksLoaded ? host.books.size() + " books" : "Looking for books…") : "Allow file access");
-            category(host, g, SHELL, host.store.statusBar() ? "Ink Home status strip" : "System status strip");
-            category(host, g, CONTROLS, host.store.pageKeysReversed() ? "Reversed page buttons" : "Normal page buttons");
+            category(host, g, APPEARANCE,
+                    host.getString(R.string.settings_ui_appearance_summary, Math.round(host.store.textScale() * 100),
+                    Math.round(host.store.uiScale() * 100)));
+            category(host, g, DISPLAY, host.getString(R.string.settings_ui_display_summary, SetupScreen.displayName(host),
+                    host.getString(host.store.listScroll() ? R.string.settings_ui_scroll : R.string.settings_ui_pages)));
+            category(host, g, READING, host.store.dailyGoal() == 0 ? host.getString(R.string.settings_ui_daily_goal_off)
+                    : host.getString(R.string.settings_ui_goal_summary, host.store.dailyGoal()));
+            category(host, g, LIBRARY, host.hasFileAccess()
+                    ? (host.booksLoaded ? bookCount(host) : host.getString(R.string.settings_ui_looking_for_books))
+                    : host.getString(R.string.settings_ui_allow_file_access));
+            category(host, g, SHELL, host.getString(host.store.statusBar()
+                    ? R.string.settings_ui_ink_home_status_strip : R.string.settings_ui_system_status_strip));
+            category(host, g, CONTROLS, host.getString(host.store.pageKeysReversed()
+                    ? R.string.settings_ui_reversed_page_buttons : R.string.settings_ui_normal_page_buttons));
             category(host, g, DEVICE, freeSpace(host));
-            category(host, g, ABOUT, "Version " + Updater.installedVersion(host));
+            category(host, g, ABOUT, host.getString(R.string.settings_ui_version, Updater.installedVersion(host)));
         } else switch (category) {
             case APPEARANCE: appearance(host, g); break;
             case DISPLAY: display(host, g); break;
@@ -99,131 +128,162 @@ final class SettingsScreen implements Screen {
         String parent = parent(selected);
         boolean active = host.ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.EXPANDED
                 && name.equals(parent == null ? selected : parent);
-        g.add(active ? "●  " + name : name, summary, () -> open(host, name));
+        String title = categoryTitle(host, name);
+        g.add(active ? host.getString(R.string.settings_ui_selected_category, title) : title, summary, () -> open(host, name));
         if (active) g.views.get(g.views.size() - 1).setSelected(true);
     }
 
+    private static String bookCount(MainActivity host) {
+        int count = host.books.size();
+        return host.getResources().getQuantityString(R.plurals.settings_ui_book_count, count, count);
+    }
+
     private static String freeSpace(MainActivity host) {
-        return android.text.format.Formatter.formatFileSize(host, host.getFilesDir().getUsableSpace()) + " free";
+        return host.getString(R.string.settings_ui_space_free, android.text.format.Formatter.formatFileSize(host, host.getFilesDir().getUsableSpace()));
     }
 
     private void appearance(MainActivity host, MainActivity.Rows g) {
         String[] layouts = {"hero", "shelf", "minimal"};
-        String[] names = {"Cover", "Shelf", "Minimal"};
+        String[] names = host.getResources().getStringArray(R.array.settings_ui_home_layouts);
         int layout = Math.max(0, Arrays.asList(layouts).indexOf(host.store.homeLayout()));
-        g.add("Home layout", names[layout], () -> host.choose("Home layout", names, layout, i -> {
+        g.add(host.getString(R.string.settings_ui_home_layout), names[layout],
+                () -> host.choose(host.getString(R.string.settings_ui_home_layout), names, layout, i -> {
             host.store.setHomeLayout(layouts[i]);
             host.render();
         }));
-        g.scale("Text size", new int[]{90, 100, 115, 130}, host.store.textScale(), value -> {
+        g.scale(host.getString(R.string.settings_ui_text_size), new int[]{90, 100, 115, 130}, host.store.textScale(), value -> {
             host.store.setTextScale(value / 100f);
             host.ink = new Ink(host, host.store.textScale(), host.store.uiScale());
             host.render();
         });
-        g.scale("Interface size", new int[]{100, 115, 130, 145}, host.store.uiScale(), value -> {
+        g.scale(host.getString(R.string.settings_ui_interface_size), new int[]{100, 115, 130, 145}, host.store.uiScale(), value -> {
             host.store.setUiScale(value / 100f);
             host.ink = new Ink(host, host.store.textScale(), host.store.uiScale());
             host.iconCache.clear();
             host.render();
         });
         String[] clocks = {"system", "12", "24"};
-        g.segments("Clock", new String[]{"Auto", "12-hour", "24-hour"}, Arrays.asList(clocks).indexOf(host.store.clock()),
+        g.segments(host.getString(R.string.settings_ui_clock), host.getResources().getStringArray(R.array.settings_ui_clock_modes), Arrays.asList(clocks).indexOf(host.store.clock()),
                 i -> { host.store.setClock(clocks[i]); host.render(); });
         boolean systemTheme = !host.store.hasThemeOverride();
         boolean eink = host.ink.folio.displayClass.isEink();
-        g.segments("Theme", eink ? new String[]{"Paper", "Night"} : new String[]{"Paper", "Night", "Follow system"},
+        g.segments(host.getString(R.string.settings_ui_theme), host.getResources().getStringArray(
+                        eink ? R.array.settings_ui_eink_themes : R.array.settings_ui_system_themes),
                 !eink && systemTheme ? 2 : host.ink.folio.night ? 1 : 0, i -> {
                     host.store.setNight(i == 2 ? null : i == 1);
                     host.recreate();
                 });
         if (host.ink.folio.displayClass != dev.inkhome.folio.core.DisplayClass.MONO_EINK) {
-            String[] accents = {"Vermilion", "Cobalt", "Forest", "Ochre"};
+            String[] accents = host.getResources().getStringArray(R.array.settings_ui_accents);
             int accent = DisplayProbe.accentIndex(host);
-            g.add("Accent", accents[accent], () -> host.choose("Accent", accents, accent, i -> {
+            g.add(host.getString(R.string.settings_ui_accent), accents[accent],
+                    () -> host.choose(host.getString(R.string.settings_ui_accent), accents, accent, i -> {
                 DisplayProbe.setAccentIndex(host, i);
                 host.recreate();
             }));
         }
-        g.add("Wallpaper", host.store.wallpaper().isEmpty() ? "None" : new File(host.store.wallpaper()).getName(), () -> open(host, "wallpaper"));
+        g.add(host.getString(R.string.settings_ui_wallpaper), host.store.wallpaper().isEmpty()
+                ? host.getString(R.string.settings_ui_none) : new File(host.store.wallpaper()).getName(), () -> open(host, "wallpaper"));
     }
 
     private void display(MainActivity host, MainActivity.Rows g) {
-        g.add("Display type", SetupScreen.displayName(host), () -> SetupScreen.chooseDisplay(host));
-        g.segments("Long lists", new String[]{"Pages", "Scroll"}, host.store.listScroll() ? 1 : 0,
+        g.add(host.getString(R.string.settings_ui_display_type), SetupScreen.displayName(host), () -> SetupScreen.chooseDisplay(host));
+        g.segments(host.getString(R.string.settings_ui_long_lists), host.getResources().getStringArray(R.array.settings_ui_list_modes), host.store.listScroll() ? 1 : 0,
                 i -> { host.store.setListScroll(i == 1); host.render(); });
         if (!host.ink.folio.displayClass.isEink()) {
-            g.segments("Motion", new String[]{"Off", "Subtle"}, host.store.prefersMotion() ? 1 : 0,
+            g.segments(host.getString(R.string.settings_ui_motion), host.getResources().getStringArray(R.array.settings_ui_motion_modes), host.store.prefersMotion() ? 1 : 0,
                     i -> host.store.setMotion(i == 1));
         }
         int[] intervals = {0, 1, 4, 8, 16};
         if (host.ink.folio.displayClass.isEink()) {
-            g.add("Strong clean now", "Flashes the screen", host::strongClean);
+            g.add(host.getString(R.string.settings_ui_strong_clean_now),
+                    host.getString(R.string.settings_ui_flashes_the_screen), host::strongClean);
         }
-        String refreshLabel = "Full refresh in the reader";
+        String refreshLabel = host.getString(R.string.settings_ui_full_refresh_in_the_reader);
         g.control(refreshLabel, new Stepper(host.ink.folio, refreshLabel,
-                new String[]{"Off", "1 page", "4 pages", "8 pages", "16 pages"},
+                host.getResources().getStringArray(R.array.settings_ui_refresh_intervals),
                 MainActivity.settingIndex(intervals, host.store.readerRefreshEvery()),
                 i -> host.store.setReaderRefreshEvery(intervals[i])), false);
-        g.toggle("App icons", host.store.appIcons(), value -> { host.store.setAppIcons(value); host.render(); });
+        g.toggle(host.getString(R.string.settings_ui_app_icons), host.store.appIcons(), value -> { host.store.setAppIcons(value); host.render(); });
         if (DisplayProbe.capabilities(host).regal && host.ink.folio.displayClass.isEink()) {
-            g.toggle("Smooth text updates", DisplayProbe.smoothText(host), enabled -> {
+            g.toggle(host.getString(R.string.settings_ui_smooth_text_updates), DisplayProbe.smoothText(host), enabled -> {
                 DisplayProbe.setSmoothText(host, enabled);
                 host.recreate();
             });
         }
-        g.toggle("Book covers", host.store.realCovers(), value -> {
+        g.toggle(host.getString(R.string.settings_ui_book_covers), host.store.realCovers(), value -> {
             host.store.setRealCovers(value);
             Covers.flush();
             if (value) host.extractCovers();
             host.updateSleepPicture(false);
             host.render();
         });
-        g.toggle("Clean screen after reading", host.store.cleanOnHome(), host.store::setCleanOnHome);
+        g.toggle(host.getString(R.string.settings_ui_clean_screen_after_reading), host.store.cleanOnHome(), host.store::setCleanOnHome);
     }
 
     private void reading(MainActivity host, MainActivity.Rows g) {
-        g.add("Open books with", host.readerName(host.store.bookReader().isEmpty() ? Store.BUILT_IN : host.store.bookReader()), () -> host.chooseReader(true));
-        g.add("Open PDFs and comics with", host.readerName(host.store.pdfReader()), () -> host.chooseReader(false));
+        g.add(host.getString(R.string.settings_ui_open_books_with), host.readerName(host.store.bookReader().isEmpty()
+                ? Store.BUILT_IN : host.store.bookReader()), () -> host.chooseReader(true));
+        g.add(host.getString(R.string.settings_ui_open_pdfs_and_comics_with), host.readerName(host.store.pdfReader()),
+                () -> host.chooseReader(false));
         int[] goals = {0, 10, 15, 20, 30, 45, 60, 90, 120};
         String[] labels = new String[goals.length];
-        for (int i = 0; i < goals.length; i++) labels[i] = goals[i] == 0 ? "Off" : goals[i] + " min";
+        for (int i = 0; i < goals.length; i++) labels[i] = goals[i] == 0 ? host.getString(R.string.settings_ui_off)
+                : host.getString(R.string.settings_ui_minutes, goals[i]);
         int goal = MainActivity.settingIndex(goals, host.store.dailyGoal());
-        g.add("Daily goal", labels[goal], () -> host.choose("Daily goal", labels, goal, i -> {
+        g.add(host.getString(R.string.settings_ui_daily_goal), labels[goal],
+                () -> host.choose(host.getString(R.string.settings_ui_daily_goal), labels, goal, i -> {
             host.store.setDailyGoal(goals[i]);
             host.refreshReadingSettings();
         }));
-        g.segments("Week starts on", new String[]{"Sunday", "Monday"}, host.store.weekStartsMonday() ? 1 : 0, i -> {
+        g.segments(host.getString(R.string.settings_ui_week_starts_on), host.getResources().getStringArray(R.array.settings_ui_weekdays), host.store.weekStartsMonday() ? 1 : 0, i -> {
             host.store.setWeekStartsMonday(i == 1);
             host.refreshReadingSettings();
         });
         int n = host.store.readingApps().size();
-        g.add("Apps that count as reading", String.valueOf(n), () -> { host.sub = "reading"; host.render(); });
-        g.add("Reading time access", Stats.hasAccess(host) ? "Allowed" : "Allow", () -> host.start(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+        g.add(host.getString(R.string.settings_ui_apps_that_count_as_reading), String.valueOf(n),
+                () -> { host.sub = "reading"; host.render(); });
+        g.add(host.getString(R.string.settings_ui_reading_time_access),
+                host.getString(Stats.hasAccess(host)
+                ? R.string.settings_ui_allowed
+                : R.string.settings_ui_allow), () -> host.start(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
     }
 
     private void library(MainActivity host, MainActivity.Rows g) {
-        g.add("Look for new books", host.booksLoaded ? host.books.size() + " books" : "…", () -> { host.lastLoad = 0; host.lastFullScan = 0; host.refreshData(0); host.toast("Looking for books…"); });
-        g.add("File access", host.hasFileAccess() ? "Allowed" : "Off", host::requestFileAccess);
+        g.add(host.getString(R.string.settings_ui_look_for_new_books), host.booksLoaded ? bookCount(host)
+                : host.getString(R.string.settings_ui_searching), () -> { host.lastLoad = 0; host.lastFullScan = 0; host.refreshData(0); host.toast(host.getString(R.string.settings_ui_looking_for_books)); });
+        g.add(host.getString(R.string.settings_ui_file_access),
+                host.getString(host.hasFileAccess() ? R.string.settings_ui_allowed : R.string.settings_ui_off), host::requestFileAccess);
     }
 
     private void shell(MainActivity host, MainActivity.Rows g) {
         boolean shellOn = ShellService.connected();
-        g.add("Ink shell", shellOn ? "On · Turn off" : "Off · Set up", () -> host.shellAccessSheet(shellOn));
-        g.segments("Status strip", new String[]{"Ink Home", "System"}, host.store.statusBar() ? 0 : 1, i -> {
+        g.add(host.getString(R.string.settings_ui_ink_shell),
+                host.getString(shellOn ? R.string.settings_ui_on_turn_off
+                : R.string.settings_ui_off_set_up), () -> host.shellAccessSheet(shellOn));
+        g.segments(host.getString(R.string.settings_ui_status_strip), host.getResources().getStringArray(R.array.settings_ui_status_strips), host.store.statusBar() ? 0 : 1, i -> {
             host.store.setStatusBar(i == 0);
             host.applySystemBar();
             host.render();
         });
         String mode = host.store.sleepMode();
-        g.add("Sleep screen", mode.equals("book") ? "Current book" : mode.equals("custom") ? "Your picture" : "Off", () -> open(host, "sleep"));
-        g.add("Notification access", SetupScreen.notificationsAllowed(host) ? "Allowed" : "Allow", () -> host.start(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
-        g.add("Default home app", host.isDefaultHome() ? "Ink Home" : "Choose", host::openHomeSettings);
-        g.add("Hidden apps", String.valueOf(host.store.hidden().size()), () -> open(host, "hidden"));
-        if (host.apps.stream().anyMatch(MainActivity::booxShellApp)) category(host, g, BOOX, "Choose which apps to show");
-        if (DotService.available(host)) category(host, g, DOT, dotOn(host) ? "On" : "Off");
+        g.add(host.getString(R.string.settings_ui_sleep_screen), mode.equals("book")
+                ? host.getString(R.string.settings_ui_current_book)
+                : mode.equals("custom") ? host.getString(R.string.settings_ui_your_picture) : host.getString(R.string.settings_ui_off), () -> open(host, "sleep"));
+        g.add(host.getString(R.string.settings_ui_notification_access),
+                host.getString(SetupScreen.notificationsAllowed(host)
+                ? R.string.settings_ui_allowed
+                : R.string.settings_ui_allow), () -> host.start(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+        g.add(host.getString(R.string.settings_ui_default_home_app),
+                host.getString(host.isDefaultHome() ? R.string.settings_ui_ink_home : R.string.settings_ui_choose), host::openHomeSettings);
+        g.add(host.getString(R.string.settings_ui_hidden_apps), String.valueOf(host.store.hidden().size()), () -> open(host, "hidden"));
+        if (host.apps.stream().anyMatch(MainActivity::booxShellApp)) category(host, g, BOOX,
+                host.getString(R.string.settings_ui_choose_which_apps_to_show));
+        if (DotService.available(host)) category(host, g, DOT, host.getString(dotOn(host) ? R.string.settings_ui_on : R.string.settings_ui_off));
         if (Notifs.count() >= 0) {
-            g.toggle("Quiet", host.store.quiet(), enabled -> { host.changeQuiet(enabled); host.render(); });
-        } else g.add("Quiet", "Requires notification access", () -> host.changeQuiet(true));
+            g.toggle(host.getString(R.string.settings_ui_quiet), host.store.quiet(), enabled -> { host.changeQuiet(enabled); host.render(); });
+        } else g.add(host.getString(R.string.settings_ui_quiet), host.getString(R.string.settings_ui_requires_notification_access),
+                () -> host.changeQuiet(true));
     }
 
     static boolean dotOn(MainActivity host) {
@@ -231,40 +291,42 @@ final class SettingsScreen implements Screen {
     }
 
     private void dot(MainActivity host, MainActivity.Rows g) {
-        g.toggle("Show Ink dot", dotOn(host), enabled -> {
+        g.toggle(host.getString(R.string.settings_ui_show_ink_dot), dotOn(host), enabled -> {
             DotService.setEnabled(host, enabled);
             host.render();
         });
         int[] sizes = {36, 42, 52};
-        g.segments("Size", new String[]{"Small", "Medium", "Large"},
+        g.segments(host.getString(R.string.settings_ui_size), host.getResources().getStringArray(R.array.settings_ui_dot_sizes),
                 MainActivity.settingIndex(sizes, DotService.size(host)), i -> {
                     DotService.setSize(host, sizes[i]);
                     host.render();
                 });
-        g.toggle("Tuck against the edge", DotService.tucked(host), tucked -> {
+        g.toggle(host.getString(R.string.settings_ui_tuck_against_the_edge), DotService.tucked(host), tucked -> {
             DotService.setTucked(host, tucked);
             host.render();
         });
-        if (ShellService.connected()) g.add("Dot in each app", "Show, tuck or hide", () -> {
+        if (ShellService.connected()) g.add(host.getString(R.string.settings_ui_dot_in_each_app),
+                host.getString(R.string.settings_ui_show_tuck_or_hide), () -> {
             String[] labels = host.apps.stream().map(host::displayLabel).toArray(String[]::new);
             String[] packages = host.apps.stream().map(app -> app.pkg).toArray(String[]::new);
-            host.choose("Dot in each app", labels, -1, i -> host.choose(labels[i],
-                    new String[]{"Show", "Tuck", "Hide"}, ShellService.dotPolicy(host, packages[i]),
+            host.choose(host.getString(R.string.settings_ui_dot_in_each_app), labels, -1, i -> host.choose(labels[i],
+                    host.getResources().getStringArray(R.array.settings_ui_dot_modes), ShellService.dotPolicy(host, packages[i]),
                     mode -> ShellService.setDotPolicy(host, packages[i], mode)));
         });
-        if (DotService.ballAvailable(host)) g.add("Boox Navigation Ball", "Its accessibility service is enabled", () -> {
-            if (!DotService.openBallSettings(host)) host.toast("Navigation Ball settings are unavailable");
+        if (DotService.ballAvailable(host)) g.add(host.getString(R.string.settings_ui_boox_navigation_ball),
+                host.getString(R.string.settings_ui_its_accessibility_service_is_enabled), () -> {
+            if (!DotService.openBallSettings(host)) host.toast(host.getString(R.string.settings_ui_navigation_ball_settings_are_unavailable));
         });
     }
 
     private void controls(MainActivity host, MainActivity.Rows g) {
-        g.toggle("Lock to portrait", host.store.portraitLocked(), locked -> {
+        g.toggle(host.getString(R.string.settings_ui_lock_to_portrait), host.store.portraitLocked(), locked -> {
             host.store.setPortraitLocked(locked);
             ActivityWindow.applyOrientation(host, host.store);
         });
-        g.segments("Page buttons", new String[]{"Normal", "Reversed"}, host.store.pageKeysReversed() ? 1 : 0,
+        g.segments(host.getString(R.string.settings_ui_page_buttons), host.getResources().getStringArray(R.array.settings_ui_page_button_modes), host.store.pageKeysReversed() ? 1 : 0,
                 i -> { host.store.setPageKeysReversed(i == 1); host.render(); });
-        g.toggle("Swipe to turn pages", host.store.swipePages(), enabled -> {
+        g.toggle(host.getString(R.string.settings_ui_swipe_to_turn_pages), host.store.swipePages(), enabled -> {
             host.store.setSwipePages(enabled);
             host.render();
         });
@@ -273,29 +335,33 @@ final class SettingsScreen implements Screen {
     private void device(MainActivity host, MainActivity.Rows g) {
         android.content.pm.PackageManager pm = host.getPackageManager();
         if (pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_WIFI))
-            link(host, g, "Wi-Fi", "", Settings.ACTION_WIFI_SETTINGS);
+            link(host, g, host.getString(R.string.settings_ui_wi_fi), "", Settings.ACTION_WIFI_SETTINGS);
         if (pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_BLUETOOTH))
-            link(host, g, "Bluetooth", "", Settings.ACTION_BLUETOOTH_SETTINGS);
+            link(host, g, host.getString(R.string.settings_ui_bluetooth), "", Settings.ACTION_BLUETOOTH_SETTINGS);
         if (DisplayProbe.capabilities(host).speaker)
-            link(host, g, "Sound", "", Settings.ACTION_SOUND_SETTINGS);
-        link(host, g, "Date and time", "", Settings.ACTION_DATE_SETTINGS);
-        link(host, g, "Storage", freeSpace(host), Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
-        link(host, g, "Android apps", "", Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS);
-        link(host, g, "All Android settings", "", Settings.ACTION_SETTINGS);
+            link(host, g, host.getString(R.string.settings_ui_sound), "", Settings.ACTION_SOUND_SETTINGS);
+        link(host, g, host.getString(R.string.settings_ui_date_and_time), "", Settings.ACTION_DATE_SETTINGS);
+        link(host, g, host.getString(R.string.settings_ui_storage), freeSpace(host), Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
+        link(host, g, host.getString(R.string.settings_ui_android_apps), "", Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS);
+        link(host, g, host.getString(R.string.settings_ui_all_android_settings), "", Settings.ACTION_SETTINGS);
     }
 
     private void link(MainActivity host, MainActivity.Rows g, String title, String value, String action) {
         g.add(title, value, () -> {
-            if (!host.start(new Intent(action).setPackage("com.android.settings"))) host.toast(title + " settings are unavailable");
+            if (!host.start(new Intent(action).setPackage("com.android.settings"))) host.toast(host.getString(R.string.settings_ui_settings_unavailable, title));
         });
     }
 
     private void updates(MainActivity host, MainActivity.Rows g) {
-        g.add(host.update != null ? "Install version " + host.update.version : "Check for updates", host.update != null ? "Ready" : "Version " + Updater.installedVersion(host),
+        String title = host.update != null ? host.getString(R.string.settings_ui_install_version, host.update.version)
+                : host.getString(R.string.settings_ui_check_for_updates);
+        String status = host.update != null ? host.getString(R.string.settings_ui_ready)
+                : host.getString(R.string.settings_ui_version, Updater.installedVersion(host));
+        g.add(title, status,
                 () -> { if (host.update != null) host.installUpdate(); else host.checkUpdates(true); });
-        g.toggle("Check automatically", host.store.autoUpdate(), value -> { host.store.setAutoUpdate(value); host.render(); });
-        g.add(SETUP, "", () -> open(host, SETUP));
-        g.add(LICENCES, "Source Sans 3 · Literata", () -> open(host, LICENCES));
+        g.toggle(host.getString(R.string.settings_ui_check_automatically), host.store.autoUpdate(), value -> { host.store.setAutoUpdate(value); host.render(); });
+        g.add(categoryTitle(host, SETUP), "", () -> open(host, SETUP));
+        g.add(categoryTitle(host, LICENCES), host.getString(R.string.settings_ui_source_sans_3_literata), () -> open(host, LICENCES));
     }
 
     private void licences(MainActivity host, LinearLayout body) {
@@ -312,12 +378,12 @@ final class SettingsScreen implements Screen {
             }
             if (paragraph.length() > 0) body.addView(MainActivity.item(host.ink.muted(paragraph.toString().trim(), 14)));
         } catch (java.io.IOException e) {
-            body.addView(host.ink.body("The font licence could not be opened."));
+            body.addView(host.ink.body(host.getString(R.string.settings_ui_the_font_licence_could_not_be_opened)));
         }
     }
 
     private void version(MainActivity host, LinearLayout body) {
-        TextView about = host.ink.center(host.ink.faint("Ink Home " + Updater.installedVersion(host), 13));
+        TextView about = host.ink.center(host.ink.faint(host.getString(R.string.settings_ui_product_version, Updater.installedVersion(host)), 13));
         about.setPadding(0, host.ink.dp(8), 0, 0);
         if (BuildConfig.DEBUG) {
             about.setOnClickListener(new View.OnClickListener() {

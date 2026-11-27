@@ -1,5 +1,6 @@
 package dev.inkhome.folio.widget;
 
+import dev.inkhome.R;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ImageButton;
@@ -23,14 +24,14 @@ public final class LevelBar extends LinearLayout {
         this.changed = changed;
         setGravity(Gravity.CENTER_VERTICAL);
         segments = new View[values.length];
-        minus = Stepper.button(f, "minus", "Decrease " + label, () -> select(this.selected - 1));
-        plus = Stepper.button(f, "plus", "Increase " + label, () -> select(this.selected + 1));
+        minus = Stepper.button(f, "minus", f.context.getString(R.string.reader_ui_decrease, label), () -> select(this.selected - 1));
+        plus = Stepper.button(f, "plus", f.context.getString(R.string.reader_ui_increase, label), () -> select(this.selected + 1));
         addView(minus, f.u(38), f.u(34));
         for (int i = 0; i < values.length; i++) {
             final int level = i;
             View v = new View(f.context);
             segments[i] = v;
-            v.setContentDescription(label + ", " + values[i]);
+            v.setContentDescription(f.context.getString(R.string.reader_ui_label_value, label, values[i]));
             v.setFocusable(true);
             v.setForeground(DataWidgets.focus(f));
             v.setOnClickListener(view -> select(level));

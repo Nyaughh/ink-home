@@ -120,7 +120,7 @@ public final class ShellService extends AccessibilityService {
         clock.setTypeface(Type.sans(this, 600));
         clock.setGravity(Gravity.CENTER);
         clock.setBackgroundColor(f.palette.paper);
-        clock.setContentDescription("Open Ink Home control panel");
+        clock.setContentDescription(getString(R.string.service_ui_open_ink_home_control_panel));
         clock.setOnClickListener(v -> togglePanel());
         WindowManager.LayoutParams p = new WindowManager.LayoutParams(WRAP_CONTENT, WRAP_CONTENT,
                 TYPE_ACCESSIBILITY_OVERLAY, FLAG_NOT_FOCUSABLE | FLAG_LAYOUT_IN_SCREEN, PixelFormat.TRANSLUCENT);
@@ -143,16 +143,16 @@ public final class ShellService extends AccessibilityService {
         rows.setOrientation(LinearLayout.VERTICAL);
         rows.setBackgroundColor(f.palette.paper);
         if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_WIFI))
-            action(f, rows, "Wi-Fi", () -> systemSettings(Settings.ACTION_WIFI_SETTINGS));
+            action(f, rows, getString(R.string.service_ui_wi_fi), () -> systemSettings(Settings.ACTION_WIFI_SETTINGS));
         if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH))
-            action(f, rows, "Bluetooth", () -> systemSettings(Settings.ACTION_BLUETOOTH_SETTINGS));
-        if (f.displayClass.isEink()) action(f, rows, "Gentle refresh", () -> {
+            action(f, rows, getString(R.string.service_ui_bluetooth), () -> systemSettings(Settings.ACTION_BLUETOOTH_SETTINGS));
+        if (f.displayClass.isEink()) action(f, rows, getString(R.string.service_ui_gentle_refresh), () -> {
             if (!Epd.requestGentleRefresh(panel))
-                dot.showNotice("Gentle refresh unavailable");
+                dot.showNotice(getString(R.string.service_ui_gentle_refresh_unavailable));
         });
-        action(f, rows, "Switcher", () -> open(this, SWITCHER));
-        action(f, rows, "All Ink Home controls", () -> open(this, PANEL));
-        action(f, rows, "Close", () -> {});
+        action(f, rows, getString(R.string.service_ui_switcher), () -> open(this, SWITCHER));
+        action(f, rows, getString(R.string.service_ui_all_ink_home_controls), () -> open(this, PANEL));
+        action(f, rows, getString(R.string.service_ui_close), () -> {});
         ScrollView sheet = new ScrollView(this);
         sheet.addView(rows);
         sheet.setOnTouchListener((v, e) -> {
@@ -183,7 +183,7 @@ public final class ShellService extends AccessibilityService {
     private void systemSettings(String screen) {
         try { startActivity(new Intent(screen).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
         catch (ActivityNotFoundException | SecurityException denied) {
-            dot.showNotice("Settings unavailable");
+            dot.showNotice(getString(R.string.service_ui_settings_unavailable));
         }
     }
 

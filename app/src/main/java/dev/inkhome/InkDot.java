@@ -30,7 +30,7 @@ final class InkDot extends View {
         this.folio = folio;
         this.actions = actions;
         slop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
-        setContentDescription("Ink dot. Clean screen");
+        setContentDescription(getContext().getString(R.string.service_ui_ink_dot_clean_screen));
         setOnClickListener(v -> actions.clean());
         setOnLongClickListener(v -> { actions.options(); return true; });
     }

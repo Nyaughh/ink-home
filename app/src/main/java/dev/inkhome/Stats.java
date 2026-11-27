@@ -268,9 +268,10 @@ final class Stats {
         return n;
     }
 
-    static String hm(int minutes) {
-        if (minutes < 60) return minutes + " min";
+    static String hm(Context c, int minutes) {
+        if (minutes < 60) return c.getString(R.string.reader_ui_duration_minutes, minutes);
         int m = minutes % 60;
-        return (minutes / 60) + " h" + (m == 0 ? "" : " " + m + " min");
+        return m == 0 ? c.getString(R.string.reader_ui_duration_hours, minutes / 60)
+                : c.getString(R.string.reader_ui_duration_hours_minutes, minutes / 60, m);
     }
 }
