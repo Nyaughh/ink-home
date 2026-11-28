@@ -27,7 +27,7 @@ final class HomeGrid extends ViewGroup {
         for (HomeLayout.Item item : layout.items) {
             HomeComponent component = HomeComponents.get(item.type);
             if (component == null) continue;
-            FrameLayout tile = new FrameLayout(host);
+            FrameLayout tile = editing ? new FrameLayout(host) : new HomeWidgetTarget(host, item, component);
             tile.setTag(item);
             tile.addView(component.render(host, item, false), new FrameLayout.LayoutParams(-1, -1));
             if (editing) {

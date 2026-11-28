@@ -276,6 +276,11 @@ final class HomeWidgetHost {
             super.onSizeChanged(w, h, oldW, oldH);
             if (w <= 0 || h <= 0) return;
             float density = getResources().getDisplayMetrics().density;
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                android.util.SizeF size = new android.util.SizeF(w / density, h / density);
+                updateAppWidgetSize(null, java.util.Collections.singletonList(size));
+                return;
+            }
             int width = Math.round(w / density);
             int height = Math.round(h / density);
             updateAppWidgetSize(null, width, height, width, height);

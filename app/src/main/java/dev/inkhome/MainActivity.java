@@ -408,7 +408,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (panelOpen) dismissPanel();
-        else if (homeEditor.active()) homeEditor.cancel();
+        else if (homeEditor.active()) homeEditor.back();
         else if (libSearch != null) { libSearch = null; hideKeyboard(); render(); }
         else if (libraryDetail != null && screen == Screen.LIBRARY) { libraryDetail = null; render(); }
         else if (libCollection != null) { libCollection = null; render(); }
@@ -585,9 +585,14 @@ public class MainActivity extends Activity {
     // ================================================================== navigation
 
     void editHome() {
+        editHome(null);
+    }
+
+    void editHome(String selectedKey) {
         sub = null;
+        libSearch = null;
         screen = Screen.HOME;
-        homeEditor.open();
+        homeEditor.open(selectedKey);
     }
 
     void go(Screen s) {
@@ -783,7 +788,8 @@ public class MainActivity extends Activity {
 
         statusBar.removeAllViews();
         View strip = new Structure(ink.folio).statusStrip(time, Math.max(0, notes),
-                wifi.connected ? wifi.level : -1, bat.percent, bat.charging, this::togglePanel);
+                wifi.connected ? wifi.level : -1, bat.percent, bat.charging, this::togglePanel,
+                homeEditor.active() ? null : this::editHome);
         strip.setOnTouchListener(new View.OnTouchListener() {
             private float startX, startY;
 

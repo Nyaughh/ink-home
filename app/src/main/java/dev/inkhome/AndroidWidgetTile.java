@@ -6,7 +6,6 @@ import android.graphics.drawable.Drawable;
 import android.widget.ImageView;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -101,18 +100,15 @@ final class AndroidWidgetTile extends HomeComponent {
         }
         TextView caption = host.ink.body(id > 0 ? host.homeWidgets.labelForId(id) : name(host));
         caption.setGravity(Gravity.CENTER);
+        caption.setMaxLines(2);
+        caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
         return caption;
     }
 
-    @Override public View render(MainActivity host, HomeLayout.Item item, boolean preview) {
+    @Override boolean rebuildOnResize() { return false; }
+
+    @Override public View renderContent(MainActivity host, HomeLayout.Item item, boolean preview, int width, int height) {
         int id = widgetId(item);
-        View child = preview || id < 1 ? preview(host, id) : host.homeWidgets.view(id, item.settings.get("redraw"));
-        if (!Boolean.parseBoolean(item.settings.get("borders"))) return child;
-        LinearLayout frame = host.ink.col();
-        frame.setBackground(host.ink.card(0, false));
-        int inset = host.ink.dp(2);
-        frame.setPadding(inset, inset, inset, inset);
-        frame.addView(child, -1, -1);
-        return frame;
+        return preview || id < 1 ? preview(host, id) : host.homeWidgets.view(id, item.settings.get("redraw"));
     }
 }

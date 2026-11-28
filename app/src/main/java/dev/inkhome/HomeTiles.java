@@ -16,18 +16,28 @@ class HomeTiles {
     final HomeLayout.Item item;
     final boolean compact, borders, preview;
     final LinearLayout tile;
+    final int width, height;
 
-    HomeTiles(MainActivity a, HomeLayout.Item item, boolean preview) {
+    HomeTiles(MainActivity a, HomeLayout.Item item, boolean preview, int width, int height) {
         this.a = a;
         this.item = item;
         this.preview = preview;
+        this.width = width;
+        this.height = height;
         ink = a.ink;
         compact = Boolean.parseBoolean(item.settings.get("compact"));
         borders = Boolean.parseBoolean(item.settings.get("borders"));
         tile = ink.col();
-        int pad = ink.dp(borders ? (compact ? 2 : 6) : 0);
-        tile.setPadding(pad, pad, pad, pad);
-        if (borders) tile.setBackground(ink.card(0, false));
+    }
+
+    boolean naturalHeight() { return height == Integer.MAX_VALUE; }
+
+    boolean fits(int widthUnits, int heightUnits) {
+        return width >= ink.dp(widthUnits) && height >= ink.dp(heightUnits);
+    }
+
+    View sectionHead(String title, boolean dense) {
+        return new dev.inkhome.folio.widget.Structure(ink.folio).sectionHead(title, dense, null, !borders);
     }
 
     View content() { return tile; }
@@ -46,7 +56,7 @@ class HomeTiles {
     }
 
     void action(Runnable click) {
-        tile.setBackground(borders ? ink.card(0, true) : ink.pressable());
+        tile.setBackground(ink.pressable());
         tile.setOnClickListener(v -> click.run());
     }
 

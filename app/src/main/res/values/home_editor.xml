@@ -13,10 +13,10 @@
     <string name="editor_right">Right</string>
     <string name="editor_up">Up</string>
     <string name="editor_down">Down</string>
-    <string name="editor_narrow">Narrower</string>
-    <string name="editor_wide">Wider</string>
-    <string name="editor_short">Shorter</string>
-    <string name="editor_tall">Taller</string>
+    <string name="editor_columns">Width</string>
+    <string name="editor_rows">Height</string>
+    <string name="editor_blocked">There is no room for that change.</string>
+
     <string name="editor_cell">Column %1$d, row %2$d</string>
     <string name="editor_dims">%1$d &#215; %2$d</string>
     <string name="editor_location">%1$s &#183; %2$s</string>

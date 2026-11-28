@@ -82,6 +82,11 @@ public final class Structure {
 
     public View statusStrip(String time, int notifications, int wifi, int battery,
                             boolean charging, Runnable openPanel) {
+        return statusStrip(time, notifications, wifi, battery, charging, openPanel, null);
+    }
+
+    public View statusStrip(String time, int notifications, int wifi, int battery,
+                            boolean charging, Runnable openPanel, Runnable editHome) {
         LinearLayout strip = column();
         LinearLayout row = row(Tokens.Bar.STATUS);
         row.setPadding(f.u(8), 0, f.u(8), 0);
@@ -95,7 +100,13 @@ public final class Structure {
         inlineGlyph(row, wifi < 0 ? "wifi-off" : "wifi", wifi);
         row.addView(text(f.context.getString(R.string.reader_ui_percent, battery), META));
         inlineGlyph(row, charging ? "battery-charging" : "battery", battery);
-        inlineGlyph(row, "tune", -1);
+        if (editHome == null) inlineGlyph(row, "tune", -1);
+        else {
+            FrameLayout edit = new FrameLayout(f.context);
+            edit.addView(glyph("grid", -1, false), new FrameLayout.LayoutParams(f.u(18), f.u(18), Gravity.CENTER));
+            action(edit, f.context.getString(R.string.home_edit_layout), editHome);
+            row.addView(edit, f.u(44), f.u(Tokens.Bar.STATUS));
+        }
         strip.addView(row);
         rule(strip, false);
         String notificationCount = f.context.getResources().getQuantityString(
@@ -248,8 +259,12 @@ public final class Structure {
     }
 
     public View sectionHead(String title, boolean dense, View end) {
+        return sectionHead(title, dense, end, true);
+    }
+
+    public View sectionHead(String title, boolean dense, View end, boolean topRule) {
         LinearLayout block = column();
-        rule(block, true);
+        if (topRule) rule(block, true);
         LinearLayout row = row(dense ? Tokens.Bar.DATA_SECTION : Tokens.Bar.SECTION);
         TextView heading = text(title, LABEL);
         heading.setAccessibilityHeading(true);

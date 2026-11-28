@@ -5,8 +5,8 @@ import android.view.View;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-final class BuiltinTile extends HomeComponent {
-    interface Content { HomeTiles create(MainActivity host, HomeLayout.Item item, boolean preview); }
+class BuiltinTile extends HomeComponent {
+    interface Content { HomeTiles create(MainActivity host, HomeLayout.Item item, boolean preview, int width, int height); }
 
     final int countTitle;
     final String type;
@@ -31,8 +31,8 @@ final class BuiltinTile extends HomeComponent {
         return w >= minWidth && w <= HomeLayout.COLS && h >= minHeight && h <= HomeLayout.ROWS;
     }
 
-    @Override public View render(MainActivity host, HomeLayout.Item item, boolean preview) {
-        return content.create(host, item, preview).content();
+    @Override public View renderContent(MainActivity host, HomeLayout.Item item, boolean preview, int width, int height) {
+        return content.create(host, item, preview, width, height).content();
     }
 
     @Override public String optionName(MainActivity host, String key) {
