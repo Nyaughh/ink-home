@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 (unreleased)
+## 2.0.0 (2026-11-28)
 
 - Settings adds custom bindings for hardware keys, reader tap zones and swipes. Existing page controls keep their defaults on upgrade.
 - The quick panel checks device capabilities and connected audio outputs when opened.
