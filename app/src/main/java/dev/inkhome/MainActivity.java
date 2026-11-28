@@ -788,8 +788,7 @@ public class MainActivity extends Activity {
 
         statusBar.removeAllViews();
         View strip = new Structure(ink.folio).statusStrip(time, Math.max(0, notes),
-                wifi.connected ? wifi.level : -1, bat.percent, bat.charging, this::togglePanel,
-                homeEditor.active() ? null : this::editHome);
+                wifi.connected ? wifi.level : -1, bat.percent, bat.charging, this::togglePanel);
         strip.setOnTouchListener(new View.OnTouchListener() {
             private float startX, startY;
 
@@ -1018,6 +1017,10 @@ public class MainActivity extends Activity {
             render();
         }), ink.weight(1));
         p.addView(shortcuts);
+        p.addView(Button.create(ink.folio, getString(R.string.home_edit_panel), Button.Style.TEXT, v -> {
+            closePanel();
+            editHome();
+        }));
         LinearLayout wrap = ink.col();
         wrap.addView(p);
         wrap.addView(ink.hair());

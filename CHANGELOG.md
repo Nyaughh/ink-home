@@ -5,7 +5,7 @@
 - Settings adds custom bindings for hardware keys, reader tap zones and swipes. Existing page controls keep their defaults on upgrade.
 - The quick panel checks device capabilities and connected audio outputs when opened.
 
-- Hold a Home widget or tap the grid icon on the status strip to edit the layout. One inspector shows the selected widget’s cell size, move arrows, variants and settings. Widgets reflow around a move or resize.
+- Hold a Home widget or choose Edit Home layout in the pull-down panel to edit the layout. One inspector shows the selected widget’s cell size, move arrows, variants and settings. Widgets reflow around a move or resize.
 - Home gains a one-screen widget editor with live previews, discrete movement and resizing, component-specific variants and a resettable reading preset. Existing section settings and Android widget bindings migrate into the layout.
 - The Library adds measured cover grids and lists. Reading stats combine daily minutes, a week chart and a monthly calendar.
 - The Folio interface adapts to monochrome e-ink, colour e-ink and LCD/OLED. Display type, text size and interface size can be adjusted separately. LCD and OLED users can follow the system theme.

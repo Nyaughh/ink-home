@@ -82,11 +82,6 @@ public final class Structure {
 
     public View statusStrip(String time, int notifications, int wifi, int battery,
                             boolean charging, Runnable openPanel) {
-        return statusStrip(time, notifications, wifi, battery, charging, openPanel, null);
-    }
-
-    public View statusStrip(String time, int notifications, int wifi, int battery,
-                            boolean charging, Runnable openPanel, Runnable editHome) {
         LinearLayout strip = column();
         LinearLayout row = row(Tokens.Bar.STATUS);
         row.setPadding(f.u(8), 0, f.u(8), 0);
@@ -100,11 +95,7 @@ public final class Structure {
         inlineGlyph(row, wifi < 0 ? "wifi-off" : "wifi", wifi);
         row.addView(text(f.context.getString(R.string.reader_ui_percent, battery), META));
         inlineGlyph(row, charging ? "battery-charging" : "battery", battery);
-        ImageView last = inlineGlyph(row, editHome == null ? "tune" : "grid", -1);
-        if (editHome != null) {
-            last.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
-            action(last, f.context.getString(R.string.home_edit_layout), editHome);
-        }
+        inlineGlyph(row, "tune", -1);
         strip.addView(row);
         rule(strip, false);
         String notificationCount = f.context.getResources().getQuantityString(
@@ -115,12 +106,10 @@ public final class Structure {
         return strip;
     }
 
-    private ImageView inlineGlyph(LinearLayout row, String name, int level) {
+    private void inlineGlyph(LinearLayout row, String name, int level) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(f.u(18), f.u(18));
         lp.setMargins(f.u(4), 0, f.u(4), 0);
-        ImageView image = glyph(name, level, false);
-        row.addView(image, lp);
-        return image;
+        row.addView(glyph(name, level, false), lp);
     }
 
     public String[] menuLabels() {
