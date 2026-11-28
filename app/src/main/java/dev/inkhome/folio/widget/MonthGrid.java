@@ -4,6 +4,7 @@ import dev.inkhome.R;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import dev.inkhome.folio.Folio;
 import dev.inkhome.folio.Type;
 import dev.inkhome.folio.core.TypeScale;
@@ -20,40 +21,42 @@ public final class MonthGrid {
         if (minutes.length != month.lengthOfMonth()) throw new IllegalArgumentException("Provide minutes for every date");
         LinearLayout calendar = DataWidgets.column(f);
         int offset = Math.floorMod(month.atDay(1).getDayOfWeek().getValue() - firstDay.getValue(), 7);
-        int threshold = goal > 0 ? goal : 30;
+        // Each date owns the same two bands, even when its minutes are blank.
         for (int start = -offset; start < minutes.length; start += 7) {
             LinearLayout week = new LinearLayout(f.context);
             week.setBaselineAligned(false);
-            LinearLayout.LayoutParams weekParams = new LinearLayout.LayoutParams(-1, -2);
-            if (start != -offset) weekParams.topMargin = f.u(4);
-            calendar.addView(week, weekParams);
+            calendar.addView(week, -1, -2);
             for (int col = 0; col < 7; col++) {
                 int index = start + col;
                 LinearLayout cell = DataWidgets.column(f);
-                LinearLayout.LayoutParams params = DataWidgets.share();
-                if (col > 0) params.setMarginStart(f.u(4));
-                week.addView(cell, params);
+                cell.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+                week.addView(cell, DataWidgets.share());
                 if (index < 0 || index >= minutes.length) continue;
                 LocalDate date = month.atDay(index + 1);
                 int count = minutes[index];
-                boolean met = count >= threshold;
-                boolean useAccent = met && goal > 0;
-                int color = useAccent ? f.palette.onAccent : met ? f.palette.onInverse : f.palette.ink;
-                LinearLayout labels = DataWidgets.column(f);
-                labels.setGravity(Gravity.CENTER);
-                labels.setMinimumHeight(f.u(40));
-                labels.setBackground(DataWidgets.shape(f, useAccent ? f.palette.accent : met ? f.palette.inverse : f.palette.paper,
+                boolean met = goal > 0 && count >= goal;
+                TextView number = Type.text(f, String.valueOf(index + 1), TypeScale.LABEL,
+                        met ? f.palette.onInverse : f.palette.ink);
+                number.setGravity(Gravity.CENTER);
+                number.setSingleLine();
+                int badgeHeight = Math.max(f.u(20), number.getLineHeight() + f.u(2));
+                int badgeWidth = Math.max(f.u(28), (int) Math.ceil(number.getPaint().measureText("88")) + f.u(4));
+                number.setBackground(DataWidgets.shape(f, met ? f.palette.inverse : f.palette.paper,
                         count > 0 && !met ? f.hairline : 0, false));
+                cell.addView(number, badgeWidth, badgeHeight);
+                View marker = new View(f.context);
+                if (date.equals(today)) marker.setBackgroundColor(f.palette.strong);
+                cell.addView(marker, badgeWidth, f.rule);
+                TextView duration = Type.text(f, count > 0
+                        ? f.context.getString(R.string.reader_ui_short_minutes, count) : "",
+                        TypeScale.CHART, f.palette.ink);
+                duration.setGravity(Gravity.CENTER);
+                duration.setSingleLine();
+                cell.addView(duration, -1, -2);
+                cell.setPadding(0, f.u(2), 0, 0);
                 cell.setScreenReaderFocusable(true);
-                labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
-                cell.addView(labels, -1, -2);
-                labels.addView(Type.text(f, String.valueOf(index + 1), TypeScale.LABEL, color));
-                labels.addView(Type.text(f, f.context.getString(R.string.reader_ui_short_minutes, count), TypeScale.META, color));
-                if (date.equals(today)) {
-                    View underline = new View(f.context);
-                    underline.setBackgroundColor(f.palette.strong);
-                    cell.addView(underline, -1, f.u(3));
-                }
+                number.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                duration.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
                 String description = f.context.getResources().getQuantityString(
                         R.plurals.reader_ui_date_minutes, count, date, count);
                 if (goal > 0 && met) description = f.context.getString(R.string.reader_ui_goal_met, description);

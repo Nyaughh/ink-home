@@ -432,9 +432,9 @@
     <string name="stats_ui_days_read">Days read</string>
     <string name="stats_ui_days_read_of">%1$d of %2$d</string>
     <string name="stats_ui_fill_the_screen_crop_edges">Fill the screen (crop edges)</string>
-    <string name="stats_ui_calendar_legend_without_goal">Filled: 30+ minutes. Outlined: some reading. Small number: minutes.</string>
+    <string name="stats_ui_calendar_legend_without_goal">Outlined dates show reading. Today is underlined.</string>
     <string name="stats_ui_filled_bars_met_the_goal">Filled bars met the goal</string>
-    <string name="stats_ui_calendar_legend_with_goal">Filled: goal met. Outlined: some reading. Small number: minutes.</string>
+    <string name="stats_ui_calendar_legend_with_goal">Outlined dates show reading. Filled dates met the goal. Today is underlined.</string>
     <string name="stats_ui_finished_in_year">Finished in %1$d</string>
     <string name="stats_ui_goal_exceeded">Goal met · %1$d min over</string>
     <string name="stats_ui_goal_met">Goal met</string>
