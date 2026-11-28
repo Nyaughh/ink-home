@@ -56,7 +56,7 @@ accounts, tracking or ads, and only goes online to check for its own updates.
 
 On compatible Boox devices, **Clean screen** requests a flashing full refresh (GC 98). The dock menu, control panel, Home key while already on Home, and **Settings › Display & refresh › Strong clean now** use the same action. Automatic cleans at the configured page interval also request GC 98. When the native request is unavailable on e-ink, a manual clean flashes Ink Home’s window black and white.
 
-**Refresh edge** is a slim tab that starts halfway down the side of the screen. Enable display-over-other-apps access to use it over other apps. Tap for a full clean, hold for the menu, or drag it to a comfortable height. On release it docks to the nearest side and remembers its placement across restarts and reboots. If the native request is unavailable, it briefly flashes a full-screen overlay.
+**Refresh edge** is a slim tab that starts tucked halfway down the side of the screen. Enable display-over-other-apps access to use it over other apps. Tap for a full clean or hold for the menu. Drag along the edge to change its height or across the screen to switch sides. On release it tucks against the nearest side and remembers its height and side for each rotation. If the native request is unavailable, it briefly flashes a full-screen overlay.
 
 The optional Ink Shell accessibility service adds a floating clock with panel shortcuts. It receives window-change events and uses the foreground app’s package name for per-app Refresh edge settings. Its Android service declaration disables access to window contents. The launcher works with Shell turned off.
 

@@ -295,17 +295,13 @@ final class SettingsScreen implements Screen {
                     DotService.setSize(host, sizes[i]);
                     host.render();
                 });
-        g.toggle(host.getString(R.string.settings_ui_tuck_against_the_edge), DotService.tucked(host), tucked -> {
-            DotService.setTucked(host, tucked);
-            host.render();
-        });
         if (ShellService.connected()) g.add(host.getString(R.string.settings_ui_dot_in_each_app),
-                host.getString(R.string.settings_ui_show_tuck_or_hide), () -> {
+                host.getString(R.string.settings_ui_show_or_hide), () -> {
             String[] labels = host.apps.stream().map(host::displayLabel).toArray(String[]::new);
             String[] packages = host.apps.stream().map(app -> app.pkg).toArray(String[]::new);
             host.choose(host.getString(R.string.settings_ui_dot_in_each_app), labels, -1, i -> host.choose(labels[i],
-                    host.getResources().getStringArray(R.array.settings_ui_dot_modes), ShellService.dotPolicy(host, packages[i]),
-                    mode -> ShellService.setDotPolicy(host, packages[i], mode)));
+                    host.getResources().getStringArray(R.array.settings_ui_dot_modes), ShellService.dotHidden(host, packages[i]) ? 1 : 0,
+                    mode -> ShellService.setDotHidden(host, packages[i], mode == 1)));
         });
         if (DotService.ballAvailable(host)) g.add(host.getString(R.string.settings_ui_boox_navigation_ball),
                 host.getString(R.string.settings_ui_its_accessibility_service_is_enabled), () -> {

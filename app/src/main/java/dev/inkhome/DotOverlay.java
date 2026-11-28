@@ -28,12 +28,6 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
     void foreground(String pkg) {
         if (!foreground.equals(pkg)) { foreground = pkg; refresh(); }
     }
-    private int policy() { return ShellService.dotPolicy(this, foreground); }
-    private boolean isTucked() { return shell ? policy() == 1 : tucked(this); }
-    private void setTuck(boolean tuck) {
-        if (shell) ShellService.setDotPolicy(this, foreground, tuck ? 1 : 0);
-        else setTucked(this, tuck);
-    }
     private final Handler main = new Handler(Looper.getMainLooper());
     private Context overlay;
     private WindowManager windows;
@@ -151,14 +145,13 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
             if (!shell) unavailable.run();
             return;
         }
-        if (shell && (foreground.isEmpty() || policy() == 2)) return;
+        if (shell && (foreground.isEmpty() || ShellService.dotHidden(this, foreground))) return;
         if (!getSystemService(PowerManager.class).isInteractive()
                 || getSystemService(KeyguardManager.class).isKeyguardLocked()) return;
         Store store = new Store(this);
         folio = new Folio(overlay, store.textScale(), store.uiScale());
         area = bounds();
         rotation = display.getRotation();
-        boolean tucked = isTucked();
         int minTarget = Math.round(48 * getResources().getDisplayMetrics().density);
         int hit = Math.max(minTarget, folio.u(48));
         placement = params(Math.min(hit, area.width()),
@@ -170,20 +163,19 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
         placement.x = position.x;
         placement.y = position.y;
         dot = new InkDot(folio, this);
-        updateAppearance(tucked, false);
+        updateAppearance();
         add(dot, placement);
     }
 
-    private void updateAppearance(boolean tucked, boolean open) {
+    private void updateAppearance() {
         float horizontal = DotPosition.fraction(placement.x, area.width() - placement.width);
-        dot.appearance(tucked, horizontal, size(this), open);
+        dot.appearance(horizontal, size(this));
     }
 
     @Override public void beginDrag() {
         dragStartX = placement.x;
         dragStartY = placement.y;
         closeMenu();
-        updateAppearance(isTucked(), false);
     }
 
     @Override public void move(float dx, float dy) {
@@ -192,20 +184,19 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
         if (placement.x == x && placement.y == y) return;
         placement.x = x;
         placement.y = y;
-        updateAppearance(isTucked(), false);
+        updateAppearance();
         windows.updateViewLayout(dot, placement);
     }
 
     @Override public void endDrag(boolean save) {
         if (!save) {
             move(0, 0);
-            updateAppearance(isTucked(), false);
             return;
         }
         int maxX = area.width() - placement.width;
         placement.x = DotPosition.nearestSide(placement.x, maxX);
         left = placement.x == 0;
-        updateAppearance(isTucked(), false);
+        updateAppearance();
         windows.updateViewLayout(dot, placement);
         new DotPosition(placement.x, placement.y).save(prefs(this), rotation,
                 maxX, area.height() - placement.height);
@@ -215,7 +206,6 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
         if (menu == null) return;
         remove(menu);
         menu = null;
-        if (dot != null) updateAppearance(isTucked(), false);
     }
 
     @Override public void options() {
@@ -230,8 +220,7 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
         rows.setOrientation(LinearLayout.VERTICAL);
         menu.addView(rows);
         row(rows, getString(R.string.service_ui_strong_clean), this::clean);
-        row(rows, isTucked() ? getString(R.string.service_ui_show_dot) : getString(R.string.service_ui_tuck_to_edge), () -> setTuck(!isTucked()));
-        if (shell) row(rows, getString(R.string.service_ui_hide_in_this_app), () -> ShellService.setDotPolicy(this, foreground, 2));
+        if (shell) row(rows, getString(R.string.service_ui_hide_in_this_app), () -> ShellService.setDotHidden(this, foreground, true));
         else row(rows, getString(R.string.service_ui_hide_dot), () -> prefs(this).edit().putBoolean("dotEnabled", false).apply());
         if (shell) {
             row(rows, getString(R.string.service_ui_control_panel), ShellService::openPanel);
@@ -252,7 +241,7 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
             if (e.getActionMasked() == MotionEvent.ACTION_OUTSIDE) { closeMenu(); return true; }
             return false;
         });
-        if (add(menu, p)) updateAppearance(isTucked(), true);
+        add(menu, p);
     }
 
     private void row(LinearLayout rows, String label, Runnable action) {

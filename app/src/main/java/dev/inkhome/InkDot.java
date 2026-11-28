@@ -24,7 +24,7 @@ final class InkDot extends View {
     private final Glyph glyph = new Glyph("refresh");
     private final int slop;
     private float downX, downY;
-    private boolean dragged, held, open, tucked;
+    private boolean dragged, held;
     private float horizontal;
     private int tabHeight;
 
@@ -38,30 +38,27 @@ final class InkDot extends View {
         setOnLongClickListener(v -> { actions.options(); return true; });
     }
 
-    void appearance(boolean tucked, float horizontal, int size, boolean open) {
-        this.tucked = tucked;
+    void appearance(float horizontal, int size) {
         this.horizontal = horizontal;
-        this.open = open;
         tabHeight = folio.u(size);
         invalidate();
     }
 
     @Override protected void onDraw(Canvas c) {
         int paper = folio.palette.paper, ink = folio.palette.ink;
-        int width = Math.min(getWidth(), tucked ? folio.u(8) : tabHeight * 4 / 7);
+        int width = Math.min(getWidth(), dragged ? tabHeight * 4 / 7 : folio.u(8));
         int height = Math.min(getHeight(), tabHeight);
         int start = Math.round((getWidth() - width) * horizontal);
         int top = (getHeight() - height) / 2;
-        boolean inverse = tucked || dragged || open;
-        brush.setColor(inverse ? paper : ink);
+        brush.setColor(paper);
         c.drawRect(start, top, start + width, top + height, brush);
-        brush.setColor(inverse ? ink : paper);
+        brush.setColor(ink);
         c.drawRect(start + folio.rule, top + folio.rule,
                 start + width - folio.rule, top + height - folio.rule, brush);
-        if (tucked) return;
+        if (!dragged) return;
         int x = start + width / 2, y = getHeight() / 2;
         int half = Math.max(0, Math.min(folio.u(9), width / 2 - folio.rule));
-        glyph.setTint(inverse ? paper : ink);
+        glyph.setTint(paper);
         glyph.setBounds(x-half, y-half, x+half, y+half);
         glyph.draw(c);
     }

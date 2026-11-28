@@ -39,14 +39,13 @@ public final class ShellService extends AccessibilityService {
 
     static boolean connected() { return active != null; }
 
-    static int dotPolicy(Context c, String pkg) {
-        boolean tuck = pkg.equals(c.getPackageName()) || new Store(c).readingApps().contains(pkg)
-                || DotService.tucked(c);
-        return DotService.prefs(c).getInt("dotPolicy:" + pkg, tuck ? 1 : 0);
+    static boolean dotHidden(Context c, String pkg) {
+        // Previous versions stored 0 for shown, 1 for tucked, and 2 for hidden.
+        return DotService.prefs(c).getInt("dotPolicy:" + pkg, 0) == 2;
     }
 
-    static void setDotPolicy(Context c, String pkg, int mode) {
-        DotService.prefs(c).edit().putInt("dotPolicy:" + pkg, mode).apply();
+    static void setDotHidden(Context c, String pkg, boolean hidden) {
+        DotService.prefs(c).edit().putInt("dotPolicy:" + pkg, hidden ? 2 : 1).apply();
     }
 
     static void openPanel() {

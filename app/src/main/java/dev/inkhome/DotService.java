@@ -25,15 +25,10 @@ public final class DotService extends Service {
         return available(c) && permitted(c) && prefs(c).getBoolean("dotEnabled", false);
     }
     public static int size(Context c) { return prefs(c).getInt("dotSize", 42); }
-    public static boolean tucked(Context c) { return prefs(c).getBoolean("dotTucked", false); }
     public static void setSize(Context c, int size) {
         if (size == 36 || size == 42 || size == 52)
             prefs(c).edit().putInt("dotSize", size).apply();
     }
-    public static void setTucked(Context c, boolean tucked) {
-        prefs(c).edit().putBoolean("dotTucked", tucked).apply();
-    }
-
     public static boolean ballAvailable(Context c) {
         String list = Settings.Secure.getString(c.getContentResolver(),
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);

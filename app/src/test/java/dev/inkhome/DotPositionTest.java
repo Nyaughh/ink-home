@@ -1,11 +1,14 @@
 package dev.inkhome;
 
+import android.content.Context;
 import android.content.SharedPreferences;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class DotPositionTest {
     private static SharedPreferences preferences(Map<String, Object> values) {
@@ -23,6 +26,7 @@ public class DotPositionTest {
         return mock(SharedPreferences.class, call -> {
             switch (call.getMethod().getName()) {
                 case "edit": return editor;
+                case "getInt":
                 case "getFloat":
                 case "getBoolean":
                     return values.getOrDefault(call.getArgument(0), call.getArgument(1));
@@ -46,17 +50,33 @@ public class DotPositionTest {
         assertEquals(100, landscape.y);
     }
 
-    @Test public void oldDotPositionsStartDockedUntilUserMovesTheTab() {
+    @Test public void restoresLegacyFreePositionThenRemembersTheNextRelease() {
         SharedPreferences prefs = preferences(new HashMap<>(Map.of("edgeLeft2", true, "edgeHeight2", .25f, "freeX2", .3f, "freeY2", .1f)));
         DotPosition legacy = DotPosition.load(prefs, 2, 400, 882, false);
-        assertEquals(400, legacy.x);
-        assertEquals(441, legacy.y);
-        assertEquals(0, DotPosition.load(prefs, 2, 400, 882, true).x);
+        assertEquals(0, legacy.x);
+        assertEquals(88, legacy.y);
 
         new DotPosition(300, 500).save(prefs, 2, 400, 882);
         DotPosition moved = DotPosition.load(prefs, 2, 400, 882, false);
         assertEquals(400, moved.x);
         assertEquals(500, moved.y);
+    }
+
+    @Test public void oldEdgeOnlyPositionKeepsItsSideAndRelativeHeight() {
+        SharedPreferences prefs = preferences(Map.of("edgeLeft3", true, "edgeHeight3", .25f));
+        DotPosition saved = DotPosition.load(prefs, 3, 500, 800, false);
+        assertEquals(0, saved.x);
+        assertEquals(200, saved.y);
+    }
+
+    @Test public void newTabStartsHalfwayDownThePreferredEdge() {
+        SharedPreferences prefs = preferences(Map.of());
+        DotPosition right = DotPosition.load(prefs, 0, 400, 800, false);
+        DotPosition left = DotPosition.load(prefs, 0, 400, 800, true);
+        assertEquals(400, right.x);
+        assertEquals(0, left.x);
+        assertEquals(400, right.y);
+        assertEquals(400, left.y);
     }
 
     @Test public void docksPreviouslySavedInteriorPositionsOnLoad() {
@@ -70,6 +90,17 @@ public class DotPositionTest {
         assertEquals(800, right.x);
         assertEquals(150, right.y);
         assertEquals(600, DotPosition.nearestSide(300, 600));
+    }
+
+    @Test public void onlyPreviouslyHiddenAppsRemainHidden() {
+        Context context = mock(Context.class);
+        SharedPreferences saved = preferences(Map.of(
+                "dotTucked", false, "dotPolicy:shown", 0, "dotPolicy:tucked", 1, "dotPolicy:hidden", 2));
+        when(context.getSharedPreferences("inkhome", Context.MODE_PRIVATE)).thenReturn(saved);
+        assertFalse(ShellService.dotHidden(context, "new"));
+        assertFalse(ShellService.dotHidden(context, "shown"));
+        assertFalse(ShellService.dotHidden(context, "tucked"));
+        assertTrue(ShellService.dotHidden(context, "hidden"));
     }
 
     @Test public void restoresInteriorHeightAfterResize() {

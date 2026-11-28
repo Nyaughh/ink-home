@@ -323,17 +323,16 @@ Refresh edge is a slim rectangular tab that can float over other apps. Its ink-a
 
 **Placement**
 
-- The tab starts docked to the side at mid-height. The user can drag it along the edge or into the usable screen area.
+- The tab starts tucked against the side at mid-height. The user can drag it along the edge or into the usable screen area.
 - The position is remembered per rotation.
 - Its touch target stays inside the screen bounds after a drag, rotation or resize.
-- Per app it can **Show**, **Tuck** or **Hide**. Defaults: Tuck in the built-in reader, in apps that count as reading (the existing list in Settings › Reading) and on Ink Home's own screens, so it never covers text or controls; Show everywhere else. The per-app choice needs Shell level; with the overlay permission alone the choice is global.
+- Ink Shell lets users show or hide the tab per app. Every visible tab rests tucked against its side.
 - Hidden on the sleep screen and in full-screen video.
 
 **Moving and hiding**
 
-- *Drag* picks up the tab and moves it with the finger. Releasing docks the rectangular tab to the nearest side and saves its height and side.
-- Choose *Tuck to edge* in the menu to park it at the nearest side. Use the menu to restore its full width.
-- *Hide* from its menu ("Hide here", "Tuck to edge"), turn it off in Settings › System shell › Refresh edge, or toggle it from a control panel tile.
+- *Drag* picks up the tab and moves it with the finger. Releasing tucks the tab to the nearest side and saves its height and side.
+- *Hide* from its menu ("Hide here"), turn it off in Settings › System shell › Refresh edge, or toggle it from a control panel tile.
 
 **Tap and hold**
 
@@ -346,7 +345,7 @@ Refresh edge is a slim rectangular tab that can float over other apps. Its ink-a
 | Mode in this app: Normal · Text · Fast | Text is Regal (fewer flashes on pages of text). Fast is a two-level mode for scrolling and typing. | Only if spike S7 finds a way for Ink Home to set another app's update mode on Onyx. Otherwise this row is a link to Boox's own per-app refresh settings. |
 | Auto clean: Off · On app switch · Every N page turns | Cleans without being asked. Default: On app switch. | Shell level (it counts app switches and page-key presses; it reads no screen content) |
 | Back · Home · Switcher · Control panel | The shortcuts people use the Boox ball for | Shell level |
-| Tuck to edge · Hide here · Settings | | |
+| Hide here · Settings | | |
 
 - Double-tap is not used: telling it apart from a single tap would delay every refresh.
 
@@ -361,7 +360,7 @@ Refresh edge is a slim rectangular tab that can float over other apps. Its ink-a
 | Route | What the user grants | What the tab can do |
 |---|---|---|
 | Display over other apps (`SYSTEM_ALERT_WINDOW`) | One switch on an Android settings screen | Float over other apps, tap for a full refresh, move, tuck, hide. Available at Launcher level. A small service keeps it alive while other apps are in front; its notification is filtered out of Ink's own list. |
-| Ink Home's accessibility service (Shell level) | The Shell switch | Everything above without the separate overlay permission, plus per-app Show, Tuck and Hide, Auto clean, the shortcut row, and staying above the keyboard. |
+| Ink Home's accessibility service (Shell level) | The Shell switch | Everything above without the separate overlay permission, plus per-app Show and Hide, Auto clean, the shortcut row, and staying above the keyboard. |
 
 Recommendation: offer the tab with the lighter permission, and let the Shell service host it when Shell is on. **On the C69, granting either permission needs Aarin's OK at the moment it happens.**
 
