@@ -105,6 +105,10 @@ final class HomeLayout {
     private void band(String type, String variant, int y, int height) {
         Item item = new Item(type, variant, 0, y, COLS, height);
         item.key = "preset-" + type;
+        item.settings.put("readingPreset", "true");
+        if ("apps".equals(type) || ("current".equals(type) && "cover".equals(variant))) {
+            item.settings.put("heightMode", "content");
+        }
         items.add(item);
     }
 
@@ -113,7 +117,9 @@ final class HomeLayout {
         String saved = prefs.getString(KEY, null);
         if (saved != null) {
             try {
-                return read(new JSONObject(saved));
+                HomeLayout layout = read(new JSONObject(saved));
+                layout.restoreOriginalPresetSizing(host, prefs.getString("homeLayout", "cover"));
+                return layout;
             } catch (JSONException ignored) {
                 return preset(host);
             }
@@ -128,6 +134,20 @@ final class HomeLayout {
         }
         if (HomeSections.hasLegacyData(prefs)) layout.save(host);
         return layout;
+    }
+
+    /** A first-generation canvas could already contain the untouched reading preset. */
+    private void restoreOriginalPresetSizing(MainActivity host, String style) {
+        if (items.isEmpty() || !items.get(0).key.startsWith("preset-") || !items.get(0).settings.isEmpty()) return;
+        HomeLayout preset = readingPreset(host, style);
+        if (preset.items.size() != items.size()) return;
+        for (int i = 0; i < items.size(); i++) {
+            Item old = items.get(i), fresh = preset.items.get(i);
+            if (!old.key.equals(fresh.key) || !old.type.equals(fresh.type) || !old.variant.equals(fresh.variant)
+                    || old.x != fresh.x || old.y != fresh.y || old.w != fresh.w || old.h != fresh.h
+                    || !old.settings.isEmpty()) return;
+        }
+        for (int i = 0; i < items.size(); i++) items.get(i).settings.putAll(preset.items.get(i).settings);
     }
 
     private static HomeLayout fromSections(HomeSections sections) {

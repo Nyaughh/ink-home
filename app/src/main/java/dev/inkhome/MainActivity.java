@@ -611,6 +611,7 @@ public class MainActivity extends Activity {
     }
 
     boolean coverPage;
+    boolean homeSetupShown;
 
     private String renderedDestination;
 

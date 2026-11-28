@@ -258,10 +258,24 @@ public class UpgradeDataTest {
         HomeLayout layout = HomeLayout.preset(homeActivity(Map.of()));
         assertEquals(List.of("current", "next", "apps"), types(layout));
         assertValid(layout);
+        assertEquals("content", layout.items.get(0).settings.get("heightMode"));
+        assertNull(layout.items.get(1).settings.get("heightMode"));
+        assertEquals("content", layout.items.get(2).settings.get("heightMode"));
         assertFalse(layout.fits(null, 0, 0, 1, 1));
         assertFalse(layout.fits(null, 0, 0, 0, 1));
         assertFalse(layout.fits(null, Integer.MAX_VALUE, 0, 1, 1));
         assertFalse(layout.fits(null, 0, 0, 1, Integer.MAX_VALUE));
+    }
+
+    @Test public void firstCanvasPresetRecoversOriginalSizingWithoutChangingEditedLayouts() {
+        MainActivity activity = homeActivity(new java.util.HashMap<>());
+        HomeLayout old = HomeLayout.preset(activity);
+        for (HomeLayout.Item item : old.items) item.settings.clear();
+        old.save(activity);
+        assertEquals("content", HomeLayout.load(activity).items.get(2).settings.get("heightMode"));
+        old.items.get(2).w = 3;
+        old.save(activity);
+        assertTrue(HomeLayout.load(activity).items.get(2).settings.isEmpty());
     }
 
     @Test public void emptyCanvasAndRepeatedComponentsRoundTrip() {

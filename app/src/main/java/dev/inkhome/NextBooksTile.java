@@ -16,15 +16,23 @@ final class NextBooksTile extends HomeBookTile {
     }
 
     private void next() {
+        boolean preset = "list".equals(item.variant) && Boolean.parseBoolean(item.settings.get("readingPreset"));
         List<Library.Book> books = orderedBooks();
         if (!books.isEmpty()) books.remove(0);
         if (books.isEmpty() || !a.hasFileAccess()) {
+            if (preset) return;
             heading(a.getString(R.string.launcher_up_next));
             if (a.hasFileAccess()) {
                 tile.addView(label(a.getString(R.string.launcher_library), TypeScale.BODY, 1));
                 action(() -> a.go(MainActivity.Screen.LIBRARY));
             } else emptyBook();
             return;
+        }
+        if (preset) {
+            boolean rightPane = item.x == 2 && item.w == 2;
+            if (rightPane) tile.setPadding(tile.getPaddingLeft() + ink.dp(ink.folio.windowClass().gutter),
+                    tile.getPaddingTop(), tile.getPaddingRight(), tile.getPaddingBottom());
+            tile.addView(ink.hair(), ink.m(-1, ink.folio.rule, 0, rightPane || compact ? 0 : 14, 0, 0));
         }
         if (!preview) a.coverPage = true;
         int limit = count();

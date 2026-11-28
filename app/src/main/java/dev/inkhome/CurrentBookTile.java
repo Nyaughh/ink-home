@@ -1,6 +1,7 @@
 package dev.inkhome;
 
 import android.view.View;
+import dev.inkhome.folio.core.WindowClass;
 import java.util.List;
 
 final class CurrentBookTile extends HomeBookTile {
@@ -18,7 +19,7 @@ final class CurrentBookTile extends HomeBookTile {
 
     private void current() {
         if (!a.hasFileAccess()) {
-            emptyBook();
+            if (!Boolean.parseBoolean(item.settings.get("readingPreset"))) emptyBook();
             return;
         }
         if (!preview && !"minimal".equals(item.variant)) a.coverPage |= !a.books.isEmpty();
@@ -40,6 +41,15 @@ final class CurrentBookTile extends HomeBookTile {
             return;
         }
         Library.Book book = reading.isEmpty() ? a.newest().get(0) : reading.get(0);
+        if ("cover".equals(item.variant) && Boolean.parseBoolean(item.settings.get("readingPreset")) && !compact) {
+            int height = Math.round(a.getResources().getConfiguration().screenHeightDp / ink.folio.uiScale);
+            WindowClass window = ink.folio.windowClass();
+            boolean wide = window == WindowClass.EXPANDED || height < 500 && window == WindowClass.MEDIUM;
+            int width = window == WindowClass.EXPANDED ? 168 : wide ? 104
+                    : Math.min(a.homeSetupShown ? 100 : 116, Math.max(72, (height - 320) / 2));
+            tile.addView(a.homeBookHero(book, reading.isEmpty(), width, false));
+            return;
+        }
         float gridHeight = a.getResources().getConfiguration().screenHeightDp / ink.folio.uiScale - 110;
         int coverWidth = Math.max(40, Math.min(compact ? 72 : 116,
                 (int) (gridHeight * item.h / HomeLayout.ROWS * .7f)));

@@ -322,7 +322,7 @@ final class HomeEditor {
                       String title, Runnable select) {
         panel.addView(host.ink.medium(title, 17));
         final int width = Math.max(1, grid.getWidth() * item.w / HomeLayout.COLS);
-        final int height = Math.max(1, grid.getHeight() * item.h / HomeLayout.ROWS);
+        final int height = Math.max(1, grid.rowSpan(item.y, item.h));
         FrameLayout frame = new FrameLayout(host) {
             @Override protected void onMeasure(int widthSpec, int heightSpec) {
                 int available = Math.min(width, MeasureSpec.getSize(widthSpec));
@@ -387,6 +387,7 @@ final class HomeEditor {
             if (sizing) {
                 item.w += dx;
                 item.h += dy;
+                item.settings.remove("heightMode");
             } else if (swap != null) {
                 item.x += dx * swap.w;
                 item.y += dy * swap.h;

@@ -9,6 +9,8 @@ Home uses one four-column, sixteen-row canvas. Each instance in the HomeLayout d
 3. Expose optional settings as key-to-choice arrays and implement optionName for user-facing labels. Keep settings local to the instance. Widgets that bind external resources can implement configureNew and call ready when the binding succeeds. Use release for discarded resources. The restoration hooks let a module surface resources retained by an upgrade.
 4. Add the component to HomeComponents.all() via the registry list. The editor derives its gallery, variants, settings and size choices from the declaration.
 
+Full-width widgets in the reading preset can use the layout setting `heightMode=content`. The grid measures the component at its available width, divides its natural height across its rows and gives the other rows the remaining space. Resizing in the editor switches the instance to fixed grid sizing.
+
 ## Persistence
 
 HomeLayout.load reads the versioned homeCanvasV1 preference. On upgrade it imports existing section choices and older grids. Save replaces the document as one preferences edit. Reading progress, library, app favourites and statistics use separate records. The editor works on a deep copy until Save. Reset replaces that draft with the reading preset.
