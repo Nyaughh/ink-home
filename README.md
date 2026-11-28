@@ -19,30 +19,20 @@ A calm, reading-first home screen for e-ink Android tablets.
   justification, a full refresh every few pages, and your place kept across
   text changes. Or open books in NeoReader, KOReader or another app; their
   time still counts, and KOReader's progress shows too.
-- **Home** starts with a reading bento on new installations. Upgrades keep your
-  existing book layout. Long-press an empty area or open
-  **Settings › Appearance › Edit Home grid** to arrange tiles on a four-column,
-  six-row page. Start a page with the Reading, Planner or Night arrangement, or
-  build one from an empty grid. Tap a tile in the editor to move or resize it.
-  **Page options › Tidy page** fits the tiles together to fill the page. Turn
-  pages with arrows, a swipe or the page keys.
-  Use tiles for your current book, Up next, favourite apps, clock and date,
-  calendar, daily reading goal, reading month, battery or moon phase. Tap the
-  moon tile to enter coordinates for local moonrise and moonset estimates.
-- Add widgets from installed apps through the Home editor. Android asks you to
-  approve binding when needed. The widget redraw limit controls how often live
-  widgets can repaint the page. The default is once a minute.
-- Switch back to a preset in **Settings › Appearance › Home layout**. Your
-  grid is kept for the next time you open the editor. **Home layout file**
-  exports and imports built-in tile placements as JSON. Add Android widgets
-  again on the destination device.
+- **Home** opens with your current book, Up next and favourite apps. In
+  **Settings › Home**, choose which sections to show and in what order. Put
+  favourites first, choose a row or list, set how many apps to show, and
+  adjust section density and borders. Optional sections include a clock,
+  calendar, reading goal, reading month and battery.
+- Add widgets from installed apps in **Settings › Home**. Android asks you to
+  approve binding when needed. The redraw limit defaults to once a minute.
 - The dock keeps Settings at the left, today's reading in the middle and the
   navigation menu under the chevron. Tap the status strip for device controls.
 - Swipe sideways, press a page key or use the arrow buttons to move through
   paged lists. In Settings, text size and interface size can be adjusted separately.
 - In **Settings › Controls**, select an action and press a hardware key to bind
   it. You can assign several inputs to one action or swap conflicting bindings.
-  Home and paged lists use the same key and swipe assignments for supported
+  The launcher and paged lists use the same key and swipe assignments for supported
   actions. In the built-in reader,
   choose the original tap layout, three columns, three rows, or five zones
   with a separate top and bottom. Assign a tap or swipe to open contents,
@@ -62,13 +52,13 @@ A calm, reading-first home screen for e-ink Android tablets.
 Ink Home is plain Java on the Android framework, with no libraries. It has no
 accounts, tracking or ads, and only goes online to check for its own updates.
 
-## Screen refresh and the Ink dot
+## Screen refresh and Refresh edge
 
 On compatible Boox devices, **Clean screen** requests a flashing full refresh (GC 98). The dock menu, control panel, Home key while already on Home, and **Settings › Display & refresh › Strong clean now** use the same action. Automatic cleans at the configured page interval also request GC 98. When the native request is unavailable on e-ink, a manual clean flashes Ink Home’s window black and white.
 
-The optional Ink dot provides the same full clean over other apps. Enable display-over-other-apps access for the standalone dot. Tap it to clean, drag it to any spot inside the screen, or hold it to open its menu. The dot remembers its position after a restart or reboot. Choose **Tuck to edge** in the menu to park it at the side. If the native request is unavailable, the dot briefly flashes a full-screen overlay.
+**Refresh edge** is a slim tab that starts halfway down the side of the screen. Enable display-over-other-apps access to use it over other apps. Tap for a full clean, hold for the menu, or drag to move it. It remembers placement across restarts and reboots. If the native request is unavailable, it briefly flashes a full-screen overlay.
 
-The optional Ink Shell accessibility service adds a floating clock with panel shortcuts. It receives window-change events and uses the foreground app’s package name for per-app dot settings. Its Android service declaration disables access to window contents. The launcher works with Shell turned off.
+The optional Ink Shell accessibility service adds a floating clock with panel shortcuts. It receives window-change events and uses the foreground app’s package name for per-app Refresh edge settings. Its Android service declaration disables access to window contents. The launcher works with Shell turned off.
 
 ## Install
 

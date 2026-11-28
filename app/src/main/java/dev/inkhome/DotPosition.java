@@ -12,17 +12,15 @@ final class DotPosition {
     }
 
     void save(SharedPreferences prefs, int rotation, int maxX, int maxY) {
-        prefs.edit().putFloat("freeX" + rotation, fraction(x, maxX))
-                .putFloat("freeY" + rotation, fraction(y, maxY)).apply();
+        prefs.edit().putFloat("refreshEdgeX" + rotation, fraction(x, maxX))
+                .putFloat("refreshEdgeY" + rotation, fraction(y, maxY)).apply();
     }
 
     static DotPosition load(SharedPreferences prefs, int rotation, int maxX, int maxY,
-                            boolean defaultLeft, int gap, int legacyTop, int legacyBottom) {
-        boolean left = prefs.getBoolean("edgeLeft" + rotation, defaultLeft);
-        float oldHeight = prefs.getFloat("edgeHeight" + rotation, .58f);
-        int legacyY = legacyTop + Math.round(Math.max(0, maxY - legacyTop - legacyBottom) * oldHeight);
-        float x = prefs.getFloat("freeX" + rotation, fraction(left ? gap : maxX - gap, maxX));
-        float y = prefs.getFloat("freeY" + rotation, fraction(legacyY, maxY));
+                            boolean defaultLeft) {
+        // The old freeX/freeY and edgeHeight keys describe the circular control.
+        float x = prefs.getFloat("refreshEdgeX" + rotation, defaultLeft ? 0f : 1f);
+        float y = prefs.getFloat("refreshEdgeY" + rotation, .5f);
         return new DotPosition(pixel(x, maxX), pixel(y, maxY));
     }
 

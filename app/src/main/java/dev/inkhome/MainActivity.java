@@ -112,7 +112,6 @@ public class MainActivity extends Activity {
 
     Store store;
     Ink ink;
-    HomeDesktop desktop;
     HomeWidgetHost homeWidgets;
     SheetHost sheets;
     final Handler ui = new Handler(Looper.getMainLooper());
@@ -173,11 +172,9 @@ public class MainActivity extends Activity {
         // NeoReader tracks progress by file path, so it gets file:// links; other readers get content://.
         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
         store = new Store(this);
-        if (store.isNewProfile()) HomeLayout.load(this).save(this);
         ink = new Ink(this, store.textScale(), store.uiScale());
 
         homeWidgets = new HomeWidgetHost(this);
-        desktop = new HomeDesktop(this);
         ActivityWindow.applyOrientation(this, store);
         restoreNavigation(b);
         if (b == null && DotService.ACTION_SETTINGS.equals(getIntent().getAction())) {
@@ -228,7 +225,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
-        if (!homeWidgets.result(request, result, data)) HomeLayoutFiles.result(this, request, result, data);
+        homeWidgets.result(request, result, data);
     }
 
     @Override
@@ -406,7 +403,6 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (panelOpen) dismissPanel();
-        else if (screen == Screen.HOME && !store.useHomePreset() && desktop.back()) return;
         else if (libSearch != null) { libSearch = null; hideKeyboard(); render(); }
         else if (libraryDetail != null && screen == Screen.LIBRARY) { libraryDetail = null; render(); }
         else if (libCollection != null) { libCollection = null; render(); }
@@ -592,15 +588,6 @@ public class MainActivity extends Activity {
         }
         screen = s;
         render();
-    }
-
-    void editHome() {
-        store.setUseHomePreset(false);
-        if (screen != Screen.HOME) {
-            go(Screen.HOME);
-            android.transition.TransitionManager.endTransitions(content);
-        }
-        desktop.edit();
     }
 
     void openHomeSetup() {
@@ -1214,6 +1201,33 @@ public class MainActivity extends Activity {
         boolean wide = expanded || (heightU < 500 && ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.MEDIUM);
         int cw = expanded ? 168 : wide ? 104 : Math.min(setupShown ? 100 : 116,
                 Math.max(72, (heightU - 320) / 2));
+        View hero = homeBookHero(b, reading.isEmpty(), cw, false);
+        LinearLayout next = col;
+        if (wide) {
+            LinearLayout panes = ink.row();
+            panes.setGravity(Gravity.TOP);
+            panes.addView(hero, ink.weight(1));
+            next = ink.col();
+            next.setPadding(ink.dp(ink.folio.windowClass().gutter), 0, 0, 0);
+            panes.addView(next, new LinearLayout.LayoutParams(0, -1, 1));
+            col.addView(panes, new LinearLayout.LayoutParams(-1, 0, 1));
+            next.setTag("homeRight");
+        } else {
+            col.addView(hero);
+        }
+
+        // Every other book, the ones being read first, whichever app they're read in.
+        Set<Library.Book> ordered = new LinkedHashSet<>(reading);
+        ordered.addAll(newest());
+        ordered.remove(b);
+        List<Library.Book> rest = new ArrayList<>(ordered);
+        if (!rest.isEmpty()) {
+            next.addView(ink.hair(), ink.m(-1, ink.folio.rule, 0, wide ? 0 : 14, 0, 0));
+            next.addView(homeBookList(rest), new LinearLayout.LayoutParams(-1, 0, 1f));
+        }
+    }
+
+    View homeBookHero(Library.Book b, boolean newestInLibrary, int cw, boolean wrapDetails) {
         int chh = Math.round(cw * 10f / 7);
         LinearLayout hero = ink.row();
         hero.setGravity(Gravity.TOP);
@@ -1222,7 +1236,7 @@ public class MainActivity extends Activity {
 
         LinearLayout info = ink.col();
         info.setPadding(ink.dp(20), ink.dp(2), 0, 0);
-        if (reading.isEmpty()) {
+        if (newestInLibrary) {
             TextView n = ink.faint(getString(R.string.launcher_newest_in_your_library), 13);
             n.setPadding(0, 0, 0, ink.dp(8));
             info.addView(n);
@@ -1259,32 +1273,11 @@ public class MainActivity extends Activity {
         activity.setGravity(Gravity.END);
         status.addView(activity, ink.weight(1));
         info.addView(status);
-        hero.addView(info, new LinearLayout.LayoutParams(0, ink.dp(chh), 1f));
+        if (wrapDetails) info.setMinimumHeight(ink.dp(chh));
+        hero.addView(info, new LinearLayout.LayoutParams(0, wrapDetails ? -2 : ink.dp(chh), 1f));
         hero.setOnClickListener(v -> openBook(b));
         hero.setOnLongClickListener(v -> { bookMenu(b); return true; });
-        LinearLayout next = col;
-        if (wide) {
-            LinearLayout panes = ink.row();
-            panes.setGravity(Gravity.TOP);
-            panes.addView(hero, ink.weight(1));
-            next = ink.col();
-            next.setPadding(ink.dp(ink.folio.windowClass().gutter), 0, 0, 0);
-            panes.addView(next, new LinearLayout.LayoutParams(0, -1, 1));
-            col.addView(panes, new LinearLayout.LayoutParams(-1, 0, 1));
-            next.setTag("homeRight");
-        } else {
-            col.addView(hero);
-        }
-
-        // Every other book, the ones being read first, whichever app they're read in.
-        Set<Library.Book> ordered = new LinkedHashSet<>(reading);
-        ordered.addAll(newest());
-        ordered.remove(b);
-        List<Library.Book> rest = new ArrayList<>(ordered);
-        if (!rest.isEmpty()) {
-            next.addView(ink.hair(), ink.m(-1, ink.folio.rule, 0, wide ? 0 : 14, 0, 0));
-            next.addView(homeBookList(rest), new LinearLayout.LayoutParams(-1, 0, 1f));
-        }
+        return hero;
     }
 
     /** Page whole rows in the space between the hero and favorites. */
@@ -2310,7 +2303,7 @@ public class MainActivity extends Activity {
     }
 
     /** Page keys jump a screen at a time in scrolling lists. */
-    private void bindScrollKeys(ScrollView sv) {
+    void bindScrollKeys(ScrollView sv) {
         pageNext = () -> scrollPage(sv, 1);
         pagePrev = () -> scrollPage(sv, -1);
     }

@@ -24,8 +24,9 @@ final class InkDot extends View {
     private final Glyph glyph = new Glyph("refresh");
     private final int slop;
     private float downX, downY;
-    private boolean dragged, held, open, tucked, left;
-    private int diameter;
+    private boolean dragged, held, open, tucked;
+    private float horizontal;
+    private int tabHeight;
 
     InkDot(Folio folio, Actions actions) {
         super(folio.context);
@@ -37,37 +38,29 @@ final class InkDot extends View {
         setOnLongClickListener(v -> { actions.options(); return true; });
     }
 
-    void appearance(boolean tucked, boolean left, int size, boolean open) {
+    void appearance(boolean tucked, float horizontal, int size, boolean open) {
         this.tucked = tucked;
-        this.left = left;
+        this.horizontal = horizontal;
         this.open = open;
-        diameter = folio.u(size);
+        tabHeight = folio.u(size);
         invalidate();
     }
 
     @Override protected void onDraw(Canvas c) {
         int paper = folio.palette.paper, ink = folio.palette.ink;
-        int x = getWidth() / 2, y = getHeight() / 2;
-        int radius = diameter / 2;
-        boolean inverse = dragged || open;
-        if (tucked) {
-            int width = folio.u(8), height = folio.u(40);
-            int start = left ? 0 : getWidth() - width;
-            brush.setColor(paper);
-            c.drawRect(start-2, y-height/2-2, start+width+2, y+height/2+2, brush);
-            brush.setColor(ink);
-            c.drawRect(start, y-height/2, start+width, y+height/2, brush);
-            return;
-        }
-        brush.setColor(paper);
-        c.drawCircle(x, y, radius+2, brush);
-        brush.setColor(ink);
-        c.drawCircle(x, y, radius, brush);
-        if (!inverse) {
-            brush.setColor(paper);
-            c.drawCircle(x, y, radius-folio.rule, brush);
-        }
-        int half = folio.u(11);
+        int width = Math.min(getWidth(), tucked ? folio.u(8) : tabHeight * 4 / 7);
+        int height = Math.min(getHeight(), tabHeight);
+        int start = Math.round((getWidth() - width) * horizontal);
+        int top = (getHeight() - height) / 2;
+        boolean inverse = tucked || dragged || open;
+        brush.setColor(inverse ? paper : ink);
+        c.drawRect(start, top, start + width, top + height, brush);
+        brush.setColor(inverse ? ink : paper);
+        c.drawRect(start + folio.rule, top + folio.rule,
+                start + width - folio.rule, top + height - folio.rule, brush);
+        if (tucked) return;
+        int x = start + width / 2, y = getHeight() / 2;
+        int half = Math.max(0, Math.min(folio.u(9), width / 2 - folio.rule));
         glyph.setTint(inverse ? paper : ink);
         glyph.setBounds(x-half, y-half, x+half, y+half);
         glyph.draw(c);

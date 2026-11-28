@@ -159,26 +159,31 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
         area = bounds();
         rotation = display.getRotation();
         boolean tucked = isTucked();
-        int hit = Math.max(folio.u(48), folio.u(size(this))+4);
-        placement = params(Math.min(hit, area.width()), Math.min(hit, area.height()), 0);
+        int minTarget = Math.round(48 * getResources().getDisplayMetrics().density);
+        int hit = Math.max(minTarget, folio.u(48));
+        placement = params(Math.min(hit, area.width()),
+                Math.min(Math.max(hit, folio.u(size(this))), area.height()), 0);
         int maxX = area.width() - placement.width;
         int maxY = area.height() - placement.height;
-        int gap = Math.max(0, folio.u(6) - (hit-folio.u(size(this)))/2);
-        DotPosition position = DotPosition.load(prefs(this), rotation, maxX, maxY,
-                ballAvailable(this), gap, folio.u(30), folio.u(52));
+        DotPosition position = DotPosition.load(prefs(this), rotation, maxX, maxY, ballAvailable(this));
         left = position.x < maxX / 2f;
         placement.x = tucked ? (left ? 0 : maxX) : position.x;
         placement.y = position.y;
         dot = new InkDot(folio, this);
-        dot.appearance(tucked, left, size(this), false);
+        updateAppearance(tucked, false);
         add(dot, placement);
+    }
+
+    private void updateAppearance(boolean tucked, boolean open) {
+        float horizontal = DotPosition.fraction(placement.x, area.width() - placement.width);
+        dot.appearance(tucked, horizontal, size(this), open);
     }
 
     @Override public void beginDrag() {
         dragStartX = placement.x;
         dragStartY = placement.y;
         closeMenu();
-        dot.appearance(false, left, size(this), false);
+        updateAppearance(false, false);
     }
 
     @Override public void move(float dx, float dy) {
@@ -187,13 +192,14 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
         if (placement.x == x && placement.y == y) return;
         placement.x = x;
         placement.y = y;
+        updateAppearance(false, false);
         windows.updateViewLayout(dot, placement);
     }
 
     @Override public void endDrag(boolean save) {
         if (!save) {
             move(0, 0);
-            dot.appearance(isTucked(), left, size(this), false);
+            updateAppearance(isTucked(), false);
             return;
         }
         int maxX = area.width() - placement.width;
@@ -207,7 +213,7 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
         if (menu == null) return;
         remove(menu);
         menu = null;
-        if (dot != null) dot.appearance(isTucked(), left, size(this), false);
+        if (dot != null) updateAppearance(isTucked(), false);
     }
 
     @Override public void options() {
@@ -244,7 +250,7 @@ final class DotOverlay extends ContextWrapper implements InkDot.Actions {
             if (e.getActionMasked() == MotionEvent.ACTION_OUTSIDE) { closeMenu(); return true; }
             return false;
         });
-        if (add(menu, p)) dot.appearance(isTucked(), left, size(this), true);
+        if (add(menu, p)) updateAppearance(isTucked(), true);
     }
 
     private void row(LinearLayout rows, String label, Runnable action) {

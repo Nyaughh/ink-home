@@ -12,12 +12,13 @@ import java.util.Arrays;
 
 final class SettingsScreen implements Screen {
     // Saved navigation state uses these route keys across locale changes.
-    static final String APPEARANCE = "Appearance", DISPLAY = "Display & refresh", READING = "Reading",
+    static final String HOME = "Home", APPEARANCE = "Appearance", DISPLAY = "Display & refresh", READING = "Reading",
             LIBRARY = "Library", SHELL = "System shell", CONTROLS = "Controls", DEVICE = "Device",
             ABOUT = "Updates & about", SETUP = "Set up Ink Home", LICENCES = "Font licences", DOT = "Ink dot", BOOX = "Boox apps";
 
     private static String categoryTitle(MainActivity host, String category) {
         switch (category) {
+            case HOME: return host.getString(R.string.launcher_home);
             case APPEARANCE: return host.getString(R.string.settings_ui_appearance);
             case DISPLAY: return host.getString(R.string.settings_ui_display_refresh);
             case READING: return host.getString(R.string.settings_ui_reading);
@@ -81,6 +82,7 @@ final class SettingsScreen implements Screen {
             category(host, g, APPEARANCE,
                     host.getString(R.string.settings_ui_appearance_summary, Math.round(host.store.textScale() * 100),
                     Math.round(host.store.uiScale() * 100)));
+            category(host, g, HOME, host.getString(R.string.home_settings_summary));
             category(host, g, DISPLAY, host.getString(R.string.settings_ui_display_summary, SetupScreen.displayName(host),
                     host.getString(host.store.listScroll() ? R.string.settings_ui_scroll : R.string.settings_ui_pages)));
             category(host, g, READING, host.store.dailyGoal() == 0 ? host.getString(R.string.settings_ui_daily_goal_off)
@@ -94,6 +96,7 @@ final class SettingsScreen implements Screen {
             category(host, g, DEVICE, freeSpace(host));
             category(host, g, ABOUT, host.getString(R.string.settings_ui_version, Updater.installedVersion(host)));
         } else switch (category) {
+            case HOME: new HomeSettings(host).rows(g); break;
             case APPEARANCE: appearance(host, g); break;
             case DISPLAY: display(host, g); break;
             case READING: reading(host, g); break;
@@ -142,29 +145,6 @@ final class SettingsScreen implements Screen {
     }
 
     private void appearance(MainActivity host, MainActivity.Rows g) {
-        String[] layouts = {"hero", "shelf", "minimal"};
-        String[] styles = host.getResources().getStringArray(R.array.settings_ui_home_layouts);
-        String[] choices = Arrays.copyOf(styles, styles.length + 1);
-        choices[styles.length] = host.getString(R.string.home_custom_grid);
-        int selected = !host.store.useHomePreset() && host.desktop.active() ? styles.length
-                : Math.max(0, Arrays.asList(layouts).indexOf(host.store.homeLayout()));
-        g.add(host.getString(R.string.settings_ui_home_layout), choices[selected],
-                () -> host.choose(host.getString(R.string.settings_ui_home_layout), choices, selected, i -> {
-                    if (i == styles.length) {
-                        if (!HomeLayout.exists(host)) HomeLayout.preset("reading").save(host);
-                        host.store.setUseHomePreset(false);
-                    } else {
-                        host.store.setUseHomePreset(true);
-                        host.store.setHomeLayout(layouts[i]);
-                    }
-                    host.render();
-                }));
-        g.add(host.getString(R.string.home_edit_grid), host.getString(R.string.home_edit_grid_summary), host::editHome);
-        g.add(host.getString(R.string.home_grid_files), host.getString(R.string.home_grid_files_summary), () ->
-                host.choose(host.getString(R.string.home_grid_files), host.getResources().getStringArray(R.array.home_grid_files), -1, i -> {
-                    if (i == 0) HomeLayoutFiles.exportLayout(host);
-                    else HomeLayoutFiles.importLayout(host);
-                }));
         g.scale(host.getString(R.string.settings_ui_text_size), new int[]{90, 100, 115, 130}, host.store.textScale(), value -> {
             host.store.setTextScale(value / 100f);
             host.ink = new Ink(host, host.store.textScale(), host.store.uiScale());

@@ -140,7 +140,7 @@ Foundations: type roles, spacing, strokes, colour roles and components (approved
 - **Bars (u):** status strip 30, app bar 56, tabs 38, section head 36 (30 on data screens), pager folio 40, dock 52.
 - **Touch targets:** at least 48 × 48 u of hit area for anything tappable, even when the drawn icon is 24 u.
 - **Icon sizes (u):** 24 standard, 18 inline, 14 chevrons and chip marks.
-- **Shape: rectangles and circles only.** Corner radius is 0 for every container and control. Circles are used for radios and the Ink dot. No rounded rectangles, no shadows, no gradients. This is the system's signature, and it draws pixel-exact on ink.
+- **Shape: rectangles and circles only.** Corner radius is 0 for every container and control. Circles are used for radios. Refresh edge has a rectangular outline. No rounded rectangles, no shadows, no gradients. This is the system's signature, and it draws pixel-exact on ink.
 - **Elevation** is shown by a `rule` edge, never by shadow. On LCD/OLED overlays also get a 32% scrim. On e-ink there is no scrim, because a full-screen grey is the worst thing to ask of the panel.
 - **Covers:** 7:10, 1 px ink edge, no radius, never stretched (centre-cropped). Generated covers (no image in the file) are typographic: format label, serif title, short rule, italic author.
 
@@ -226,7 +226,7 @@ Each component is specified once. Sizes are in `u`. The mockups show all of them
 | **BarChart** | 92 high. Solid bars for days that met the goal, outlined bars for days that didn't, minutes printed on each, dashed goal line. |
 | **MonthGrid** | Seven even columns of 40 high cells, 4 apart. Each cell: the date over the minutes read. Filled = goal met, hairline outline = some reading, plain = none. A 3 u bar under today. |
 | **DataRow** | 34 high: name, an 84 wide bar showing its share, and a right-aligned tabular value. For ranked data such as Most read. |
-| **InkDot** | The floating refresh control: a 42 disc of paper with a `rule` ring and the refresh glyph, with a 48 hit area. Full specification in 5.6. |
+| **Refresh edge** | A slim rectangular tab with a refresh glyph and a touch target of at least 48 dp. Full specification in 5.6. |
 
 ### 4.13 Patterns
 
@@ -261,17 +261,17 @@ The same strip at the top, the same panel behind it, the same way home and the s
 │          │    │ StatusStrip  → Control  │         │ StatusStrip  → Control  │  same strip,
 │  Sleep   │ →  │              panel      │   →     │              panel      │  same panel
 │  screen  │    │ Home and the other      │         │      the app            │
-│          │    │ screens, over the dock  │         │ Ink dot · edge gestures │  same refresh,
+│          │    │ screens, over the dock  │         │ Refresh edge · edge gestures │  same refresh,
 └──────────┘    └─────────────────────────┘         └─────────────────────────┘  same way home
-                     Switcher: recent books and apps, from the panel or the dot
+                     Switcher: recent books and apps, from the panel or the tab
 ```
 
 ### 5.2 Three levels, each opt-in
 
 | Level | What the user does | What Ink Home takes over |
 |---|---|---|
-| **Launcher** (today's footing) | Chooses Ink Home as the home app and allows files, reading time and notifications | Everything inside Ink Home: strip, control panel, navigation, sheets, notices. Its own Open-with sheet, its own Switcher, a Device settings hub that links to Android's own pages and never to Boox's, Boox's shell apps tucked away by default, and the sleep picture written at the panel's real size. With one extra permission (display over other apps), the Ink dot. |
-| **Shell** | Turns on "Ink shell" in Settings, which opens one Android screen to enable Ink Home's accessibility service | The Ink status strip and control panel over every app, the Ink dot with its full menu, an optional Ink bar (Back, Home, Switcher, Clean screen), and Sleep now. |
+| **Launcher** (today's footing) | Chooses Ink Home as the home app and allows files, reading time and notifications | Everything inside Ink Home: strip, control panel, navigation, sheets, notices. Its own Open-with sheet, its own Switcher, a Device settings hub that links to Android's own pages and never to Boox's, Boox's shell apps tucked away by default, and the sleep picture written at the panel's real size. With one extra permission (display over other apps), Refresh edge. |
+| **Shell** | Turns on "Ink shell" in Settings, which opens one Android screen to enable Ink Home's accessibility service | The Ink status strip and control panel over every app, Refresh edge with its full menu, an optional Ink bar (Back, Home, Switcher, Clean screen), and Sleep now. |
 | **Owner** | Runs one command once from a computer: `adb shell dpm set-device-owner dev.inkhome/.shell.Owner` (the device must have no accounts, which is true of the C69) | Boox's status bar and control centre are switched off, the Ink sleep screen is installed as the system screensaver, Wi-Fi and Bluetooth toggle directly from the panel, Restart, Boox apps hidden system-wide (hidden, not uninstalled), Ink Home's own permissions granted without prompts, and updates installed without the Android installer screen. A "Leave Owner level" button in Settings undoes it. |
 
 Launcher-level items use public Android APIs and carry no unknowns. **Everything listed for Shell and Owner is designed but not yet proven on Onyx's modified system.** Phase 0 has a spike for each (S3 to S7), and each feature has a fallback, so the plan does not depend on any of them working. On the C69 each of those steps waits for Aarin's OK at the moment it runs.
@@ -286,15 +286,15 @@ Launcher-level items use public Android APIs and carry no unknowns. **Everything
 | 4 | Control centre | Boox control centre | Ink ControlPanel: connectivity, clean screen, rotation, quiet, sleep, volume, notifications, shortcuts | Launcher inside Ink Home; Shell everywhere; Boox's disabled at Owner | Below Owner level, a swipe from the top edge still opens Boox's |
 | 5 | Notifications | Boox list and pop-ups | The panel's list (exists today). "Quiet" stops pop-ups; notifications collect in the panel. | Launcher | Pop-ups when Quiet is off |
 | 6 | Recent apps | Boox recents | Ink Switcher: recent books and apps from usage data, opened from the panel, the Ink bar or Apps › Recent | Launcher | Boox recents if the user triggers Boox's own gesture |
-| 7 | Back and Home | Boox edge gestures, which draw nothing | Kept as the default. Optional Ink bar, and the Ink dot's shortcut row. | Shell | Nothing visible |
+| 7 | Back and Home | Boox edge gestures, which draw nothing | Kept as the default. Optional Ink bar, and Refresh edge's shortcut row. | Shell | Nothing visible |
 | 8 | Sleep screen | Boox screensaver showing a picture the user set by hand | SleepScreen drawn by Ink Home. Launcher: the picture file as now, correct size, new layout. Owner: installed as the system screensaver and kept current automatically. | Launcher, Owner | The manual "set as screensaver" step below Owner level |
 | 9 | Power menu | Boox dialog | Panel offers Sleep now (Shell) and Restart (Owner) | Shell, Owner | Boox's dialog on a long power press; power off |
 | 10 | Open with | Android chooser | Ink ChoiceSheet listing the apps that can open the file | Launcher | Nothing |
 | 11 | Settings | Boox settings and Android Settings | Ink Settings › Device is the hub. Links open Android's own pages. | Launcher | Android Settings pages (plain Android, not Boox) |
 | 12 | Boox's shell apps (its launcher and Navigation Ball) | Listed in Apps; the Onyx launcher is seeded as a favourite (`MainActivity.java:1787`) | On Onyx devices these two start hidden, grouped as "Boox apps" under Apps › Hidden, and are no longer seeded as favourites. Boox's ordinary apps (Dictionary, Calculator, BooxDrop and so on) stay where they are. | Launcher; system-wide at Owner | Nothing unless the user shows them |
 | 13 | Dialogs and toasts inside Ink Home | Android's | Sheets and Notices | Launcher | Nothing |
-| 14 | Refresh handling | Ink Home's manual clean; Boox's E-Ink Centre per app | Folio refresh model inside Ink Home; the Ink dot for a full refresh from anywhere (5.6) | Launcher with the overlay permission, or Shell | Other apps' own refresh modes remain Boox's unless spike S7 finds a way to set them. Linked from Display & refresh as "Per-app refresh". |
-| 19 | Floating control | Boox's Navigation Ball (its service is enabled on the C69; the ball wasn't on screen when I looked) | The Ink dot (5.6) | Launcher with the overlay permission, or Shell | The Boox ball only if the user keeps it on |
+| 14 | Refresh handling | Ink Home's manual clean; Boox's E-Ink Centre per app | Folio refresh model inside Ink Home; Refresh edge for a full refresh from anywhere (5.6) | Launcher with the overlay permission, or Shell | Other apps' own refresh modes remain Boox's unless spike S7 finds a way to set them. Linked from Display & refresh as "Per-app refresh". |
+| 19 | Floating control | Boox's Navigation Ball (its service is enabled on the C69; the ball wasn't on screen when I looked) | Refresh edge (5.6) | Launcher with the overlay permission, or Shell | The Boox ball only if the user keeps it on |
 | 15 | Wi-Fi network list | Android's panel | Direct toggle at Owner level; the network list stays Android's | Owner | Android's network list |
 | 16 | Keyboard | Onyx keyboard | Not replaced in this plan. Any installed keyboard can be chosen. A Folio keyboard is a possible later project. | | Onyx keyboard |
 | 17 | Permission prompts and the app installer | Android's | Cannot be replaced. Owner level removes most of them for Ink Home itself. | Owner | Android's prompts |
@@ -317,23 +317,13 @@ No Linux port is planned. The design stays independent of Android where that cos
 - Each system dependency sits behind a small interface with one Android implementation: `Epd` (refresh), `SystemStatus` (time, battery, network), `Connectivity`, `PowerControl`, `AppCatalog`, `Notifications`, `SleepSurface`.
 - Component specs in 4.12 are written as geometry and behaviour, not as Android view classes.
 
-### 5.6 The Ink dot: a floating refresh control
+### 5.6 Refresh edge
 
-A small control that floats over the whole device, like Boox's navigation ball, in Ink's own visual language. One tap clears ghosting wherever you are.
-
-The Ink dot inside another app, and its long-press menu (approved mockup file `ui-redesign-mockups/shots/sheet-dot.png`).
-
-**Look**
-
-- *Idle:* a 42 u disc of paper with a `rule` ring and the refresh glyph, plus a 2 px paper halo outside the ring so it stays readable over dark content. Hit area 48 u. Sizes: Small 36, Medium 42 (default), Large 52.
-- *Open or picked up:* inverse (ink disc, paper glyph).
-- *Tucked:* an 8 × 40 u ink tab flush with the screen edge, with the same halo. It behaves exactly like the dot; it is only slimmer.
-- Always solid. Never translucent, never shadowed: greys and soft edges are what e-ink shows worst.
-- Offered on e-ink display classes only. On LCD/OLED there is nothing to refresh, so it doesn't exist.
+Refresh edge is a slim rectangular tab that can float over other apps. Its ink-and-paper outline remains visible over dark or light content. The touch target extends beyond the visible tab so a reader can tap or drag it comfortably.
 
 **Placement**
 
-- The dot starts near an edge and can be placed anywhere within the usable screen.
+- The tab starts docked to the side at mid-height. The user can drag it along the edge or into the usable screen area.
 - The position is remembered per rotation.
 - Its touch target stays inside the screen bounds after a drag, rotation or resize.
 - Per app it can **Show**, **Tuck** or **Hide**. Defaults: Tuck in the built-in reader, in apps that count as reading (the existing list in Settings › Reading) and on Ink Home's own screens, so it never covers text or controls; Show everywhere else. The per-app choice needs Shell level; with the overlay permission alone the choice is global.
@@ -341,14 +331,14 @@ The Ink dot inside another app, and its long-press menu (approved mockup file `u
 
 **Moving and hiding**
 
-- *Drag* picks up the dot and moves it with the finger. Releasing saves its position.
-- Choose *Tuck to edge* in the menu to park it at the nearest side. Drag the tab to bring the dot back.
-- *Hide* from its menu ("Hide here", "Tuck to edge"), turn it off in Settings › System shell › Ink dot, or toggle it from a control panel tile.
+- *Drag* picks up the tab and moves it with the finger. Releasing saves its position.
+- Choose *Tuck to edge* in the menu to park it at the nearest side. Drag the tab to bring the tab back.
+- *Hide* from its menu ("Hide here", "Tuck to edge"), turn it off in Settings › System shell › Refresh edge, or toggle it from a control panel tile.
 
 **Tap and hold**
 
-- **Tap: one full refresh of the whole screen** (the `CLEAN` intent in 4.9). The flash is the feedback, so the dot draws no pressed state.
-- **Hold (400 ms): the refresh menu**, a 252 u panel beside the dot:
+- **Tap: one full refresh of the whole screen** (the `CLEAN` intent in 4.9). The flash is the feedback, so the tab draws no pressed state.
+- **Hold (400 ms): the refresh menu**, a 252 u panel beside the tab:
 
 | Entry | What it does | Needs |
 |---|---|---|
@@ -362,17 +352,17 @@ The Ink dot inside another app, and its long-press menu (approved mockup file `u
 
 **Living with the Boox navigation ball**
 
-- One floating control at a time. When the Ink dot is turned on while Boox's ball service is enabled, setup says so and offers to open Boox's Navigation Ball settings so the user can switch the ball off. Below Owner level Ink Home does not change that setting itself. At Owner level it can hide the Navigation Ball app, with Aarin's OK.
-- If the user keeps both, the dot starts on the left edge and its shortcut row is off, so the two don't duplicate each other.
-- With the shortcut row on, the dot covers what the ball is used for (refresh, back, home, recents).
+- One floating control at a time. When Refresh edge is turned on while Boox's ball service is enabled, setup says so and offers to open Boox's Navigation Ball settings so the user can switch the ball off. Below Owner level Ink Home does not change that setting itself. At Owner level it can hide the Navigation Ball app, with Aarin's OK.
+- If the user keeps both, the tab starts on the left edge and its shortcut row is off, so the two don't duplicate each other.
+- With the shortcut row on, the tab covers what the ball is used for (refresh, back, home, recents).
 
 **Permission**
 
-| Route | What the user grants | What the dot can do |
+| Route | What the user grants | What the tab can do |
 |---|---|---|
 | Display over other apps (`SYSTEM_ALERT_WINDOW`) | One switch on an Android settings screen | Float over other apps, tap for a full refresh, move, tuck, hide. Available at Launcher level. A small service keeps it alive while other apps are in front; its notification is filtered out of Ink's own list. |
 | Ink Home's accessibility service (Shell level) | The Shell switch | Everything above without the separate overlay permission, plus per-app Show, Tuck and Hide, Auto clean, the shortcut row, and staying above the keyboard. |
 
-Recommendation: offer the dot with the lighter permission, and let the Shell service host it when Shell is on. **On the C69, granting either permission needs Aarin's OK at the moment it happens.**
+Recommendation: offer the tab with the lighter permission, and let the Shell service host it when Shell is on. **On the C69, granting either permission needs Aarin's OK at the moment it happens.**
 
-**Unknowns (spike S7).** Whether `refreshScreen(98)` called from an overlay window cleans the whole screen on Onyx (expected, since the call asks the system for a full update, but not proven). Whether the overlay stays alive in the background. Whether an ordinary app can change another app's update mode. On e-ink devices without Onyx's interface, the dot falls back to a brief black-then-white full-screen flash drawn by the overlay itself.
+**Unknowns (spike S7).** Whether `refreshScreen(98)` called from an overlay window cleans the whole screen on Onyx (expected, since the call asks the system for a full update, but not proven). Whether the overlay stays alive in the background. Whether an ordinary app can change another app's update mode. On e-ink devices without Onyx's interface, the tab falls back to a brief black-then-white full-screen flash drawn by the overlay itself.

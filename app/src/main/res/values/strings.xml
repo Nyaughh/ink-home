@@ -45,7 +45,7 @@
     <string name="ui_ink_home_is_your_home_screen">Ink Home is your home screen</string>
     <string name="ui_choose_ink_home_as_the_default_home">Choose Ink Home as the default home app.</string>
     <string name="ui_confirm_your_display">Confirm your display</string>
-    <string name="ui_ink_dot_optional">Ink dot (optional)</string>
+    <string name="ui_ink_dot_optional">Refresh edge (optional)</string>
     <string name="ui_on">On</string>
     <string name="ui_floating_screen_refresh_control">Floating screen refresh control</string>
     <string name="ui_dismiss_setup_on_home">Dismiss setup on Home</string>
@@ -125,7 +125,7 @@
     <string name="launcher_quiet">Quiet</string>
     <string name="launcher_allow_access">Allow access</string>
     <string name="launcher_on">On</string>
-    <string name="launcher_ink_dot">Ink dot</string>
+    <string name="launcher_ink_dot">Refresh edge</string>
     <string name="launcher_light_and_warmth">Light and warmth</string>
     <string name="launcher_light">Light</string>
     <string name="launcher_display_settings">Display settings</string>
@@ -269,7 +269,7 @@
     <string name="settings_ui_updates_about">Updates &amp; about</string>
     <string name="settings_ui_set_up_ink_home">Set up Ink Home</string>
     <string name="settings_ui_font_licences">Font licences</string>
-    <string name="settings_ui_ink_dot">Ink dot</string>
+    <string name="settings_ui_ink_dot">Refresh edge</string>
     <string name="settings_ui_boox_apps">Boox apps</string>
     <string name="settings_ui_settings">Settings</string>
     <string name="settings_ui_scroll">Scroll</string>
@@ -281,7 +281,6 @@
     <string name="settings_ui_system_status_strip">System status strip</string>
     <string name="settings_ui_reversed_page_buttons">Reversed page buttons</string>
     <string name="settings_ui_normal_page_buttons">Normal page buttons</string>
-    <string name="settings_ui_home_layout">Home layout</string>
     <string name="settings_ui_text_size">Text size</string>
     <string name="settings_ui_interface_size">Interface size</string>
     <string name="settings_ui_clock">Clock</string>
@@ -328,10 +327,10 @@
     <string name="settings_ui_quiet">Quiet</string>
     <string name="settings_ui_requires_notification_access">Requires notification access</string>
     <string name="settings_ui_dot_gestures">Tap to clean, drag to move, hold for options</string>
-    <string name="settings_ui_show_ink_dot">Show Ink dot</string>
+    <string name="settings_ui_show_ink_dot">Show Refresh edge</string>
     <string name="settings_ui_size">Size</string>
     <string name="settings_ui_tuck_against_the_edge">Tuck against the edge</string>
-    <string name="settings_ui_dot_in_each_app">Dot in each app</string>
+    <string name="settings_ui_dot_in_each_app">Refresh edge in each app</string>
     <string name="settings_ui_show_tuck_or_hide">Show, tuck or hide</string>
     <string name="settings_ui_boox_navigation_ball">Boox Navigation Ball</string>
     <string name="settings_ui_its_accessibility_service_is_enabled">Its accessibility service is enabled</string>
@@ -351,11 +350,6 @@
     <string name="settings_ui_check_automatically">Check automatically</string>
     <string name="settings_ui_source_sans_3_literata">Source Sans 3 · Literata</string>
     <string name="settings_ui_the_font_licence_could_not_be_opened">The font licence could not be opened.</string>
-    <string-array name="settings_ui_home_layouts">
-        <item>Cover</item>
-        <item>Shelf</item>
-        <item>Minimal</item>
-    </string-array>
     <string-array name="settings_ui_clock_modes">
         <item>Auto</item>
         <item>12-hour</item>
@@ -652,24 +646,24 @@
     <string name="service_ui_done">Done</string>
     <string name="service_ui_enter_a_name">Enter a name</string>
     <string name="service_ui_finish_later">Finish later</string>
-    <string name="service_ui_hide_dot">Hide dot</string>
+    <string name="service_ui_hide_dot">Hide Refresh edge</string>
     <string name="service_ui_hide_in_this_app">Hide in this app</string>
-    <string name="service_ui_ink_dot">Ink dot</string>
-    <string name="service_ui_ink_dot_clean_screen">Ink dot. Clean screen</string>
-    <string name="service_ui_ink_dot_is_on">Ink dot is on</string>
+    <string name="service_ui_ink_dot">Refresh edge</string>
+    <string name="service_ui_ink_dot_clean_screen">Refresh edge. Clean screen</string>
+    <string name="service_ui_ink_dot_is_on">Refresh edge is on</string>
     <string name="service_ui_ink_home">Ink Home</string>
     <string name="service_ui_ink_home_asleep">Ink Home · asleep</string>
     <string name="service_ui_install_failed">Update didn\'t install</string>
     <string name="service_ui_install_failed_reason">Update didn\'t install: %1$s</string>
     <string name="service_ui_loading_recent_apps">Loading recent apps…</string>
     <string name="service_ui_no_recent_apps">No recent apps.</string>
-    <string name="service_ui_open_ink_dot_settings">Open Ink dot settings</string>
+    <string name="service_ui_open_ink_dot_settings">Open Refresh edge settings</string>
     <string name="service_ui_open_ink_home_control_panel">Open Ink Home control panel</string>
     <string name="service_ui_overlay_permission_settings_unavailable">Overlay permission settings unavailable</string>
     <string name="service_ui_save">Save</string>
     <string name="service_ui_settings">Settings</string>
     <string name="service_ui_settings_unavailable">Settings unavailable</string>
-    <string name="service_ui_show_dot">Show dot</string>
+    <string name="service_ui_show_dot">Show Refresh edge</string>
     <string name="service_ui_show_recently_opened_apps_and_when_you_used_them">Show recently opened apps and when you used them.</string>
     <string name="service_ui_skip">Skip</string>
     <string name="service_ui_sleeping">Sleeping</string>

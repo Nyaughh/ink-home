@@ -1,4 +1,4 @@
 <resources>
     <string name="ink_shell_label">Ink shell</string>
-    <string name="ink_shell_description">Ink shell uses the current app’s name to show a clock that opens controls over other apps and to place the optional Ink dot. Ink shell reads no screen text and does not listen to hardware keys. Turn Ink shell off here at any time to remove its controls.</string>
+    <string name="ink_shell_description">Ink shell uses the current app’s name to show a clock that opens controls over other apps and to place the optional Refresh edge. Ink shell reads no screen text and does not listen to hardware keys. Turn Ink shell off here at any time to remove its controls.</string>
 </resources>

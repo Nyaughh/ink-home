@@ -38,22 +38,23 @@ public class DotPositionTest {
         new DotPosition(600, 100).save(prefs, 1, 800, 400);
 
         SharedPreferences reopened = preferences(new HashMap<>(stored));
-        DotPosition portrait = DotPosition.load(reopened, 0, 400, 800, false, 2, 30, 52);
-        DotPosition landscape = DotPosition.load(reopened, 1, 800, 400, false, 2, 30, 52);
+        DotPosition portrait = DotPosition.load(reopened, 0, 400, 800, false);
+        DotPosition landscape = DotPosition.load(reopened, 1, 800, 400, false);
         assertEquals(100, portrait.x);
         assertEquals(600, portrait.y);
         assertEquals(600, landscape.x);
         assertEquals(100, landscape.y);
     }
 
-    @Test public void readsLegacyEdgeAndHeightUntilUserMovesTheDot() {
-        SharedPreferences prefs = preferences(new HashMap<>(Map.of("edgeLeft2", true, "edgeHeight2", .25f)));
-        DotPosition legacy = DotPosition.load(prefs, 2, 400, 882, false, 4, 30, 52);
-        assertEquals(4, legacy.x);
-        assertEquals(230, legacy.y);
+    @Test public void oldDotPositionsStartDockedUntilUserMovesTheTab() {
+        SharedPreferences prefs = preferences(new HashMap<>(Map.of("edgeLeft2", true, "edgeHeight2", .25f, "freeX2", .3f, "freeY2", .1f)));
+        DotPosition legacy = DotPosition.load(prefs, 2, 400, 882, false);
+        assertEquals(400, legacy.x);
+        assertEquals(441, legacy.y);
+        assertEquals(0, DotPosition.load(prefs, 2, 400, 882, true).x);
 
         new DotPosition(300, 500).save(prefs, 2, 400, 882);
-        DotPosition moved = DotPosition.load(prefs, 2, 400, 882, false, 4, 30, 52);
+        DotPosition moved = DotPosition.load(prefs, 2, 400, 882, false);
         assertEquals(300, moved.x);
         assertEquals(500, moved.y);
     }

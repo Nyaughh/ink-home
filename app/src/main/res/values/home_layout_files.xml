@@ -1,9 +1,0 @@
-<resources>
-    <string name="home_layout_file_picker_unavailable">File picker unavailable</string>
-    <string name="home_layout_file_choose_file">Choose a file through the Android file picker</string>
-    <string name="home_layout_file_exported">Layout exported. Add Android widgets separately after import.</string>
-    <string name="home_layout_file_export_failed">Could not export layout</string>
-    <string name="home_layout_file_import_failed">Could not import layout. Choose a valid Ink Home layout file.</string>
-    <string name="home_layout_file_replace_prompt">Replace Home layout? Existing Android widgets will be removed. Add them again after import.</string>
-    <string name="home_layout_file_replace">Replace layout</string>
-</resources>

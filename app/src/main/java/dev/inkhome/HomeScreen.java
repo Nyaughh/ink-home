@@ -1,22 +1,23 @@
 package dev.inkhome;
 
+import android.appwidget.AppWidgetHostView;
+import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import java.util.List;
 
 final class HomeScreen implements Screen {
     @Override
     public void build(MainActivity host) {
         LinearLayout col = host.page();
-        if (!host.store.useHomePreset() && host.desktop.active()) {
-            host.applyWallpaper();
-            SetupScreen.addHomeCallout(host, col);
-            col.addView(host.desktop.build(), new LinearLayout.LayoutParams(-1, 0, 1));
-            return;
-        }
-        col.setOnLongClickListener(v -> { host.editHome(); return true; });
         int margin = host.ink.dp(host.ink.folio.windowClass().margin);
         col.setPadding(margin, host.ink.dp(16), margin, host.ink.dp(8));
         host.applyWallpaper();
+        HomeSections sections = HomeSections.load(host);
+        if (!sections.isDefault()) {
+            customHome(host, col, sections);
+            return;
+        }
         String layout = host.store.homeLayout();
         List<Library.Book> reading = host.reading();
 
@@ -40,5 +41,35 @@ final class HomeScreen implements Screen {
             (right == null ? col : right).addView(host.ink.vflex());
         }
         host.homeFavorites(col);
+    }
+
+    private void customHome(MainActivity host, LinearLayout col, HomeSections sections) {
+        LinearLayout body = host.ink.col();
+        SetupScreen.addHomeCallout(host, body);
+        for (String id : sections.order) {
+            if (!sections.visible.contains(id)) continue;
+            View section;
+            int widget = HomeSections.widgetId(id);
+            if (widget >= 0) {
+                section = host.homeWidgets.view(widget);
+                if (section instanceof AppWidgetHostView) {
+                    AppWidgetHostView view = (AppWidgetHostView) section;
+                    if (view.getAppWidgetInfo() != null) view.setMinimumHeight(view.getAppWidgetInfo().minHeight);
+                }
+                if (sections.borders) {
+                    LinearLayout frame = host.ink.col();
+                    frame.setBackground(host.ink.card(0, false));
+                    frame.addView(section);
+                    section = frame;
+                }
+            } else {
+                section = HomeTiles.build(host, id, sections);
+                if (id.equals("current") || id.equals("next")) host.coverPage |= !host.books.isEmpty();
+            }
+            body.addView(section, host.ink.m(-1, -2, 0, sections.compact ? 4 : 10, 0, 0));
+        }
+        ScrollView scroll = host.ink.scroller(body);
+        host.bindScrollKeys(scroll);
+        col.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     }
 }

@@ -155,10 +155,6 @@ final class SheetHost {
         present(title, style.get().scroller(contents), activity.getString(R.string.service_ui_done), this::dismiss, null);
     }
 
-    void form(String title, View fields, Runnable save, EditText firstField) {
-        present(title, style.get().scroller(padded(fields)), activity.getString(R.string.service_ui_save), save, firstField);
-    }
-
     private LinearLayout padded(View child) {
         Ink ink = style.get();
         LinearLayout box = ink.col();

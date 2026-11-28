@@ -12,7 +12,7 @@ The integrated Phase 0 debug APK is 1,262,843 bytes (+962,676 bytes including th
 | S4 · Standby | The configured secure component was DeskClock. This firmware provides no dreams shell command implementation. Its ordinary standby picture remains the manual sleep-image workflow. |
 | S5 · Owner | No physical owner provision or policy change. Reversible removal was not demonstrated on the C69. Status-bar suppression, hiding apps and silent updates remain unverified. |
 | S6 · Page keys | No key events recorded during the service test. Physical presses and navigation on a loaded page were not confirmed. Production does not filter page keys in other apps. |
-| S7 · Ink dot | Verified native full clean, move, tuck, return to foreground and complete service shutdown as detailed below. Cross-app refresh mode changes were not demonstrated. The Boox service was detected, but detection cannot establish whether its own ball is visible. |
+| S7 · Floating refresh control (Phase 5 prototype) | Verified native full clean, move, tuck, return to foreground and complete service shutdown as detailed below. Cross-app refresh mode changes were not demonstrated. The Boox service was detected, but detection cannot establish whether its own ball is visible. |
 
 The approved side-by-side install succeeded. ActivityManager reported dev.inkhome.dev/dev.inkhome.MainActivity as resumed on the C69. No grants or settings changes were made.
 
