@@ -16,8 +16,9 @@ final class FavoriteAppsTile extends HomeTiles {
         super(host, item, preview, width, height);
 
         boolean preset = Boolean.parseBoolean(item.settings.get("readingPreset"));
-        boolean stockWidth = item.w == HomeLayout.COLS || item.x == 2 && item.w == 2;
-        if (preset && (naturalHeight() || item.x == 2 && item.w == 2) && stockWidth && !compact && !borders && count() == 0 && !"column".equals(item.variant)
+        boolean vertical = item.w == 1 && item.h > 1 || !naturalHeight() && height > width || "column".equals(item.variant);
+        boolean presetFace = naturalHeight() && item.x == 0 || item.x == 2 && item.w == 2;
+        if (preset && presetFace && !vertical && !compact && !borders && count() == 0
                 && fits(160, 0)) {
             presetApps();
             tile.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), 0);
@@ -39,12 +40,12 @@ final class FavoriteAppsTile extends HomeTiles {
         if (apps.isEmpty()) {
             TextView hint = label(a.getString(R.string.launcher_empty_favorites_hint), TypeScale.META, 3);
             hint.setMaxLines(Math.max(1, Math.min(3, remaining / Math.max(1, hint.getLineHeight()))));
-            if (preset && !compact) hint.setPadding(0, ink.dp(14), 0, ink.dp(10));
+            if (preset && !compact && remaining >= hint.getLineHeight() * hint.getMaxLines() + ink.dp(24))
+                hint.setPadding(0, ink.dp(14), 0, ink.dp(10));
             tile.addView(hint);
             action(() -> a.go(MainActivity.Screen.APPS));
             return;
         }
-        boolean vertical = "column".equals(item.variant);
         boolean icons = a.store.appIcons();
         int columns = vertical ? 1 : Math.max(1, availableWidth / Math.max(1, ink.dp(compact ? 64 : 84)));
         int requested = Math.min(12, count());
@@ -61,7 +62,7 @@ final class FavoriteAppsTile extends HomeTiles {
         rowHeight = Math.max(1, Math.min(remaining, Math.max(ink.dp(48), rowHeight + ink.dp(2))));
         int rows = naturalHeight() ? (requested > 0 ? requested : "grid".equals(item.variant) ? 2 : 1)
                 : Math.max(1, remaining / rowHeight);
-        if ("row".equals(item.variant)) rows = 1;
+        if (!vertical && "row".equals(item.variant)) rows = 1;
         int limit = (int) Math.min(apps.size(), (long) columns * rows);
         if (requested > 0) limit = Math.min(limit, requested);
         for (int first = 0; first < limit; first += columns) {

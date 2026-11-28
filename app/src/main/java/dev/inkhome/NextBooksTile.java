@@ -52,7 +52,7 @@ final class NextBooksTile extends HomeBookTile {
             remaining -= headHeight;
         }
         if (!list) {
-            if (!preview && !naturalHeight() && item.w == HomeLayout.COLS && remaining >= ink.dp(300)) {
+            if (!preview && !naturalHeight() && innerWidth >= ink.dp(240) && remaining >= ink.dp(300)) {
                 tile.addView(a.bookGrid(item.key, books), new LinearLayout.LayoutParams(-1, 0, 1));
             } else covers(books, remaining);
             return;
@@ -70,7 +70,7 @@ final class NextBooksTile extends HomeBookTile {
                 bookAction(row, book);
             }
             int rowHeight = measuredHeight(row, innerWidth);
-            if (rowHeight > remaining && i > 0) break;
+            if (rowHeight > remaining) break;
             tile.addView(row);
             remaining -= rowHeight;
             if (remaining < ink.dp(24)) break;

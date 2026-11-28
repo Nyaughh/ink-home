@@ -7,7 +7,13 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import dev.inkhome.folio.core.RefreshBudget.Change;
+import dev.inkhome.folio.paging.PagedList;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
 
 /** The grid and all controls operate on a draft until the user saves. */
 final class HomeEditor {
@@ -44,18 +50,13 @@ final class HomeEditor {
 
     void back() {
         if (selected == null) cancel();
-        else select(null);
+        else if (inspector == null || !inspector.back()) select(null);
     }
 
     void show(LinearLayout col) {
         canvas = new FrameLayout(host);
         col.addView(canvas, new LinearLayout.LayoutParams(-1, 0, 1));
         rebuildCanvas();
-    }
-
-    private void rememberPosition() {
-        if (inspector != null) inspector.remember(position);
-        inspector = null;
     }
 
     private void select(HomeLayout.Item item) {
@@ -66,13 +67,18 @@ final class HomeEditor {
     }
 
     private void rebuildCanvas() {
-        rememberPosition();
+        inspector = null;
         canvas.removeAllViews();
         grid = new HomeGrid(host, draft, item -> {
             if (item != null || selected != null) select(item);
             else gallery();
         }, this::gallery, selected);
-        grid.setResizeAction(this::select);
+        grid.setResizeAction(item -> {
+            if (inspector != null) inspector.sizes();
+        });
+        grid.setGestureActive(active -> {
+            if (inspector != null) inspector.setVisibility(active ? View.INVISIBLE : View.VISIBLE);
+        });
         canvas.addView(grid, new FrameLayout.LayoutParams(-1, -1));
         if (selected == null) return;
         for (HomeLayout.Item item : draft.items) {
@@ -158,7 +164,14 @@ final class HomeEditor {
 
     private void reset() {
         HomeLayout preset = HomeLayout.preset(host);
+        if (!preset.changeGrid(draft.cols, draft.rows)) {
+            host.toast(label(R.string.editor_blocked));
+            return;
+        }
         for (HomeComponent module : HomeComponents.all()) module.reset(host, original, preset);
+        for (Integer id : draft.hiddenWidgetIds) {
+            if (!preset.hiddenWidgetIds.contains(id)) preset.hiddenWidgetIds.add(id);
+        }
         for (HomeComponent module : HomeComponents.all()) module.prune(host, original, preset);
         draft = preset;
         selected = null;
@@ -166,36 +179,73 @@ final class HomeEditor {
     }
 
     private void gallery() {
-        LinearLayout gallery = panel();
+        List<Supplier<View>> groups = new ArrayList<>();
         for (HomeComponent component : HomeComponents.all()) {
-            for (String variant : component.variants()) {
-                HomeLayout.Item candidate = placement(component, variant);
-                boolean available = candidate != null;
-                HomeLayout.Item preview = available ? candidate :
-                        new HomeLayout.Item(component.id(), variant, 0, 0, HomeLayout.COLS, 3);
-                String title = component.name(host);
-                if (component.variants().length > 1) title += " / " + pretty(variant);
-                card(gallery, component, preview, title, () -> {
-                    if (available) add(component, preview, null);
-                    else replacements(component, preview, false);
-                });
-            }
-        }
-        for (HomeComponent component : HomeComponents.all()) {
+            groups.add(() -> group(component));
             for (HomeLayout.Item saved : component.restorable(host, draft)) {
-                action(gallery, label(R.string.editor_restore, component.restoredName(host, saved)), () -> {
-                    HomeLayout.Item place = placement(component, saved.variant);
-                    if (place == null) {
-                        replacements(component, saved, true);
-                    } else {
-                        occupy(saved, place);
-                        component.restored(draft, saved);
-                        insert(saved, null);
-                    }
+                groups.add(() -> {
+                    LinearLayout restore = panel();
+                    action(restore, label(R.string.editor_restore, component.restoredName(host, saved)), () -> {
+                        HomeLayout.Item place = placement(component, saved.variant);
+                        if (place == null) replacements(component, saved, true);
+                        else {
+                            occupy(saved, place);
+                            component.restored(draft, saved);
+                            insert(saved, null);
+                        }
+                    });
+                    return restore;
                 });
             }
         }
-        host.sheets.custom(label(R.string.editor_gallery), gallery);
+        int height = host.ink.dp(132 * Math.max(1f, host.ink.textOnly));
+        if (host.store.listScroll()) {
+            LinearLayout gallery = host.ink.col();
+            for (Supplier<View> group : groups) gallery.addView(group.get(), new LinearLayout.LayoutParams(-1, height));
+            host.sheets.custom(label(R.string.editor_gallery), gallery);
+        } else {
+            PagedList gallery = new PagedList(host.ink.folio, null, groups.size(), height,
+                    i -> groups.get(i).get(), 0, ignored -> {}, () -> host.refreshController.changed(canvas, Change.PAGE)) {
+                @Override protected void onMeasure(int widthSpec, int heightSpec) {
+                    int limit = host.getWindow().getDecorView().getHeight() * 2 / 3;
+                    if (MeasureSpec.getMode(heightSpec) != MeasureSpec.UNSPECIFIED)
+                        limit = Math.min(limit, MeasureSpec.getSize(heightSpec));
+                    super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(Math.min(limit, groups.size() * height),
+                            MeasureSpec.EXACTLY));
+                }
+            };
+            gallery.setSwipes(host.store.swipePages(), gallery::next, gallery::previous, gallery::next, gallery::previous);
+            host.sheets.paged(label(R.string.editor_gallery), gallery);
+        }
+    }
+
+    private View group(HomeComponent component) {
+        LinearLayout group = panel();
+        String name = component.name(host);
+        group.addView(host.ink.medium(name, 17));
+        LinearLayout variants = host.ink.row();
+        group.addView(variants, new LinearLayout.LayoutParams(-1, 0, 1));
+        for (String variant : component.variants()) {
+            HomeLayout.Item place = placement(component, variant);
+            HomeLayout.Item example = place == null ? preferredSize(component, variant, false) : place;
+            if (example == null) continue;
+            Runnable select = () -> {
+                if (place == null) replacements(component, example, false);
+                else add(component, place, null);
+            };
+            String style = pretty(variant);
+            LinearLayout card = host.ink.col();
+            card.setGravity(Gravity.CENTER);
+            View preview = HomeInspector.preview(host, grid, draft.cols, component, example, name + " / " + style,
+                    host.ink.dp(56), select);
+            card.addView(preview, new LinearLayout.LayoutParams(-1, 0, 1));
+            if (component.variants().length > 1) card.addView(host.ink.oneLine(host.ink.medium(style, 14)));
+            card.setOnClickListener(v -> select.run());
+            LinearLayout.LayoutParams cell = new LinearLayout.LayoutParams(0, -1, 1);
+            if (variants.getChildCount() > 0) cell.setMarginStart(host.ink.dp(8));
+            variants.addView(card, cell);
+        }
+        return group;
     }
 
     private void add(HomeComponent component, HomeLayout.Item item, HomeLayout.Item replacement) {
@@ -223,15 +273,20 @@ final class HomeEditor {
     }
 
     private HomeLayout.Item placement(HomeComponent component, String variant) {
+        return preferredSize(component, variant, true);
+    }
+
+    private HomeLayout.Item preferredSize(HomeComponent component, String variant, boolean requireSpace) {
         // Prefer a full-width, three-row preview. Smaller gaps can still accept
         // the component, and modules with larger minimums get their first fit.
         HomeLayout.Item best = null;
         int bestScore = Integer.MAX_VALUE;
-        for (int w = HomeLayout.COLS; w > 0; w--) {
-            for (int h = 1; h <= HomeLayout.ROWS; h++) {
-                int score = HomeLayout.COLS - w + Math.abs(3 - h);
+        for (int w = draft.cols; w > 0; w--) {
+            for (int h = 1; h <= draft.rows; h++) {
+                int score = draft.cols - w + Math.abs(3 - h);
                 if (score >= bestScore || !component.supports(w, h)) continue;
-                HomeLayout.Item match = firstSpace(component, variant, w, h);
+                HomeLayout.Item match = requireSpace ? firstSpace(component, variant, w, h) :
+                        new HomeLayout.Item(component.id(), variant, 0, 0, w, h);
                 if (match != null) {
                     best = match;
                     bestScore = score;
@@ -243,8 +298,8 @@ final class HomeEditor {
     }
 
     private HomeLayout.Item firstSpace(HomeComponent component, String variant, int w, int h) {
-        for (int y = 0; y <= HomeLayout.ROWS - h; y++) {
-            for (int x = 0; x <= HomeLayout.COLS - w; x++) {
+        for (int y = 0; y <= draft.rows - h; y++) {
+            for (int x = 0; x <= draft.cols - w; x++) {
                 if (draft.fits(null, x, y, w, h))
                     return new HomeLayout.Item(component.id(), variant, x, y, w, h);
             }
@@ -280,15 +335,29 @@ final class HomeEditor {
         target.h = location.h;
     }
 
+    private HomeLayout.Item replacementSpace(HomeComponent component, String variant, HomeLayout.Item current) {
+        int width = 0, height = 0;
+        for (int w = current.w; w > 0; w--) {
+            for (int h = current.h; h > 0; h--) {
+                if (w * h > width * height && component.supports(w, h)) {
+                    width = w;
+                    height = h;
+                }
+            }
+        }
+        return width == 0 ? null : new HomeLayout.Item(component.id(), variant, current.x, current.y, width, height);
+    }
+
     private void replacements(HomeComponent component, HomeLayout.Item candidate, boolean restore) {
         LinearLayout choices = panel();
         for (HomeLayout.Item current : draft.items) {
-            if (!component.supports(current.w, current.h)) continue;
+            HomeLayout.Item place = replacementSpace(component, candidate.variant, current);
+            if (place == null) continue;
             String name = HomeComponents.get(current.type).name(host);
             String title = label(R.string.editor_location, name,
                     label(R.string.editor_cell, current.x + 1, current.y + 1));
             action(choices, title, () -> {
-                occupy(candidate, current);
+                occupy(candidate, place);
                 if (restore) {
                     component.restored(draft, candidate);
                     insert(candidate, current);
@@ -298,13 +367,6 @@ final class HomeEditor {
         if (choices.getChildCount() == 0) {
             host.toast(label(R.string.editor_no_space));
         } else host.sheets.custom(label(R.string.editor_replace), choices);
-    }
-
-    private void card(LinearLayout panel, HomeComponent component, HomeLayout.Item item,
-                      String title, Runnable select) {
-        panel.addView(host.ink.medium(title, 17));
-        View frame = HomeInspector.preview(host, grid, component, item, title, 0, select);
-        panel.addView(frame, host.ink.m(-2, -2, 0, 4, 0, 12));
     }
 
 }

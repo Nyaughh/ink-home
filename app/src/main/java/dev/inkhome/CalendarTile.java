@@ -9,7 +9,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import dev.inkhome.folio.core.TypeScale;
-import dev.inkhome.folio.widget.MonthGrid;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -75,48 +74,40 @@ final class CalendarTile extends DataTile {
 
     private boolean showGrid(LocalDate today, YearMonth month, DayOfWeek first, Locale locale,
                              String monthName, boolean activity, boolean weekOnly) {
-        int cellWidth = width / 7;
         TextView sample = center("88");
-        if (cellWidth < textWidth(sample) || height < measuredHeight(sample) * 2) return false;
-        LinearLayout grid = ink.col();
-        LinearLayout names = ink.row();
-        grid.addView(names);
-        for (int i = 0; i < 7; i++) {
-            names.addView(center(first.plus(i).getDisplayName(TextStyle.NARROW, locale)), ink.weight(1));
-        }
-        LocalDate weekStart = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(first));
+        int line = measuredHeight(sample);
+        int minimum = Math.max(line + (activity ? ink.folio.rule : 0), textWidth(sample));
         LocalDate start = month.atDay(1).with(java.time.temporal.TemporalAdjusters.previousOrSame(first));
         int weeks = (int) ((month.atEndOfMonth().toEpochDay() - start.toEpochDay()) / 7 + 1);
-        if (!weekOnly && height >= (weeks + 1) * measuredHeight(sample)) {
-            String title = activity ? a.getString(R.string.stats_ui_this_month) : monthName;
-            if (activity && !compact && cellWidth >= Math.max(ink.dp(28),
-                    textWidth(label("88", TypeScale.LABEL, 1)) + ink.dp(4))) {
-                int[] minutes = new int[month.lengthOfMonth()];
-                for (int i = 0; i < minutes.length; i++) minutes[i] = minutesOn(month.atDay(i + 1));
-                grid.addView(MonthGrid.create(ink.folio, month, first, minutes, a.store.dailyGoal(), today, null));
-                if (useGrid(grid, title)) return true;
-                grid.removeViewAt(1);
-            }
-            for (; !start.isAfter(month.atEndOfMonth()); start = start.plusWeeks(1)) {
-                grid.addView(week(start, month, today, activity, false));
-            }
-            if (useGrid(grid, title)) return true;
-            grid.removeViews(1, grid.getChildCount() - 1);
+        int side = Math.min(width / 7, Math.max(0, height - line) / weeks);
+        boolean monthFits = !weekOnly && side >= minimum;
+        if (!monthFits) {
+            start = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(first));
+            weeks = 1;
+            side = Math.min(width / 7, Math.max(0, height - line));
+            if (side < minimum) return false;
         }
-        String title = activity ? a.getString(R.string.stats_ui_this_week) : monthName;
-        if (activity) {
-            grid.addView(week(weekStart, null, today, true, true));
-            if (useGrid(grid, title)) return true;
-            grid.removeViewAt(1);
+        String title = activity ? a.getString(monthFits ? R.string.stats_ui_this_month
+                : R.string.stats_ui_this_week) : monthName;
+        TextView heading = center(title);
+        int headingHeight = measuredHeight(heading);
+        int titledSide = Math.min(width / 7, Math.max(0, height - line - headingHeight) / weeks);
+        tile.setGravity(Gravity.CENTER);
+        if (titledSide >= minimum) {
+            side = titledSide;
+            tile.addView(heading, -1, headingHeight);
         }
-        grid.addView(week(weekStart, null, today, activity, false));
-        return useGrid(grid, title);
-    }
-
-    private boolean useGrid(LinearLayout grid, String title) {
-        if (measuredHeight(grid) > height) return false;
-        tile.addView(grid);
-        prependHeading(title);
+        LinearLayout names = ink.row();
+        for (int i = 0; i < 7; i++) {
+            names.addView(center(first.plus(i).getDisplayName(TextStyle.NARROW, locale)), side, line);
+        }
+        tile.addView(names, 7 * side, line);
+        boolean durations = activity && side >= line * 2 + ink.folio.rule
+                && side >= textWidth(center(a.getString(R.string.reader_ui_short_minutes, 1440)));
+        for (int i = 0; i < weeks; i++) {
+            tile.addView(week(start.plusWeeks(i), monthFits ? month : null, today, activity, durations, side),
+                    7 * side, side);
+        }
         return true;
     }
 
@@ -126,31 +117,41 @@ final class CalendarTile extends DataTile {
         return cell;
     }
 
-    private LinearLayout week(LocalDate start, YearMonth month, LocalDate today, boolean activity, boolean durations) {
+    private LinearLayout week(LocalDate start, YearMonth month, LocalDate today, boolean activity, boolean durations, int side) {
         LinearLayout row = ink.row();
         row.setBaselineAligned(false);
         for (int i = 0; i < 7; i++) {
             LocalDate date = start.plusDays(i);
             LinearLayout cell = ink.col();
-            row.addView(cell, ink.weight(1));
+            cell.setGravity(Gravity.CENTER);
+            row.addView(cell, side, side);
             if (month != null && !YearMonth.from(date).equals(month)) continue;
             TextView number = center(String.valueOf(date.getDayOfMonth()));
             cell.addView(number);
             int minutes = activity ? minutesOn(date) : 0;
-            if (date.equals(today)) {
-                number.setBackgroundColor(ink.folio.palette.inverse);
+            boolean met = activity && a.store.dailyGoal() > 0 && minutes >= a.store.dailyGoal();
+            boolean current = date.equals(today);
+            boolean filled = activity ? met : current;
+            if (filled) {
+                cell.setBackgroundColor(ink.folio.palette.inverse);
                 number.setTextColor(ink.folio.palette.onInverse);
             }
-            if (durations) {
-                cell.addView(center(a.getString(R.string.reader_ui_short_minutes, minutes)));
-            } else if (activity && minutes > 0) {
-                View mark = new View(a);
-                mark.setBackgroundColor(ink.TEXT);
-                cell.addView(mark, -1, ink.folio.rule);
+            if (durations && minutes > 0) {
+                TextView duration = center(a.getString(R.string.reader_ui_short_minutes, minutes));
+                if (filled) duration.setTextColor(ink.folio.palette.onInverse);
+                cell.addView(duration);
             }
-            cell.setContentDescription(activity ? a.getResources().getQuantityString(
+            if (activity && (current || !durations && minutes > 0)) {
+                View mark = new View(a);
+                mark.setBackgroundColor(filled ? ink.folio.palette.onInverse : ink.TEXT);
+                cell.addView(mark, current ? side : side / 3, ink.folio.rule);
+            }
+            String description = activity ? a.getResources().getQuantityString(
                     R.plurals.reader_ui_date_minutes, minutes, date, minutes)
-                    : date.format(DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.FULL)));
+                    : date.format(DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.FULL));
+            if (met) description = a.getString(R.string.reader_ui_goal_met, description);
+            if (current) description = a.getString(R.string.reader_ui_today, description);
+            cell.setContentDescription(description);
         }
         return row;
     }

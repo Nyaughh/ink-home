@@ -10,6 +10,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -22,6 +23,8 @@ import java.util.UUID;
 /** The editable Home canvas. Instance keys distinguish copies of the same component. */
 final class HomeLayout {
     static final int COLS = 4, ROWS = 16;
+    static final int MIN_COLS = 3, MAX_COLS = 6, MIN_ROWS = 4, MAX_ROWS = 16;
+    int cols = COLS, rows = ROWS;
     private static final String KEY = "homeCanvasV1";
     final List<Item> items = new ArrayList<>();
     final List<Integer> hiddenWidgetIds = new ArrayList<>();
@@ -51,13 +54,15 @@ final class HomeLayout {
 
     HomeLayout copy() {
         HomeLayout copy = new HomeLayout();
+        copy.cols = cols;
+        copy.rows = rows;
         for (Item item : items) copy.items.add(item.copy());
         copy.hiddenWidgetIds.addAll(hiddenWidgetIds);
         return copy;
     }
 
     boolean fits(Item ignore, int x, int y, int w, int h) {
-        if (w < 1 || h < 1 || x < 0 || y < 0 || x > COLS - w || y > ROWS - h) return false;
+        if (w < 1 || h < 1 || x < 0 || y < 0 || x > cols - w || y > rows - h) return false;
         for (Item item : items) {
             if (item != ignore && x < item.x + item.w && x + w > item.x
                     && y < item.y + item.h && y + h > item.y) return false;
@@ -66,7 +71,7 @@ final class HomeLayout {
     }
 
     /** A preview of one layout edit. Coordinates change together only when the editor accepts it. */
-    static final class Placement {
+    final class Placement {
         private final Item selected;
         private final int x, y, width, height;
         private final Map<Item, Integer> destinations = new LinkedHashMap<>();
@@ -85,8 +90,8 @@ final class HomeLayout {
             selected.w = width;
             selected.h = height;
             for (Map.Entry<Item, Integer> entry : destinations.entrySet()) {
-                entry.getKey().x = entry.getValue() % COLS;
-                entry.getKey().y = entry.getValue() / COLS;
+                entry.getKey().x = entry.getValue() % cols;
+                entry.getKey().y = entry.getValue() / cols;
             }
         }
     }
@@ -95,12 +100,12 @@ final class HomeLayout {
         if (!items.contains(selected) || !((dx == 0 && (dy == -1 || dy == 1))
                 || (dy == 0 && (dx == -1 || dx == 1)))) return null;
         int x = selected.x + dx, y = selected.y + dy;
-        long next = cells(x, y, selected.w, selected.h);
-        if (next == 0) return null;
+        BitSet next = cells(x, y, selected.w, selected.h);
+        if (next.isEmpty()) return null;
         List<Item> neighbours = new ArrayList<>();
         int distance = 0;
         for (Item other : items) {
-            if (other == selected || (next & cells(other)) == 0) continue;
+            if (other == selected || !next.intersects(cells(other))) continue;
             neighbours.add(other);
             distance = Math.max(distance, dx == 0 ? other.h : other.w);
         }
@@ -109,26 +114,26 @@ final class HomeLayout {
         // Cross the adjacent band in one action. Equal-sized widgets swap, and a wider
         // widget can cross two narrower widgets together without disturbing the rest.
         int acrossX = selected.x + dx * distance, acrossY = selected.y + dy * distance;
-        long occupied = cells(acrossX, acrossY, selected.w, selected.h);
-        if (occupied != 0) {
+        BitSet occupied = cells(acrossX, acrossY, selected.w, selected.h);
+        if (!occupied.isEmpty()) {
             Placement swap = new Placement(selected, acrossX, acrossY, selected.w, selected.h);
             for (Item other : items) {
                 if (other == selected) continue;
                 boolean pushed = neighbours.contains(other);
                 int ox = other.x - (pushed ? dx * selected.w : 0);
                 int oy = other.y - (pushed ? dy * selected.h : 0);
-                long mask = cells(ox, oy, other.w, other.h);
-                if (mask == 0 || (mask & occupied) != 0) {
+                BitSet mask = cells(ox, oy, other.w, other.h);
+                if (mask.isEmpty() || occupied.intersects(mask)) {
                     swap = null;
                     break;
                 }
-                occupied |= mask;
-                if (pushed) swap.destinations.put(other, oy * COLS + ox);
+                occupied.or(mask);
+                if (pushed) swap.destinations.put(other, oy * cols + ox);
             }
             if (swap != null) return swap;
         }
         Placement step = reflow(selected, x, y, selected.w, selected.h, dx, dy);
-        if (step != null || distance == 1 || cells(acrossX, acrossY, selected.w, selected.h) == 0) return step;
+        if (step != null || distance == 1 || cells(acrossX, acrossY, selected.w, selected.h).isEmpty()) return step;
         // With an irregular group, the one-cell destination can split a band into
         // unusable slivers. Try crossing its full depth with reflow as well.
         return reflow(selected, acrossX, acrossY, selected.w, selected.h, dx, dy);
@@ -139,27 +144,35 @@ final class HomeLayout {
         HomeComponent component = HomeComponents.get(selected.type);
         if (component == null || !component.supports(width, height)) return null;
         // Preserve the top-left anchor, moving it inward only at the outer edges.
-        int x = Math.min(selected.x, COLS - width), y = Math.min(selected.y, ROWS - height);
+        int x = Math.min(selected.x, cols - width), y = Math.min(selected.y, rows - height);
         return reflow(selected, x, y, width, height, 0, 0);
     }
 
-    private static long cells(Item item) {
+    private BitSet cells(Item item) {
         return cells(item.x, item.y, item.w, item.h);
     }
 
-    /** One bit per cell on the 4 × 16 canvas, including the sign bit for the last cell. */
-    private static long cells(int x, int y, int w, int h) {
-        if (w < 1 || w > COLS || h < 1 || h > ROWS ||
-                x < 0 || x > COLS - w || y < 0 || y > ROWS - h) return 0;
-        long row = ((1L << w) - 1) << (y * COLS + x);
-        long result = 0;
-        for (int i = 0; i < h; i++, row <<= COLS) result |= row;
+    private BitSet cells(int x, int y, int w, int h) {
+        BitSet result = new BitSet(cols * rows);
+        if (w < 1 || h < 1 || x < 0 || y < 0 || x > cols - w || y > rows - h) return result;
+        for (int row = y; row < y + h; row++) {
+            int start = row * cols + x;
+            result.set(start, start + w);
+        }
         return result;
+    }
+
+    Placement moveTo(Item selected, int x, int y) {
+        if (!items.contains(selected)) return null;
+        return reflow(selected, x, y, selected.w, selected.h,
+                Integer.compare(x, selected.x), Integer.compare(y, selected.y));
     }
 
     private Placement reflow(Item selected, int x, int y, int w, int h, int dx, int dy) {
         Placement result = new Placement(selected, x, y, w, h);
-        long target = cells(x, y, w, h), fixed = target;
+        BitSet target = cells(x, y, w, h);
+        if (target.isEmpty()) return null;
+        BitSet fixed = (BitSet) target.clone();
         int area = w * h;
         List<Item> blocked = new ArrayList<>();
         List<Item> others = new ArrayList<>();
@@ -167,52 +180,52 @@ final class HomeLayout {
             if (other == selected) continue;
             others.add(other);
             area += other.w * other.h;
-            long mask = cells(other);
-            if ((target & mask) != 0) blocked.add(other);
-            else fixed |= mask;
+            BitSet mask = cells(other);
+            if (target.intersects(mask)) blocked.add(other);
+            else fixed.or(mask);
         }
-        if (area > COLS * ROWS) return null;
+        if (area > cols * rows) return null;
         if (blocked.isEmpty()) return result;
-        if (pack(result, blocked, fixed, dx, dy)) return result;
+        if (pack(result.destinations, blocked, fixed, dx, dy)) return result;
         // A third widget can be in the only gap that fits the neighbour. Open the
         // rest of the canvas to reflow only after the local displacement fails.
-        if (others.size() != blocked.size() && pack(result, others, target, dx, dy)) return result;
+        if (others.size() != blocked.size() && pack(result.destinations, others, target, dx, dy)) return result;
         return null;
     }
 
-    private static final class Candidate {
-        final long mask;
+    private final class Candidate {
+        final BitSet mask;
         final int cell, cost;
 
         Candidate(Item item, int x, int y, int cost) {
             mask = cells(x, y, item.w, item.h);
-            cell = y * COLS + x;
+            cell = y * cols + x;
             this.cost = cost;
         }
     }
 
-    private static final class Choices {
+    private final class Choices {
         final Item item;
         final List<Candidate> places = new ArrayList<>();
         int chosen;
 
-        Choices(Item item, long fixed, int dx, int dy) {
+        Choices(Item item, BitSet fixed, int dx, int dy) {
             this.item = item;
-            for (int y = 0; y <= ROWS - item.h; y++) {
-                for (int x = 0; x <= COLS - item.w; x++) {
+            for (int y = 0; y <= rows - item.h; y++) {
+                for (int x = 0; x <= cols - item.w; x++) {
                     int horizontal = x - item.x, vertical = y - item.y;
                     // Distance first, then favour movement opposite the arrow.
                     int cost = 3 * (Math.abs(horizontal) + Math.abs(vertical))
                             + Integer.signum(horizontal * dx + vertical * dy);
                     Candidate place = new Candidate(item, x, y, cost);
-                    if ((fixed & place.mask) == 0) places.add(place);
+                    if (!fixed.intersects(place.mask)) places.add(place);
                 }
             }
             places.sort(Comparator.comparingInt(p -> p.cost));
         }
     }
 
-    private static boolean pack(Placement result, List<Item> moving, long fixed, int dx, int dy) {
+    private boolean pack(Map<Item, Integer> destinations, List<Item> moving, BitSet fixed, int dx, int dy) {
         List<Choices> choices = new ArrayList<>();
         for (Item item : moving) {
             Choices options = new Choices(item, fixed, dx, dy);
@@ -223,7 +236,7 @@ final class HomeLayout {
                 .thenComparingInt(c -> -c.item.w * c.item.h));
         if (!new PackingSearch(choices).solve(0, fixed)) return false;
         for (Choices c : choices) {
-            if (c.chosen != c.item.y * COLS + c.item.x) result.destinations.put(c.item, c.chosen);
+            destinations.put(c.item, c.chosen);
         }
         return true;
     }
@@ -237,17 +250,85 @@ final class HomeLayout {
             this.choices = choices;
         }
 
-        boolean solve(int index, long occupied) {
+        boolean solve(int index, BitSet occupied) {
             if (index == choices.size()) return true;
             Choices current = choices.get(index);
             for (Candidate place : current.places) {
-                if ((occupied & place.mask) != 0) continue;
+                if (occupied.intersects(place.mask)) continue;
                 if (--attempts < 0) return false;
                 current.chosen = place.cell;
-                if (solve(index + 1, occupied | place.mask)) return true;
+                occupied.or(place.mask);
+                if (solve(index + 1, occupied)) return true;
+                occupied.andNot(place.mask);
             }
             return false;
         }
+    }
+
+    private static boolean validGrid(int cols, int rows) {
+        return cols >= MIN_COLS && cols <= MAX_COLS && rows >= MIN_ROWS && rows <= MAX_ROWS;
+    }
+
+    boolean changeGrid(int newCols, int newRows) {
+        if (!validGrid(newCols, newRows)) return false;
+        if (cols == newCols && rows == newRows) return true;
+        if (items.size() > newCols * newRows) return false;
+
+        HomeLayout draft = copy();
+        draft.cols = newCols;
+        draft.rows = newRows;
+        // Try proportional rectangles first. Reduce preferred spans in single-cell
+        // steps when rounding or a module's aspect ratio prevents them from fitting.
+        for (int reduction = 0; reduction <= MAX_ROWS; reduction++) {
+            int area = 0;
+            for (int i = 0; i < items.size(); i++) {
+                Item before = items.get(i), item = draft.items.get(i);
+                item.x = Math.round(before.x * (float) newCols / cols);
+                item.y = Math.round(before.y * (float) newRows / rows);
+                int right = Math.round((before.x + before.w) * (float) newCols / cols);
+                int bottom = Math.round((before.y + before.h) * (float) newRows / rows);
+                int wantedW = Math.max(1, right - item.x - reduction);
+                int wantedH = Math.max(1, bottom - item.y - reduction);
+                if (!draft.chooseSpan(item, wantedW, wantedH)) return false;
+                item.x = Math.min(item.x, newCols - item.w);
+                item.y = Math.min(item.y, newRows - item.h);
+                area += item.w * item.h;
+            }
+            Map<Item, Integer> packed = new LinkedHashMap<>();
+            if (area > newCols * newRows ||
+                    !draft.pack(packed, draft.items, new BitSet(), 0, 0)) continue;
+            for (int i = 0; i < items.size(); i++) {
+                Item original = items.get(i), placed = draft.items.get(i);
+                int position = packed.get(placed);
+                original.x = position % newCols;
+                original.y = position / newCols;
+                original.w = placed.w;
+                original.h = placed.h;
+            }
+            cols = newCols;
+            rows = newRows;
+            return true;
+        }
+        return false;
+    }
+
+    private boolean chooseSpan(Item item, int wantedW, int wantedH) {
+        HomeComponent component = HomeComponents.get(item.type);
+        if (component == null) return false;
+        int best = Integer.MAX_VALUE;
+        for (int h = 1; h <= rows; h++) {
+            for (int w = 1; w <= cols; w++) {
+                if (!component.supports(w, h)) continue;
+                int dw = w - wantedW, dh = h - wantedH;
+                int cost = dw * dw + dh * dh;
+                if (cost < best) {
+                    best = cost;
+                    item.w = w;
+                    item.h = h;
+                }
+            }
+        }
+        return best != Integer.MAX_VALUE;
     }
 
     static HomeLayout preset(MainActivity host) {
@@ -385,8 +466,8 @@ final class HomeLayout {
     }
 
     private boolean place(Item item) {
-        for (int y = 0; y <= ROWS - item.h; y++) {
-            for (int x = 0; x <= COLS - item.w; x++) {
+        for (int y = 0; y <= rows - item.h; y++) {
+            for (int x = 0; x <= cols - item.w; x++) {
                 if (!fits(null, x, y, item.w, item.h)) continue;
                 item.x = x;
                 item.y = y;
@@ -399,6 +480,11 @@ final class HomeLayout {
 
     private static HomeLayout read(JSONObject data) throws JSONException {
         HomeLayout home = new HomeLayout();
+        int cols = data.optInt("cols", COLS), rows = data.optInt("rows", ROWS);
+        if (validGrid(cols, rows)) {
+            home.cols = cols;
+            home.rows = rows;
+        }
         Set<String> keys = new HashSet<>();
         JSONArray items = data.getJSONArray("items");
         for (int i = 0; i < items.length(); i++) {
@@ -411,7 +497,8 @@ final class HomeLayout {
             if (!Arrays.asList(variants).contains(variant)) variant = variants[0];
             Item item = new Item(component.id(), variant,
                     raw.optInt("x", -1), raw.optInt("y", -1), raw.optInt("w"), raw.optInt("h"));
-            if (!home.fits(null, item.x, item.y, item.w, item.h) || !component.supports(item.w, item.h)) continue;
+            // Size rules govern new spans. A module may tighten them after this placement was saved.
+            if (!home.fits(null, item.x, item.y, item.w, item.h)) continue;
             String key = raw.optString("key", "");
             if (!key.isEmpty() && keys.add(key)) item.key = key;
             else keys.add(item.key);
@@ -444,7 +531,7 @@ final class HomeLayout {
                         .put("variant", item.variant).put("x", item.x).put("y", item.y)
                         .put("w", item.w).put("h", item.h).put("settings", new JSONObject(item.settings)));
             }
-            data.put("items", cells).put("hiddenWidgetIds", new JSONArray(hiddenWidgetIds));
+            data.put("cols", cols).put("rows", rows).put("items", cells).put("hiddenWidgetIds", new JSONArray(hiddenWidgetIds));
         } catch (JSONException e) {
             throw new IllegalStateException("Cannot encode Home layout", e);
         }

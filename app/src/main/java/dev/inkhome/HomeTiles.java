@@ -26,7 +26,7 @@ class HomeTiles {
         this.height = height;
         ink = a.ink;
         compact = Boolean.parseBoolean(item.settings.get("compact"));
-        borders = Boolean.parseBoolean(item.settings.get("borders"));
+        borders = HomeComponent.hasBorder(a, item);
         tile = ink.col();
     }
 
@@ -48,7 +48,13 @@ class HomeTiles {
     }
 
     TextView label(String s, TypeScale role, int lines) {
-        return ink.lines(ink.text(s, role, ink.TEXT), lines);
+        TextView view = ink.lines(ink.text(s, role, ink.TEXT), lines);
+        if (!naturalHeight() && view.getLineHeight() > height) {
+            view.setIncludeFontPadding(false);
+            float scale = (float) Math.max(0, height - 1) / view.getLineHeight();
+            view.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, view.getTextSize() * scale);
+        }
+        return view;
     }
 
     void heading(String s) {

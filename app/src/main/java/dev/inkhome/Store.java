@@ -186,6 +186,9 @@ final class Store {
 
     String homeLayout() { return p.getString("homeLayout", "hero"); }
 
+    boolean widgetBorders() { return p.getBoolean("widgetBorders", false); }
+    void setWidgetBorders(boolean value) { p.edit().putBoolean("widgetBorders", value).apply(); }
+
     /** Scales the whole interface: spacing, icons, covers and text. */
     float uiScale() { return p.contains("uiScale") ? p.getFloat("uiScale", 1.15f)
             : dev.inkhome.folio.DisplayProbe.displayClass(context).defaultInterfaceScale(); }

@@ -28,7 +28,7 @@ class BuiltinTile extends HomeComponent {
     @Override public String name(MainActivity host) { return host.getString(title); }
     @Override public String[] variants() { return styles.clone(); }
     @Override public boolean supports(int w, int h) {
-        return w >= minWidth && w <= HomeLayout.COLS && h >= minHeight && h <= HomeLayout.ROWS;
+        return w >= minWidth && h >= minHeight && (!squareFace() || w == h);
     }
 
     @Override public View renderContent(MainActivity host, HomeLayout.Item item, boolean preview, int width, int height) {
@@ -43,7 +43,7 @@ class BuiltinTile extends HomeComponent {
     }
     @Override public Map<String, String[]> options() {
         Map<String, String[]> opts = new LinkedHashMap<>();
-        opts.put("borders", new String[]{"false", "true"});
+        opts.put("borders", new String[]{"default", "false", "true"});
         opts.put("compact", new String[]{"false", "true"});
         if (countTitle != 0) {
             String[] counts = new String[13];

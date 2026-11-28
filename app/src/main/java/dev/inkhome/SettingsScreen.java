@@ -12,12 +12,13 @@ import java.util.Arrays;
 
 final class SettingsScreen implements Screen {
     // Saved navigation state uses these route keys across locale changes.
-    static final String HOME = "Home", APPEARANCE = "Appearance", DISPLAY = "Display & refresh", READING = "Reading",
+    static final String GRID = "Home grid", HOME = "Home", APPEARANCE = "Appearance", DISPLAY = "Display & refresh", READING = "Reading",
             LIBRARY = "Library", SHELL = "System shell", CONTROLS = "Controls", DEVICE = "Device",
             ABOUT = "Updates & about", SETUP = "Set up Ink Home", LICENCES = "Font licences", DOT = "Ink dot", BOOX = "Boox apps";
 
     private static String categoryTitle(MainActivity host, String category) {
         switch (category) {
+            case GRID: return host.getString(R.string.home_grid_title);
             case HOME: return host.getString(R.string.launcher_home);
             case APPEARANCE: return host.getString(R.string.settings_ui_appearance);
             case DISPLAY: return host.getString(R.string.settings_ui_display_refresh);
@@ -84,6 +85,7 @@ final class SettingsScreen implements Screen {
                     host.getString(R.string.settings_ui_appearance_summary, Math.round(host.store.textScale() * 100),
                     Math.round(host.store.uiScale() * 100)));
             category(host, g, HOME, host.getString(R.string.home_settings_summary));
+            category(host, g, GRID, host.getString(R.string.home_grid_summary));
             category(host, g, DISPLAY, host.getString(R.string.settings_ui_display_summary, SetupScreen.displayName(host),
                     host.getString(host.store.listScroll() ? R.string.settings_ui_scroll : R.string.settings_ui_pages)));
             category(host, g, READING, host.store.dailyGoal() == 0 ? host.getString(R.string.settings_ui_daily_goal_off)
@@ -97,6 +99,7 @@ final class SettingsScreen implements Screen {
             category(host, g, DEVICE, freeSpace(host));
             category(host, g, ABOUT, host.getString(R.string.settings_ui_version, Updater.installedVersion(host)));
         } else switch (category) {
+            case GRID: grid(host, g); break;
             case APPEARANCE: appearance(host, g); break;
             case DISPLAY: display(host, g); break;
             case READING: reading(host, g); break;
@@ -142,6 +145,32 @@ final class SettingsScreen implements Screen {
 
     private static String freeSpace(MainActivity host) {
         return host.getString(R.string.settings_ui_space_free, android.text.format.Formatter.formatFileSize(host, host.getFilesDir().getUsableSpace()));
+    }
+
+    private void grid(MainActivity host, MainActivity.Rows rows) {
+        HomeLayout layout = HomeLayout.load(host);
+        gridDimension(host, rows, layout, true);
+        gridDimension(host, rows, layout, false);
+        rows.toggle(host.getString(R.string.home_default_borders), host.store.widgetBorders(), host.store::setWidgetBorders);
+    }
+
+    private void gridDimension(MainActivity host, MainActivity.Rows rows, HomeLayout layout, boolean columns) {
+        int min = columns ? HomeLayout.MIN_COLS : HomeLayout.MIN_ROWS;
+        int max = columns ? HomeLayout.MAX_COLS : HomeLayout.MAX_ROWS;
+        int current = columns ? layout.cols : layout.rows;
+        String title = host.getString(columns ? R.string.home_grid_columns : R.string.home_grid_rows);
+        String[] choices = new String[max - min + 1];
+        for (int i = 0; i < choices.length; i++) choices[i] = Integer.toString(min + i);
+        rows.add(title, Integer.toString(current), () -> host.choose(title, choices, current - min, i -> {
+            int value = min + i;
+            if (value == current) return;
+            if (layout.changeGrid(columns ? value : layout.cols, columns ? layout.rows : value)) {
+                layout.save(host);
+                host.render();
+            } else {
+                host.toast(host.getString(R.string.home_grid_cannot_fit));
+            }
+        }));
     }
 
     private void appearance(MainActivity host, MainActivity.Rows g) {

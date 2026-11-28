@@ -132,4 +132,55 @@ public class HomeReflowTest {
         assertNull(fragmented.resize(narrow, 3, 1));
         valid(fragmented);
     }
+
+    @Test public void longDistanceDropSwapsAcrossAll96Cells() {
+        HomeLayout layout = new HomeLayout();
+        assertTrue(layout.changeGrid(6, 16));
+        for (int y = 0; y < layout.rows; y++)
+            for (int x = 0; x < layout.cols; x++) add(layout, x, y, 1, 1);
+        HomeLayout.Item first = layout.items.get(0), last = layout.items.get(95);
+        List<String> before = positions(layout);
+        assertNull(layout.moveTo(first, 6, 0));
+        assertNull(layout.moveTo(first.copy(), 2, 2));
+        HomeLayout.Placement placement = layout.moveTo(first, 5, 15);
+        assertNotNull(placement);
+        assertEquals(before, positions(layout));
+        placement.apply();
+        assertEquals(5, first.x);
+        assertEquals(15, first.y);
+        assertEquals(0, last.x);
+        assertEquals(0, last.y);
+        valid(layout);
+    }
+
+    @Test public void changingGridKeepsInstancesAndMapsFullWidthBands() {
+        HomeLayout layout = new HomeLayout();
+        HomeLayout.Item first = add(layout, 0, 0, 4, 8);
+        HomeLayout.Item second = add(layout, 0, 8, 4, 8);
+        first.settings.put("count", "3");
+        layout.hiddenWidgetIds.add(72);
+        assertTrue(layout.changeGrid(3, 4));
+        assertSame(first, layout.items.get(0));
+        assertSame(second, layout.items.get(1));
+        assertEquals(3, first.w);
+        assertEquals(2, first.h);
+        assertEquals(2, second.y);
+        assertEquals("3", first.settings.get("count"));
+        assertEquals(List.of(72), layout.hiddenWidgetIds);
+        assertEquals(3, layout.copy().cols);
+        assertEquals(4, layout.copy().rows);
+        valid(layout);
+    }
+
+    @Test public void invalidOrOvercrowdedGridChangeLeavesCanvasUntouched() {
+        HomeLayout layout = new HomeLayout();
+        for (int i = 0; i < 13; i++) add(layout, i % 4, i / 4, 1, 1);
+        List<String> before = positions(layout);
+        assertFalse(layout.changeGrid(3, 4));
+        assertFalse(layout.changeGrid(7, 16));
+        assertFalse(layout.changeGrid(4, 17));
+        assertEquals(before, positions(layout));
+        assertEquals(4, layout.cols);
+        assertEquals(16, layout.rows);
+    }
 }

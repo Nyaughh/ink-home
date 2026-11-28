@@ -4,6 +4,7 @@
     <string name="editor_reset_title">Restore the preset layout?</string>
     <string name="editor_reset_note">This replaces your draft. Choose Save to keep the preset or Cancel to return to your saved Home.</string>
     <string name="editor_gallery">Add to Home</string>
+    <string name="editor_global_default">Use global default</string>
     <string name="editor_remove">Remove</string>
     <string name="editor_move">Move</string>
     <string name="editor_size">Resize</string>

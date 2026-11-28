@@ -2,9 +2,11 @@ package dev.inkhome;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewConfiguration;
 import android.widget.FrameLayout;
 import java.util.function.Consumer;
 
@@ -12,13 +14,24 @@ import java.util.function.Consumer;
 final class HomeGrid extends ViewGroup {
     private final Paint outline = new Paint();
     private final int stroke;
+    private final int touchSlop;
     private FrameLayout selected;
-    private final int[] rowEdges = new int[HomeLayout.ROWS + 1];
-    private final int[] intrinsicHeights = new int[HomeLayout.ROWS];
+    private final int[] rowEdges;
+    private final HomeLayout layout;
+    private final Consumer<HomeLayout.Item> select;
+    private Consumer<Boolean> gestureActive;
+    private final Rect ghost = new Rect();
+    private final int[] intrinsicHeights;
 
     HomeGrid(MainActivity host, HomeLayout layout, Consumer<HomeLayout.Item> select,
              Runnable longPress, String selectedKey) {
         super(host);
+        this.layout = layout;
+        this.select = select;
+        rowEdges = new int[layout.rows + 1];
+        intrinsicHeights = new int[layout.rows];
+        if (select != null) setMotionEventSplittingEnabled(false);
+        touchSlop = ViewConfiguration.get(host).getScaledTouchSlop();
         boolean editing = select != null;
         stroke = Math.max(1, host.ink.dp(2));
         outline.setColor(host.ink.TEXT);
@@ -31,10 +44,12 @@ final class HomeGrid extends ViewGroup {
             tile.setTag(item);
             tile.addView(component.render(host, item, false), new FrameLayout.LayoutParams(-1, -1));
             if (editing) {
+                tile.setMotionEventSplittingEnabled(false);
                 View handle = new View(host);
                 handle.setContentDescription(component.name(host));
                 handle.setOnClickListener(v -> select.accept(item));
                 handle.setFocusable(true);
+                handle.setOnTouchListener(new HomeGridGesture(this, layout, item, false, touchSlop));
                 tile.getChildAt(0).setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
                 tile.setDescendantFocusability(FOCUS_BEFORE_DESCENDANTS);
                 tile.addView(handle, new FrameLayout.LayoutParams(-1, -1));
@@ -50,9 +65,40 @@ final class HomeGrid extends ViewGroup {
         View grip = new View(getContext());
         grip.setContentDescription(getResources().getString(R.string.editor_size));
         grip.setFocusable(true);
+        grip.setOnTouchListener(new HomeGridGesture(this, layout, item, true, touchSlop));
         grip.setOnClickListener(v -> resize.accept(item));
         int target = ((MainActivity) getContext()).ink.dp(44);
         selected.addView(grip, new FrameLayout.LayoutParams(target, target, Gravity.BOTTOM | Gravity.RIGHT));
+    }
+
+    void setGestureActive(Consumer<Boolean> listener) {
+        gestureActive = listener;
+    }
+
+    void dragging(boolean active) {
+        if (gestureActive != null) gestureActive.accept(active);
+        if (!active && !ghost.isEmpty()) {
+            ghost.setEmpty();
+            invalidate();
+        }
+    }
+
+    void showTarget(int x, int y, int w, int h) {
+        int left = x * getWidth() / layout.cols, right = (x + w) * getWidth() / layout.cols;
+        if (ghost.left == left && ghost.right == right && ghost.top == rowEdges[y]
+                && ghost.bottom == rowEdges[y + h]) return;
+        ghost.set(left, rowEdges[y], right, rowEdges[y + h]);
+        invalidate();
+    }
+
+    void clearTarget() {
+        if (ghost.isEmpty()) return;
+        ghost.setEmpty();
+        invalidate();
+    }
+
+    void dropped(HomeLayout.Item item) {
+        select.accept(item);
     }
 
     int rowSpan(int y, int rows) {
@@ -60,14 +106,14 @@ final class HomeGrid extends ViewGroup {
     }
 
     private void measureRows(int width, int height) {
-        final int rows = HomeLayout.ROWS;
+        final int rows = layout.rows;
         java.util.Arrays.fill(intrinsicHeights, 0);
         int flexibleRows = rows;
         long requestedExtra = 0;
         for (int i = 0; i < getChildCount(); i++) {
             FrameLayout tile = (FrameLayout) getChildAt(i);
             HomeLayout.Item item = (HomeLayout.Item) tile.getTag();
-            if (item.w != HomeLayout.COLS || !"content".equals(item.settings.get("heightMode"))) continue;
+            if (item.w != layout.cols || !"content".equals(item.settings.get("heightMode"))) continue;
             // Measure the component alone. The editor's tap shield and grip do not contribute height.
             View component = tile.getChildAt(0);
             component.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
@@ -111,7 +157,7 @@ final class HomeGrid extends ViewGroup {
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             HomeLayout.Item item = (HomeLayout.Item) child.getTag();
-            int w = (item.x + item.w) * width / HomeLayout.COLS - item.x * width / HomeLayout.COLS;
+            int w = (item.x + item.w) * width / layout.cols - item.x * width / layout.cols;
             int h = rowSpan(item.y, item.h);
             child.measure(MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY));
@@ -122,13 +168,27 @@ final class HomeGrid extends ViewGroup {
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             HomeLayout.Item item = (HomeLayout.Item) child.getTag();
-            int x = item.x * (r - l) / HomeLayout.COLS, y = rowEdges[item.y];
+            int x = item.x * (r - l) / layout.cols, y = rowEdges[item.y];
             child.layout(x, y, x + child.getMeasuredWidth(), y + child.getMeasuredHeight());
         }
     }
 
     @Override protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
+        if (!ghost.isEmpty()) {
+            MainActivity host = (MainActivity) getContext();
+            float inset = stroke * 1.5f;
+            outline.setStyle(Paint.Style.STROKE);
+            outline.setColor(host.ink.PAPER);
+            outline.setStrokeWidth(3 * stroke);
+            canvas.drawRect(ghost.left + inset, ghost.top + inset,
+                    ghost.right - inset, ghost.bottom - inset, outline);
+            outline.setColor(host.ink.TEXT);
+            outline.setStrokeWidth(stroke);
+            canvas.drawRect(ghost.left + inset, ghost.top + inset,
+                    ghost.right - inset, ghost.bottom - inset, outline);
+            return;
+        }
         if (selected == null) return;
         float half = stroke / 2f;
         outline.setStyle(Paint.Style.STROKE);

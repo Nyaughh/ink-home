@@ -47,11 +47,11 @@ final class AndroidWidgetTile extends HomeComponent {
     @Override public String name(MainActivity host) { return host.getString(R.string.home_widget_android); }
     @Override public String[] variants() { return new String[]{"default"}; }
     @Override public boolean supports(int w, int h) {
-        return w >= 1 && w <= HomeLayout.COLS && h >= 1 && h <= HomeLayout.ROWS;
+        return w >= 1 && h >= 1;
     }
     @Override public Map<String, String[]> options() {
         Map<String,String[]> choices = new LinkedHashMap<>();
-        choices.put("borders", new String[]{"false", "true"});
+        choices.put("borders", new String[]{"default", "false", "true"});
         choices.put("redraw", new String[]{"default", "as requested", "1 second", "10 seconds", "1 minute"});
         return choices;
     }

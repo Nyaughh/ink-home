@@ -1,0 +1,9 @@
+<resources>
+    <string name="home_panel_widgets">Widgets</string>
+    <string name="home_grid_title">Home grid</string>
+    <string name="home_grid_summary">Grid size and widget borders</string>
+    <string name="home_grid_columns">Columns</string>
+    <string name="home_grid_rows">Rows</string>
+    <string name="home_default_borders">Show widget borders by default</string>
+    <string name="home_grid_cannot_fit">Your widgets need more space. Choose a larger grid.</string>
+</resources>

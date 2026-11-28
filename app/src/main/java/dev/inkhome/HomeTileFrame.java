@@ -12,6 +12,7 @@ final class HomeTileFrame extends FrameLayout {
 
     private final Content factory;
     private final boolean responsive;
+    private final int preferredInset;
     private int builtWidth = -1, builtHeight = -1;
     private int naturalWidth = -1, naturalHeight;
 
@@ -19,19 +20,24 @@ final class HomeTileFrame extends FrameLayout {
         super(host);
         this.factory = factory;
         this.responsive = responsive;
-        if (Boolean.parseBoolean(item.settings.get("borders"))) {
+        if (HomeComponent.hasBorder(host, item)) {
             Ink ink = host.ink;
             GradientDrawable border = new GradientDrawable();
             border.setColor(ink.PAPER);
             border.setStroke(ink.folio.rule, ink.folio.palette.strong);
             setBackground(border);
             boolean compact = Boolean.parseBoolean(item.settings.get("compact"));
-            int inset = ink.folio.rule + ink.dp(compact ? 4 : 8);
-            setPadding(inset, inset, inset, inset);
-        }
+            preferredInset = ink.folio.rule + ink.dp(compact ? 4 : 8);
+        } else preferredInset = 0;
     }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
+        int shorterEdge = MeasureSpec.getSize(widthSpec);
+        if (MeasureSpec.getMode(heightSpec) != MeasureSpec.UNSPECIFIED) {
+            shorterEdge = Math.min(shorterEdge, MeasureSpec.getSize(heightSpec));
+        }
+        int inset = Math.min(preferredInset, shorterEdge / 8);
+        if (inset != getPaddingTop()) setPadding(inset, inset, inset, inset);
         int width = Math.max(0, MeasureSpec.getSize(widthSpec) - getPaddingLeft() - getPaddingRight());
         boolean natural = MeasureSpec.getMode(heightSpec) == MeasureSpec.UNSPECIFIED;
         int availableHeight = Math.max(0, MeasureSpec.getSize(heightSpec) - getPaddingTop() - getPaddingBottom());

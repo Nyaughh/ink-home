@@ -20,11 +20,14 @@ A calm, reading-first home screen for e-ink Android tablets.
   text changes. Or open books in NeoReader, KOReader or another app; their
   time still counts, and KOReader's progress shows too.
 - **Home** opens with your current book, Up next and favourite apps. Choose
-  **Edit Home layout** in the pull-down panel, open **Settings › Home**, or
-  hold a widget and choose **Edit layout**. Tap a widget to move it with the
-  arrows, choose its size in cells and preview its variants and settings.
-  Nearby widgets make room where they fit. Add a widget from the gallery or
-  reset to the reading preset. Save applies the draft and Cancel discards it.
+  the **Edit Home layout** tile in the pull-down panel, open **Settings › Home**,
+  or hold a widget and choose **Edit layout**. Drag a widget to move it. Select
+  it and drag its corner to resize. The drawer also offers cell sizes, move
+  arrows, styles and widget settings. Save applies your draft.
+- **Add** opens a picker grouped by widget, including a square reading-goal
+  ring. The picker follows your pages or scrolling preference.
+  **Settings › Home grid** controls grid dimensions and the default widget
+  border. Individual widgets can override that border.
 - Add widgets from installed apps in **Settings › Home**. Android asks you to
   approve binding when needed. The redraw limit defaults to once a minute.
 - The dock keeps Settings at the left, today's reading in the middle and the

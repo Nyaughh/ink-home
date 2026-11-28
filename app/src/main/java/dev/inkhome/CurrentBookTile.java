@@ -31,7 +31,7 @@ final class CurrentBookTile extends HomeBookTile {
         }
         List<Library.Book> reading = a.reading();
         if ("shelf".equals(item.variant)) {
-            if (!preview && !naturalHeight() && item.w == HomeLayout.COLS && fits(240, 300)) {
+            if (!preview && !naturalHeight() && fits(240, 300)) {
                 a.homeShelf(tile, reading, item.key);
             } else {
                 List<Library.Book> shelf = orderedBooks();
@@ -53,7 +53,7 @@ final class CurrentBookTile extends HomeBookTile {
         }
         if (!minimal && fits(232, 136) && !compact) {
             int cover = 104;
-            boolean splitPreset = item.x == 0 && item.w == 2 && item.h == HomeLayout.ROWS;
+            boolean splitPreset = item.x == 0 && item.w == 2 && fits(232, 300);
             boolean presetHero = preset && (naturalHeight() || splitPreset);
             if (presetHero) {
                 int screen = Math.round(a.getResources().getConfiguration().screenHeightDp / ink.folio.uiScale);

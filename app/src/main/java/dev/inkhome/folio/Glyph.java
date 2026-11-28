@@ -78,6 +78,10 @@ public class Glyph extends Drawable {
             case "forward": case "chevron": lines(c,9,5, 16,12, 9,19); break;
             case "up": lines(c,5,15, 12,8, 19,15); break;
             case "down": lines(c,5,9, 12,16, 19,9); break;
+            case "trash":
+                segment(c,4,6,20,6); segment(c,9,3,15,3);
+                lines(c,6,8, 7,21, 17,21, 18,8);
+                segment(c,10,10,10,18); segment(c,14,10,14,18); break;
             case "close": segment(c,5,5,19,19); segment(c,19,5,5,19); break;
             case "more":
                 for (int x = 5; x <= 19; x += 7) c.drawRect(x-1,11,x+1,13,solid);

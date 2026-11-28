@@ -942,6 +942,10 @@ public class MainActivity extends Activity {
             tiles.add(panelTile("light", getString(caps.warmLight ? R.string.launcher_light_and_warmth : R.string.launcher_light), getString(R.string.launcher_display_settings), false,
                     this::openPanelLight));
         }
+        tiles.add(panelTile("grid", getString(R.string.home_edit_panel), getString(R.string.home_panel_widgets), false, () -> {
+            closePanel();
+            editHome();
+        }));
         for (int i = 0; i < tiles.size(); i += 2) {
             addTiles(p, tiles.get(i), i + 1 < tiles.size() ? tiles.get(i + 1) : new View(this));
         }
@@ -1017,10 +1021,6 @@ public class MainActivity extends Activity {
             render();
         }), ink.weight(1));
         p.addView(shortcuts);
-        p.addView(Button.create(ink.folio, getString(R.string.home_edit_panel), Button.Style.TEXT, v -> {
-            closePanel();
-            editHome();
-        }));
         LinearLayout wrap = ink.col();
         wrap.addView(p);
         wrap.addView(ink.hair());

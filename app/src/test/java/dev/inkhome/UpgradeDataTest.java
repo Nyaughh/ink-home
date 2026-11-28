@@ -39,6 +39,20 @@ public class UpgradeDataTest {
         return context;
     }
 
+    @Test public void bordersFollowDefaultUnlessAnInstanceHasAnExplicitChoice() {
+        MainActivity activity = mock(MainActivity.class);
+        HomeLayout.Item tile = new HomeLayout.Item("clock", "default", 0, 0, 1, 1);
+        activity.store = new Store(legacyContext(Map.of()));
+        assertFalse(HomeComponent.hasBorder(activity, tile));
+        tile.settings.put("borders", "true");
+        assertTrue(HomeComponent.hasBorder(activity, tile));
+        activity.store = new Store(legacyContext(Map.of("widgetBorders", true)));
+        tile.settings.put("borders", "false");
+        assertFalse(HomeComponent.hasBorder(activity, tile));
+        tile.settings.remove("borders");
+        assertTrue(HomeComponent.hasBorder(activity, tile));
+    }
+
     @Test public void locksPortraitOnFreshInstallAndHonorsExplicitOptOut() {
         assertTrue(new Store(legacyContext(Map.of())).portraitLocked());
         assertFalse(new Store(legacyContext(Map.of("portraitLocked", false))).portraitLocked());
@@ -276,6 +290,31 @@ public class UpgradeDataTest {
         old.items.get(2).w = 3;
         old.save(activity);
         assertTrue(HomeLayout.load(activity).items.get(2).settings.isEmpty());
+    }
+
+    @Test public void firstCanvasWithoutDimensionsRetainsLegacyGoalAcrossSave() {
+        Map<String, Object> values = new java.util.HashMap<>();
+        values.put("homeCanvasV1", """
+                {"items":[{"key":"my-goal","type":"goal","x":0,"y":12,"w":4,"h":2,
+                "settings":{"borders":"true"}}],"hiddenWidgetIds":[91]}
+                """);
+        MainActivity activity = homeActivity(values);
+        HomeLayout layout = HomeLayout.load(activity);
+        assertEquals(4, layout.cols);
+        assertEquals(16, layout.rows);
+        layout.save(activity);
+        layout = HomeLayout.load(activity);
+        assertEquals(4, layout.items.get(0).w);
+        assertEquals(2, layout.items.get(0).h);
+        assertTrue(layout.changeGrid(6, 14));
+        layout.save(activity);
+        layout = HomeLayout.load(activity);
+        assertEquals(6, layout.cols);
+        assertEquals(14, layout.rows);
+        assertEquals("my-goal", layout.items.get(0).key);
+        assertEquals("true", layout.items.get(0).settings.get("borders"));
+        assertEquals(List.of(91), layout.hiddenWidgetIds);
+        assertValid(layout);
     }
 
     @Test public void emptyCanvasAndRepeatedComponentsRoundTrip() {
