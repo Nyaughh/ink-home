@@ -11,6 +11,8 @@ Home uses one canvas with configurable dimensions. Older layouts open on the ori
 
 Full-width widgets in the reading preset can use the layout setting `heightMode=content`. The grid measures the component at its available width, divides its natural height across its rows and gives the other rows the remaining space. Resizing in the editor switches the instance to fixed grid sizing.
 
+Each drag handle anchors the opposite corner. The same span rules apply to dragging and to the Width and Height steppers in the inspector. For a square face, stepping either dimension changes both. Tapping a widget opens a compact header outside the selection. Its info button opens the settings.
+
 ## Persistence
 
 HomeLayout.load reads the versioned homeCanvasV1 preference. On upgrade it imports existing section choices and older grids. Save replaces the document as one preferences edit. Reading progress, library, app favourites and statistics use separate records. The editor works on a deep copy until Save. Reset replaces that draft with the reading preset.

@@ -10,22 +10,26 @@ final class HomeTileFrame extends FrameLayout {
         View build(int width, int height);
     }
 
+    final boolean bordered;
     private final Content factory;
     private final boolean responsive;
     private final int preferredInset;
     private int builtWidth = -1, builtHeight = -1;
     private int naturalWidth = -1, naturalHeight;
 
-    HomeTileFrame(MainActivity host, HomeLayout.Item item, boolean responsive, Content factory) {
+    HomeTileFrame(MainActivity host, HomeLayout.Item item, boolean preview, boolean responsive, Content factory) {
         super(host);
         this.factory = factory;
         this.responsive = responsive;
-        if (HomeComponent.hasBorder(host, item)) {
+        bordered = HomeComponent.hasBorder(host, item);
+        if (bordered) {
             Ink ink = host.ink;
-            GradientDrawable border = new GradientDrawable();
-            border.setColor(ink.PAPER);
-            border.setStroke(ink.folio.rule, ink.folio.palette.strong);
-            setBackground(border);
+            if (preview) {
+                GradientDrawable border = new GradientDrawable();
+                border.setColor(ink.PAPER);
+                border.setStroke(ink.folio.rule, ink.folio.palette.strong);
+                setBackground(border);
+            } else setBackgroundColor(ink.PAPER);
             boolean compact = Boolean.parseBoolean(item.settings.get("compact"));
             preferredInset = ink.folio.rule + ink.dp(compact ? 4 : 8);
         } else preferredInset = 0;

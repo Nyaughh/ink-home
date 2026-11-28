@@ -177,7 +177,7 @@ final class SheetHost {
         int rule = ink.folio.rule;
         panel.setPadding(rule, rule, rule, rule);
         LinearLayout header = ink.row();
-        header.setPadding(ink.dp(16), 0, 0, 0);
+        header.setPadding(ink.dp(16), ink.dp(4), ink.dp(6), ink.dp(4));
         header.addView(ink.text(title, TypeScale.TITLE_SM, ink.TEXT), ink.weight(1));
         View close = ink.iconButton("close", this::dismiss);
         close.setContentDescription(activity.getString(R.string.service_ui_close));

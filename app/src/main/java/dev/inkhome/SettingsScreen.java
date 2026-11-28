@@ -78,7 +78,8 @@ final class SettingsScreen implements Screen {
                 category == null || (expanded && parent(category) == null && !SetupScreen.FROM_HOME.equals(category))
                         ? null : host::onBackPressed));
         LinearLayout body = host.ink.col();
-        body.setPadding(host.ink.dp(MainActivity.PAD), 0, host.ink.dp(MainActivity.PAD), host.ink.dp(8));
+        body.setPadding(host.ink.dp(MainActivity.PAD), host.ink.dp(8),
+                host.ink.dp(MainActivity.PAD), host.ink.dp(8));
         MainActivity.Rows g = host.new Rows(expanded || host.ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.COMPACT);
         if (category == null) {
             category(host, g, APPEARANCE,
@@ -161,16 +162,16 @@ final class SettingsScreen implements Screen {
         String title = host.getString(columns ? R.string.home_grid_columns : R.string.home_grid_rows);
         String[] choices = new String[max - min + 1];
         for (int i = 0; i < choices.length; i++) choices[i] = Integer.toString(min + i);
-        rows.add(title, Integer.toString(current), () -> host.choose(title, choices, current - min, i -> {
+        rows.control(title, new Stepper(host.ink.folio, title, choices, current - min, i -> {
             int value = min + i;
             if (value == current) return;
             if (layout.changeGrid(columns ? value : layout.cols, columns ? layout.rows : value)) {
                 layout.save(host);
-                host.render();
             } else {
                 host.toast(host.getString(R.string.home_grid_cannot_fit));
             }
-        }));
+            host.render();
+        }), true);
     }
 
     private void appearance(MainActivity host, MainActivity.Rows g) {

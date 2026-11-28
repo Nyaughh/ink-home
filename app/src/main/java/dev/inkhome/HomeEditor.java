@@ -18,6 +18,8 @@ import java.util.function.Supplier;
 /** The grid and all controls operate on a draft until the user saves. */
 final class HomeEditor {
     private FrameLayout canvas;
+    private FrameLayout toolbarSlot;
+    private LinearLayout actions;
     private HomeInspector inspector;
     private final HomeInspector.Position position = new HomeInspector.Position();
     private final MainActivity host;
@@ -67,12 +69,17 @@ final class HomeEditor {
     }
 
     private void rebuildCanvas() {
+        if (toolbarSlot != null && toolbarSlot.getChildCount() > 1) {
+            toolbarSlot.removeViewAt(1);
+            actions.setVisibility(View.VISIBLE);
+        }
         inspector = null;
         canvas.removeAllViews();
         grid = new HomeGrid(host, draft, item -> {
             if (item != null || selected != null) select(item);
             else gallery();
         }, this::gallery, selected);
+        grid.setDropAction(() -> select(null));
         grid.setResizeAction(item -> {
             if (inspector != null) inspector.sizes();
         });
@@ -106,18 +113,25 @@ final class HomeEditor {
                     for (HomeComponent module : HomeComponents.all()) module.prune(host, original, draft);
                     select(null);
                 });
-        canvas.addView(inspector, inspector.placement(grid, item));
+        if (toolbarSlot != null && inspector.needsToolbar(grid, item)) {
+            actions.setVisibility(View.GONE);
+            toolbarSlot.addView(inspector, new FrameLayout.LayoutParams(-1, -1));
+        } else {
+            canvas.addView(inspector, inspector.placement(grid, item));
+        }
     }
 
     View toolbar() {
-        LinearLayout bar = host.ink.row();
-        toolbarAction(bar, R.string.editor_add, this::gallery);
-        toolbarAction(bar, R.string.editor_reset, () -> host.sheets.message(
+        toolbarSlot = new FrameLayout(host);
+        actions = host.ink.row();
+        toolbarAction(actions, R.string.editor_add, this::gallery);
+        toolbarAction(actions, R.string.editor_reset, () -> host.sheets.message(
                 label(R.string.editor_reset_title), label(R.string.editor_reset_note),
                 label(R.string.editor_reset), this::reset));
-        toolbarAction(bar, R.string.library_ui_cancel, this::cancel);
-        toolbarAction(bar, R.string.service_ui_save, this::save);
-        return bar;
+        toolbarAction(actions, R.string.library_ui_cancel, this::cancel);
+        toolbarAction(actions, R.string.service_ui_save, this::save);
+        toolbarSlot.addView(actions, new FrameLayout.LayoutParams(-1, -1));
+        return toolbarSlot;
     }
 
     private void toolbarAction(LinearLayout bar, int title, Runnable action) {
@@ -147,6 +161,8 @@ final class HomeEditor {
         selected = null;
         inspector = null;
         canvas = null;
+        toolbarSlot = null;
+        actions = null;
         grid = null;
         original = null;
         draft = null;
@@ -198,7 +214,7 @@ final class HomeEditor {
                 });
             }
         }
-        int height = host.ink.dp(132 * Math.max(1f, host.ink.textOnly));
+        int height = host.ink.dp(144 * Math.max(1f, host.ink.textOnly));
         if (host.store.listScroll()) {
             LinearLayout gallery = host.ink.col();
             for (Supplier<View> group : groups) gallery.addView(group.get(), new LinearLayout.LayoutParams(-1, height));
@@ -224,7 +240,9 @@ final class HomeEditor {
         String name = component.name(host);
         group.addView(host.ink.medium(name, 17));
         LinearLayout variants = host.ink.row();
-        group.addView(variants, new LinearLayout.LayoutParams(-1, 0, 1));
+        LinearLayout.LayoutParams strip = new LinearLayout.LayoutParams(-1, 0, 1);
+        strip.topMargin = host.ink.dp(6);
+        group.addView(variants, strip);
         for (String variant : component.variants()) {
             HomeLayout.Item place = placement(component, variant);
             HomeLayout.Item example = place == null ? preferredSize(component, variant, false) : place;
@@ -239,12 +257,18 @@ final class HomeEditor {
             View preview = HomeInspector.preview(host, grid, draft.cols, component, example, name + " / " + style,
                     host.ink.dp(56), select);
             card.addView(preview, new LinearLayout.LayoutParams(-1, 0, 1));
-            if (component.variants().length > 1) card.addView(host.ink.oneLine(host.ink.medium(style, 14)));
+            if (component.variants().length > 1) {
+                TextView caption = host.ink.oneLine(host.ink.medium(style, 14));
+                caption.setGravity(Gravity.CENTER);
+                caption.setPadding(host.ink.dp(4), host.ink.dp(3), host.ink.dp(4), 0);
+                card.addView(caption);
+            }
             card.setOnClickListener(v -> select.run());
             LinearLayout.LayoutParams cell = new LinearLayout.LayoutParams(0, -1, 1);
             if (variants.getChildCount() > 0) cell.setMarginStart(host.ink.dp(8));
             variants.addView(card, cell);
         }
+        group.addView(host.ink.hair(), host.ink.m(-1, host.ink.folio.hairline, 0, 8, 0, 0));
         return group;
     }
 
@@ -316,6 +340,7 @@ final class HomeEditor {
 
     private void action(LinearLayout panel, String title, Runnable run) {
         TextView view = host.ink.body(title);
+        view.setPadding(host.ink.dp(8), host.ink.dp(6), host.ink.dp(8), host.ink.dp(6));
         view.setMinHeight(host.ink.dp(48));
         view.setGravity(Gravity.CENTER_VERTICAL);
         view.setBackground(host.ink.pressable());

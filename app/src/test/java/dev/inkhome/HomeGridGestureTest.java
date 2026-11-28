@@ -35,7 +35,7 @@ public class HomeGridGestureTest {
     }
 
     @Test public void dragAcrossVariableTracksCommitsOnlyOnDrop() {
-        HomeGridGesture gesture = new HomeGridGesture(grid, layout, item, false, 8);
+        HomeGridGesture gesture = new HomeGridGesture(grid, layout, item, HomeGridGesture.Handle.MOVE, 8);
         touch(gesture, MotionEvent.ACTION_DOWN, 40, 50);
         touch(gesture, MotionEvent.ACTION_MOVE, 449, 180);
         touch(gesture, MotionEvent.ACTION_MOVE, 450, 181);
@@ -44,12 +44,13 @@ public class HomeGridGestureTest {
         touch(gesture, MotionEvent.ACTION_UP, 450, 181);
         assertEquals(4, item.x);
         assertEquals(2, item.y);
-        verify(grid).dropped(item);
+        verify(grid).dropped();
+        verify(handle, never()).performClick();
     }
 
     @Test public void cancelledResizeLeavesIntrinsicHeightAndBoundsIntact() {
         item.settings.put("heightMode", "content");
-        HomeGridGesture gesture = new HomeGridGesture(grid, layout, item, true, 8);
+        HomeGridGesture gesture = new HomeGridGesture(grid, layout, item, HomeGridGesture.Handle.BOTTOM_RIGHT, 8);
         touch(gesture, MotionEvent.ACTION_DOWN, 100, 100);
         touch(gesture, MotionEvent.ACTION_MOVE, 200, 161);
         verify(grid).showTarget(0, 0, 2, 3);
@@ -63,8 +64,45 @@ public class HomeGridGestureTest {
         assertNull(item.settings.get("heightMode"));
     }
 
+    @Test public void eachCornerExpandsAroundItsOppositeCornerAndReflowsANeighbor() {
+        for (HomeGridGesture.Handle corner : HomeGridGesture.Handle.values()) {
+            if (corner == HomeGridGesture.Handle.MOVE) continue;
+            item.x = 2;
+            item.y = 2;
+            item.w = 1;
+            item.h = 1;
+            int x = corner.left ? 1 : 2;
+            int y = corner.top ? 1 : 2;
+            HomeLayout.Item neighbor = new HomeLayout.Item("clock", "default",
+                    corner.left ? 1 : 3, corner.top ? 1 : 3, 1, 1);
+            layout.items.add(neighbor);
+            HomeGridGesture gesture = new HomeGridGesture(grid, layout, item, corner, 8);
+            touch(gesture, MotionEvent.ACTION_DOWN, 200, 200);
+            touch(gesture, MotionEvent.ACTION_UP, corner.left ? 100 : 300, corner.top ? 170 : 230);
+            assertEquals(x, item.x);
+            assertEquals(y, item.y);
+            assertEquals(2, item.w);
+            assertEquals(2, item.h);
+            assertTrue(layout.fits(item, x, y, 2, 2));
+            layout.items.remove(neighbor);
+        }
+        verify(handle, never()).performClick();
+        verify(grid, times(4)).dropped();
+    }
+
+    @Test public void draggingPastTopLeftBoundaryDoesNotClickOrShiftAnchor() {
+        HomeGridGesture gesture = new HomeGridGesture(grid, layout, item, HomeGridGesture.Handle.TOP_LEFT, 8);
+        touch(gesture, MotionEvent.ACTION_DOWN, 10, 10);
+        touch(gesture, MotionEvent.ACTION_UP, -100, -150);
+        verify(grid).showTarget(0, 0, 1, 1);
+        verify(grid).dropped();
+        verify(handle, never()).performClick();
+        assertNull(layout.resizeAt(item, -1, 0, 2, 1));
+        assertNull(layout.resizeAt(item, 0, -1, 1, 2));
+    }
+
     @Test public void tapRetainsAccessibleClickAction() {
-        HomeGridGesture gesture = new HomeGridGesture(grid, layout, item, false, 8);
+        HomeGridGesture gesture = new HomeGridGesture(grid, layout, item, HomeGridGesture.Handle.MOVE, 8);
         touch(gesture, MotionEvent.ACTION_DOWN, 10, 10);
         touch(gesture, MotionEvent.ACTION_UP, 13, 12);
         verify(handle).performClick();

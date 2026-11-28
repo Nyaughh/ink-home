@@ -140,12 +140,17 @@ final class HomeLayout {
     }
 
     Placement resize(Item selected, int width, int height) {
+        // Preserve the top-left anchor, moving it inward only at the outer edges.
+        int x = Math.min(selected.x, cols - width), y = Math.min(selected.y, rows - height);
+        return resizeAt(selected, x, y, width, height);
+    }
+
+    Placement resizeAt(Item selected, int x, int y, int width, int height) {
         if (!items.contains(selected)) return null;
         HomeComponent component = HomeComponents.get(selected.type);
         if (component == null || !component.supports(width, height)) return null;
-        // Preserve the top-left anchor, moving it inward only at the outer edges.
-        int x = Math.min(selected.x, cols - width), y = Math.min(selected.y, rows - height);
-        return reflow(selected, x, y, width, height, 0, 0);
+        return reflow(selected, x, y, width, height,
+                Integer.compare(x, selected.x), Integer.compare(y, selected.y));
     }
 
     private BitSet cells(Item item) {

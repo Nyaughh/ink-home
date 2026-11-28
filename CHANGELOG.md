@@ -6,7 +6,7 @@
 - The quick panel checks device capabilities and connected audio outputs when opened.
 - Wide Favourite apps widgets reserve room for app names. Older Home layouts retain their border choices, and widget previews have padding inside the frame. The Wi-Fi quick tile shows the connected signal level.
 
-- Drag and snap Home widgets to move or resize them. The settings drawer offers cell sizes, styles and per-widget options. The grouped widget picker follows the pages preference and includes a square reading-goal ring. Settings › Home grid controls the grid size and default widget borders.
+- Drag Home widgets to move them or drag any selected corner to resize. Tap a widget for its compact header, then open the info button for width and height, styles and other options. The grouped widget picker follows the pages preference and includes a square reading-goal ring. Settings › Home grid controls the grid size and default widget borders.
 - Home gains a one-screen widget editor with live previews, discrete movement and resizing, component-specific variants and a resettable reading preset. Existing section settings and Android widget bindings migrate into the layout.
 - The Library adds measured cover grids and lists. Reading stats combine daily minutes, a week chart and a monthly calendar.
 - The Folio interface adapts to monochrome e-ink, colour e-ink and LCD/OLED. Display type, text size and interface size can be adjusted separately. LCD and OLED users can follow the system theme.

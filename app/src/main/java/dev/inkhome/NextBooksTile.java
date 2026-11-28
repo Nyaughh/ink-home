@@ -36,7 +36,9 @@ final class NextBooksTile extends HomeBookTile {
         tile.setPadding(gutter, 0, 0, 0);
         if (preset && !borders && fits(0, 68)) {
             int margin = right || compact ? 0 : 14;
-            tile.addView(ink.hair(), ink.m(-1, ink.folio.rule, 0, margin, 0, 0));
+            View separator = ink.hair();
+            separator.setId(R.id.home_section_rule);
+            tile.addView(separator, ink.m(-1, ink.folio.rule, 0, margin, 0, 0));
             remaining -= ink.folio.rule + ink.dp(margin);
         }
         int innerWidth = width - gutter;

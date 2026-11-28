@@ -22,7 +22,7 @@ abstract class HomeComponent {
     abstract boolean supports(int width, int height);
     final View render(MainActivity host, HomeLayout.Item item, boolean preview) {
         if (!preview && displaysCovers(host, item)) host.coverPage = true;
-        HomeTileFrame frame = new HomeTileFrame(host, item, rebuildOnResize(),
+        HomeTileFrame frame = new HomeTileFrame(host, item, preview, rebuildOnResize(),
                 (width, height) -> renderContent(host, item, preview, width, height));
         if (!squareFace()) return frame;
         FrameLayout holder = new FrameLayout(host) {

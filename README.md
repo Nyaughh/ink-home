@@ -22,8 +22,9 @@ A calm, reading-first home screen for e-ink Android tablets.
 - **Home** opens with your current book, Up next and favourite apps. Choose
   the **Edit Home layout** tile in the pull-down panel, open **Settings › Home**,
   or hold a widget and choose **Edit layout**. Drag a widget to move it. Select
-  it and drag its corner to resize. The drawer also offers cell sizes, move
-  arrows, styles and widget settings. Save applies your draft.
+  it and drag any corner to resize from that edge. Tap the info button beside
+  the widget name for width and height steppers, move arrows, styles and widget settings.
+  Save applies your draft.
 - **Add** opens a picker grouped by widget, including a square reading-goal
   ring. The picker follows your pages or scrolling preference.
   **Settings › Home grid** controls grid dimensions and the default widget

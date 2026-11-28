@@ -27,12 +27,12 @@ public final class Stepper extends LinearLayout {
         plus = button(f, "plus", f.context.getString(R.string.reader_ui_increase, label), () -> move(1, changed));
         value = Type.text(f, "", TypeScale.BODY, f.palette.ink);
         value.setGravity(Gravity.CENTER);
-        value.setMinWidth(f.u(56));
-        value.setPadding(f.u(5), 0, f.u(5), 0);
+        value.setMinWidth(f.u(36));
+        value.setPadding(f.u(6), 0, f.u(6), 0);
         value.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
-        addView(minus, f.u(38), f.u(34));
+        addView(minus, f.u(48), f.u(48));
         addView(value);
-        addView(plus, f.u(38), f.u(34));
+        addView(plus, f.u(48), f.u(48));
         update();
     }
 
@@ -63,7 +63,12 @@ public final class Stepper extends LinearLayout {
 
     private void update() {
         value.setText(values[selected]);
-        available(minus, selected > 0);
-        available(plus, selected < values.length - 1);
+        setButtonEnabled(minus, selected > 0);
+        setButtonEnabled(plus, selected < values.length - 1);
+    }
+
+    private static void setButtonEnabled(ImageButton button, boolean enabled) {
+        button.setEnabled(enabled);
+        button.setAlpha(enabled ? 1f : .38f);
     }
 }

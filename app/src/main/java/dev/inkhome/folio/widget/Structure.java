@@ -253,7 +253,10 @@ public final class Structure {
 
     public View sectionHead(String title, boolean dense, View end, boolean topRule) {
         LinearLayout block = column();
-        if (topRule) rule(block, true);
+        if (topRule) {
+            rule(block, true);
+            block.getChildAt(0).setId(R.id.home_section_rule);
+        }
         LinearLayout row = row(dense ? Tokens.Bar.DATA_SECTION : Tokens.Bar.SECTION);
         TextView heading = text(title, LABEL);
         heading.setAccessibilityHeading(true);

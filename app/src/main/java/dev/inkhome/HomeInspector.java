@@ -7,7 +7,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import dev.inkhome.folio.widget.Pager;
+import dev.inkhome.folio.widget.Stepper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,7 +19,8 @@ import java.util.Map;
 final class HomeInspector extends LinearLayout {
     static final class Position {
         String page;
-        void clear() { page = null; }
+        boolean expanded;
+        void clear() { page = null; expanded = false; }
     }
 
     private final MainActivity host;
@@ -50,45 +51,69 @@ final class HomeInspector extends LinearLayout {
         setBackground(ink.stroke(ink.PAPER, 0, ink.TEXT));
         setClickable(true);
         int edge = ink.folio.rule;
-        setPadding(edge, edge, edge, edge);
+        setPadding(edge, 0, edge, 0);
         LinearLayout header = ink.row();
-        header.setPadding(ink.dp(12), 0, 0, 0);
+        header.setPadding(ink.dp(12), ink.dp(2), ink.dp(6), ink.dp(2));
         back = ink.iconButton("back", this::back);
         back.setContentDescription(host.getString(R.string.reader_ui_back));
-        header.addView(back);
+        header.addView(back, new LayoutParams(ink.dp(48), -1));
         title = ink.oneLine(ink.medium("", 17));
         header.addView(title, ink.weight(1));
+        View info = ink.iconButton("info", () -> expand(null));
+        info.setVisibility(position.expanded ? GONE : VISIBLE);
+        info.setContentDescription(host.getString(R.string.editor_widget_details));
+        header.addView(info, new LayoutParams(ink.dp(48), -1));
         View trash = ink.iconButton("trash", remove);
         trash.setContentDescription(host.getString(R.string.editor_remove));
-        header.addView(trash);
+        header.addView(trash, new LayoutParams(ink.dp(48), -1));
         View dismiss = ink.iconButton("close", close);
         dismiss.setContentDescription(host.getString(R.string.service_ui_close));
-        header.addView(dismiss);
-        addView(header);
+        header.addView(dismiss, new LayoutParams(ink.dp(48), -1));
+        addView(header, new LayoutParams(-1, ink.dp(50)));
+        if (!position.expanded) {
+            title.setText(component.name(host));
+            back.setVisibility(GONE);
+            body = null;
+            scroll = null;
+            return;
+        }
         addView(ink.hair());
         body = ink.col();
-        body.setPadding(ink.dp(12), 0, ink.dp(12), ink.dp(4));
+        body.setPadding(ink.dp(12), ink.dp(8), ink.dp(12), ink.dp(8));
         scroll = ink.scroller(body);
         addView(scroll, new LayoutParams(-1, 0, 1));
         show(position.page);
     }
 
     boolean back() {
-        if (position.page == null) return false;
-        show(null);
+        if (!position.expanded) return false;
+        if (position.page != null) show(null);
+        else {
+            position.clear();
+            refresh.run();
+        }
         return true;
     }
 
     void sizes() {
-        sizePage = -1;
-        show("size");
+        expand("size");
+    }
+
+    private void expand(String page) {
+        if (position.expanded) {
+            show(page);
+        } else {
+            position.expanded = true;
+            position.page = page;
+            refresh.run();
+        }
     }
 
     private void show(String page) {
         position.page = page;
         body.removeAllViews();
         scroll.scrollTo(0, 0);
-        back.setVisibility(page == null ? GONE : VISIBLE);
+        back.setVisibility(VISIBLE);
         if (page == null) {
             title.setText(component.name(host));
             movement();
@@ -106,15 +131,17 @@ final class HomeInspector extends LinearLayout {
                 example.variant = variant;
                 Runnable choose = () -> {
                     item.variant = variant;
-                    changed();
+                    refresh.run();
                 };
                 LinearLayout row = ink.row();
+                padRow(row);
                 row.addView(preview(host, grid, layout.cols, component, example, display(variant), ink.dp(52), choose),
                         ink.m(ink.dp(84), ink.dp(52), 0, 3, 12, 3));
                 row.addView(ink.body(display(variant)), ink.weight(1));
                 if (variant.equals(item.variant)) row.addView(ink.icon("check", 20));
                 row.setOnClickListener(v -> choose.run());
                 body.addView(row);
+                body.addView(ink.hair());
             }
         } else {
             title.setText(component.optionName(host, page));
@@ -123,10 +150,11 @@ final class HomeInspector extends LinearLayout {
             boolean shortValues = Arrays.stream(values).allMatch(v -> v.length() <= 2);
             if (shortValues && values.length > 4) {
                 LinearLayout row = null;
-                int columns = Math.max(1, Math.min(5, (getWidth() - ink.dp(24)) / ink.dp(62)));
+                int columns = Math.max(1, Math.min(5, (placement(grid, item).width - ink.dp(24)) / ink.dp(62)));
                 for (int i = 0; i < values.length; i++) {
                     if (i % columns == 0) {
                         row = ink.row();
+                        padRow(row);
                         row.setWeightSum(columns);
                         body.addView(row);
                     }
@@ -139,15 +167,10 @@ final class HomeInspector extends LinearLayout {
         }
     }
 
-    private void changed() {
-        position.clear();
-        refresh.run();
-    }
-
     private void save(String key, String value) {
         if (key.equals("borders") && value.equals("default")) item.settings.remove(key);
         else item.settings.put(key, value);
-        changed();
+        refresh.run();
     }
 
     private void option(String key, String[] values) {
@@ -164,7 +187,8 @@ final class HomeInspector extends LinearLayout {
 
     private void setting(String name, String value, boolean navigate, Runnable click) {
         LinearLayout row = ink.row();
-        row.setMinimumHeight(ink.dp(36));
+        padRow(row);
+        row.setMinimumHeight(ink.dp(48));
         row.addView(ink.medium(name, 15), ink.weight(1));
         row.addView(ink.body(value));
         if (navigate) row.addView(ink.icon("chevron", 18));
@@ -176,81 +200,104 @@ final class HomeInspector extends LinearLayout {
 
     private String dims(int w, int h) { return host.getString(R.string.editor_dims, w, h); }
 
-    private int sizePage = -1;
+    private void padRow(View row) {
+        row.setPadding(ink.dp(6), ink.dp(4), ink.dp(6), ink.dp(4));
+    }
 
     private void dimensions() {
         int capacity = layout.cols * layout.rows;
         for (HomeLayout.Item other : layout.items) if (other != item) capacity -= other.w * other.h;
-        List<int[]> sizes = new ArrayList<>();
-        for (int w = 1; w <= layout.cols; w++) {
-            for (int h = 1; h <= layout.rows; h++) {
-                if (component.supports(w, h) && w * h <= capacity) sizes.add(new int[]{w, h});
-            }
-        }
-        int width = getWidth() > 0 ? getWidth() : placement(grid, item).width;
-        if (width < 1) width = grid.getWidth();
-        int columns = Math.max(1, Math.min(5, (width - ink.dp(24)) / ink.dp(76)));
-        int height = placement(grid, item).height;
-        if (height < 1) height = grid.getHeight();
-        int rows = Math.max(1, (height - ink.dp(100)) / ink.dp(46));
-        int perPage = rows * columns;
-        int last = Math.max(0, (sizes.size() - 1) / perPage);
-        if (sizePage < 0) {
-            sizePage = 0;
-            for (int i = 0; i < sizes.size(); i++) {
-                int[] size = sizes.get(i);
-                if (size[0] == item.w && size[1] == item.h) sizePage = i / perPage;
-            }
-        }
-        sizePage = Math.min(sizePage, last);
-        LinearLayout row = null;
-        for (int i = sizePage * perPage; i < Math.min(sizes.size(), (sizePage + 1) * perPage); i++) {
-            if (i % columns == 0) {
-                row = ink.row();
-                row.setWeightSum(columns);
-                body.addView(row);
-            }
-            int w = sizes.get(i)[0], h = sizes.get(i)[1];
-            row.addView(choice(dims(w, h), w == item.w && h == item.h, true,
-                    () -> apply(layout.resize(item, w, h), true)), ink.weight(1));
-        }
-        if (last > 0) {
-            Pager pager = new Pager(ink.folio, false,
-                    () -> turnSizePage(-1), () -> turnSizePage(1));
-            pager.bind(sizePage, last + 1);
-            body.addView(pager);
-        }
+        boolean sideBySide = placement(grid, item).width >= ink.dp(304);
+        LinearLayout columns = sideBySide ? ink.row() : ink.col();
+        body.addView(columns);
+        dimensionColumn(columns, true, capacity, sideBySide);
+        View divider = ink.hair();
+        columns.addView(divider, new LayoutParams(sideBySide ? ink.folio.hairline : -1,
+                sideBySide ? -1 : ink.folio.hairline));
+        dimensionColumn(columns, false, capacity, sideBySide);
     }
 
-    private void turnSizePage(int step) {
-        sizePage = Math.max(0, sizePage + step);
-        show("size");
+    private void dimensionColumn(LinearLayout parent, boolean width, int capacity, boolean sideBySide) {
+        int current = width ? item.w : item.h;
+        List<String> choices = new ArrayList<>();
+        int selected = 0;
+        for (int n = 1; n <= (width ? layout.cols : layout.rows); n++) {
+            int w = width || component.squareFace() ? n : item.w;
+            int h = !width || component.squareFace() ? n : item.h;
+            if (n != current && (w > layout.cols || h > layout.rows || w * h > capacity || !component.supports(w, h)))
+                continue;
+            if (n == current) selected = choices.size();
+            choices.add(Integer.toString(n));
+        }
+        String name = host.getString(width ? R.string.editor_columns : R.string.editor_rows);
+        LinearLayout column = sideBySide ? ink.col() : ink.row();
+        column.setGravity(Gravity.CENTER);
+        column.setPadding(ink.dp(4), ink.dp(6), ink.dp(4), ink.dp(6));
+        parent.addView(column, sideBySide ? ink.weight(1) : new LayoutParams(-1, -2));
+        TextView heading = ink.medium(name, 15);
+        if (sideBySide) heading.setPadding(0, 0, 0, ink.dp(6));
+        column.addView(heading, sideBySide ? new LayoutParams(-2, -2) : ink.weight(1));
+        String[] values = choices.toArray(new String[0]);
+        Stepper stepper = new Stepper(ink.folio, name, values, selected, index -> {
+            int n = Integer.parseInt(values[index]);
+            int w = width || component.squareFace() ? n : item.w;
+            int h = !width || component.squareFace() ? n : item.h;
+            apply(layout.resize(item, w, h), true);
+        });
+        column.addView(stepper);
+    }
+
+    private int collapsedHeight(int width) {
+        measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+        return getMeasuredHeight();
+    }
+
+    boolean needsToolbar(HomeGrid grid, HomeLayout.Item item) {
+        if (position.expanded) return false;
+        int above = grid.rowSpan(0, item.y);
+        int below = grid.getHeight() - grid.rowSpan(0, item.y + item.h);
+        return Math.max(above, below) < collapsedHeight(panelWidth(grid));
+    }
+
+    private int panelWidth(HomeGrid grid) {
+        return Math.min(grid.getWidth(), ink.dp(420));
     }
 
     FrameLayout.LayoutParams placement(HomeGrid grid, HomeLayout.Item item) {
-        int width = grid.getWidth(), height = grid.getHeight();
-        boolean landscape = width >= height && width >= ink.dp(460);
-        if (landscape) {
-            int edge = (item.x + item.w) * width / layout.cols - ink.dp(22) > width / 2 ? Gravity.LEFT : Gravity.RIGHT;
-            return new FrameLayout.LayoutParams(Math.min(ink.dp(440), width / 2), -1, edge);
+        int above = grid.rowSpan(0, item.y);
+        int below = grid.getHeight() - grid.rowSpan(0, item.y + item.h);
+        int gravity = above > below ? Gravity.TOP : Gravity.BOTTOM;
+        int width = panelWidth(grid);
+        int minExpanded = Math.min(grid.getHeight(), ink.dp(220));
+        int height = position.expanded ? Math.min(ink.dp(336), Math.max(minExpanded, grid.getHeight() / 2))
+                : collapsedHeight(width);
+        if (position.expanded) {
+            int room = Math.max(above, below);
+            if (room >= minExpanded) height = Math.min(height, room);
+            else {
+                int left = grid.getWidth() * item.x / layout.cols;
+                int right = grid.getWidth() - grid.getWidth() * (item.x + item.w) / layout.cols;
+                if (Math.max(left, right) >= ink.dp(300)) {
+                    width = Math.min(width, Math.max(left, right));
+                    return new FrameLayout.LayoutParams(width, height,
+                            gravity | (left > right ? Gravity.LEFT : Gravity.RIGHT));
+                }
+            }
         }
-        int center = grid.rowSpan(0, item.y + item.h) - ink.dp(22);
-        int gravity = center > height / 2 ? Gravity.TOP : Gravity.BOTTOM;
-        // Keep the selected corner reachable. On portrait screens borrow the spare
-        // space on the other side so the normal settings list fits without scrolling.
-        int room = gravity == Gravity.TOP ? center - ink.dp(22) : height - center - ink.dp(22);
-        int panelHeight = Math.min(ink.dp(350), Math.min(height * 2 / 3, Math.max(height / 2, room)));
-        return new FrameLayout.LayoutParams(-1, panelHeight, gravity);
+        return new FrameLayout.LayoutParams(width, height, gravity | Gravity.CENTER_HORIZONTAL);
     }
 
     private void movement() {
         LinearLayout row = ink.row();
+        padRow(row);
         row.addView(caption(host.getString(R.string.editor_move)));
         arrow(row, "\u2190", R.string.editor_left, -1, 0);
         arrow(row, "\u2192", R.string.editor_right, 1, 0);
         arrow(row, "\u2191", R.string.editor_up, 0, -1);
         arrow(row, "\u2193", R.string.editor_down, 0, 1);
         body.addView(row);
+        body.addView(ink.hair());
     }
 
     private void arrow(LinearLayout row, String glyph, int label, int dx, int dy) {
@@ -265,11 +312,12 @@ final class HomeInspector extends LinearLayout {
     private void apply(HomeLayout.Placement change, boolean resize) {
         if (change == null) {
             host.toast(host.getString(R.string.editor_blocked));
+            refresh.run();
             return;
         }
         change.apply();
         if (resize) item.settings.remove("heightMode");
-        changed();
+        refresh.run();
     }
 
     private TextView caption(String label) {

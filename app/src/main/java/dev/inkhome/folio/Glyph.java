@@ -72,6 +72,10 @@ public class Glyph extends Drawable {
                 path.setFillType(Path.FillType.EVEN_ODD);
                 c.drawPath(path,dest);
                 break;
+            case "info":
+                c.drawCircle(12,12,9,line);
+                c.drawCircle(12,8,1,solid);
+                segment(c,12,12,12,16); break;
             case "search":
                 c.drawCircle(10,10,6,line); segment(c,15,15,21,21); break;
             case "back": lines(c,15,5, 8,12, 15,19); break;
