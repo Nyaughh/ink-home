@@ -51,15 +51,23 @@ final class FavoriteAppsTile extends HomeTiles {
         int requested = Math.min(12, count());
         if (requested > 0) columns = Math.min(columns, requested);
         int size = Math.min(ink.dp(compact ? 28 : 40), Math.min(remaining, availableWidth / columns));
+        int rowBudget = remaining;
+        if (vertical && !naturalHeight()) {
+            int capacity = requested > 0 ? requested : item.h;
+            int wanted = Math.max(1, Math.min(apps.size(), capacity));
+            int visible = Math.min(wanted, Math.max(1, remaining / Math.max(1, ink.dp(18))));
+            rowBudget = remaining / visible;
+            size = Math.min(size, Math.max(1, rowBudget - ink.dp(2)));
+        }
         int gap = ink.dp(compact ? 2 : preset ? 8 : 4);
         TextView sample = label("Ag", TypeScale.APP_NAME, 1);
         sample.measure(0, 0);
         int labelHeight = sample.getMeasuredHeight();
-        boolean names = !icons || (vertical ? availableWidth >= size + ink.dp(52)
+        boolean names = !icons || (vertical ? availableWidth >= size + ink.dp(48) && rowBudget >= labelHeight
                 : availableWidth / columns >= ink.dp(54) && remaining >= size + gap + labelHeight);
         int rowHeight = vertical ? Math.max(icons ? size : 0, names ? labelHeight : 0)
                 : (icons ? size : 0) + (names ? labelHeight : 0) + (icons && names ? gap : 0);
-        rowHeight = Math.max(1, Math.min(remaining, Math.max(ink.dp(48), rowHeight + ink.dp(2))));
+        rowHeight = Math.max(1, Math.min(rowBudget, Math.max(ink.dp(48), rowHeight + ink.dp(2))));
         int rows = naturalHeight() ? (requested > 0 ? requested : "grid".equals(item.variant) ? 2 : 1)
                 : Math.max(1, remaining / rowHeight);
         if (!vertical && "row".equals(item.variant)) rows = 1;
