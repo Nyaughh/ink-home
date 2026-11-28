@@ -30,23 +30,20 @@ final class HomeWidgetHost {
     private static final int CONFIGURE = 0x4902;
     private static final String PENDING = "pendingHomeWidget";
     private static final String REDRAW = "homeWidgetRedrawMs";
-    private static final int[] INTERVALS = {0, 1000, 10000, 60000};
 
+    final AndroidWidgetAllocations allocations;
     private final MainActivity activity;
     private final SharedPreferences prefs;
     private final AppWidgetManager manager;
     private final AppWidgetHost host;
-    private final List<WidgetView> attached = new ArrayList<>();
     private IntConsumer accepted;
     private boolean listening;
     private int pending;
-    private int interval;
 
     HomeWidgetHost(MainActivity activity) {
         this.activity = activity;
         prefs = activity.getSharedPreferences("inkhome", Context.MODE_PRIVATE);
         manager = AppWidgetManager.getInstance(activity);
-        interval = prefs.getInt(REDRAW, 60000);
         host = new AppWidgetHost(activity, HOST) {
             @Override public AppWidgetHostView onCreateView(Context context, int id, AppWidgetProviderInfo info) {
                 return new WidgetView(context);
@@ -54,6 +51,7 @@ final class HomeWidgetHost {
         };
         pending = prefs.getInt(PENDING, 0);
         if (pending != 0) discard();
+        allocations = new AndroidWidgetAllocations(activity);
     }
 
     void start() {
@@ -94,6 +92,11 @@ final class HomeWidgetHost {
     private String label(AppWidgetProviderInfo info) {
         String label = info.loadLabel(activity.getPackageManager());
         return label != null ? label : info.provider.getShortClassName();
+    }
+
+    String labelForId(int id) {
+        AppWidgetProviderInfo info = manager.getAppWidgetInfo(id);
+        return info == null ? activity.getString(R.string.home_widget_unavailable) : label(info);
     }
 
     private void bind(AppWidgetProviderInfo info, IntConsumer callback) {
@@ -165,9 +168,19 @@ final class HomeWidgetHost {
         activity.toast(activity.getString(R.string.home_widget_add_failed));
     }
 
-    View view(int id) {
+    View view(int id, String redraw) {
         AppWidgetProviderInfo info = manager.getAppWidgetInfo(id);
-        if (info != null) return host.createView(activity, id, info);
+        if (info != null) {
+            WidgetView widget = (WidgetView) host.createView(activity, id, info);
+            widget.interval = switch (redraw == null ? "default" : redraw) {
+                case "as requested" -> 0;
+                case "1 second" -> 1000;
+                case "10 seconds" -> 10000;
+                case "1 minute" -> 60000;
+                default -> prefs.getInt(REDRAW, 60000);
+            };
+            return widget;
+        }
         TextView missing = activity.ink.body(activity.getString(R.string.home_widget_unavailable));
         missing.setGravity(Gravity.CENTER);
         return missing;
@@ -177,18 +190,8 @@ final class HomeWidgetHost {
         host.deleteAppWidgetId(id);
     }
 
-    void settings() {
-        String[] labels = activity.getResources().getStringArray(R.array.home_widget_intervals);
-        int checked = -1;
-        for (int i = 0; i < INTERVALS.length; i++) if (interval == INTERVALS[i]) checked = i;
-        activity.choose(activity.getString(R.string.home_widget_redraw_limit), labels, checked, i -> {
-            interval = INTERVALS[i];
-            prefs.edit().putInt(REDRAW, interval).apply();
-            for (WidgetView widget : attached) widget.reschedule();
-        });
-    }
-
     private final class WidgetView extends AppWidgetHostView {
+        private int interval;
         private long lastRefresh;
         private RemoteViews latest;
         private boolean providerChanged;
@@ -213,13 +216,6 @@ final class HomeWidgetHost {
             scheduled = true;
             long delay = lastRefresh == 0 ? 0 : lastRefresh + interval - SystemClock.uptimeMillis();
             postDelayed(refresh, Math.max(0, delay));
-        }
-
-        private void reschedule() {
-            if (!scheduled) return;
-            removeCallbacks(refresh);
-            scheduled = false;
-            schedule();
         }
 
         private void flush() {
@@ -273,7 +269,6 @@ final class HomeWidgetHost {
         @Override protected void onAttachedToWindow() {
             super.onAttachedToWindow();
             active = true;
-            attached.add(this);
             if (providerChanged || redrawNeeded || layoutChanged) schedule();
         }
 
@@ -288,7 +283,6 @@ final class HomeWidgetHost {
 
         @Override protected void onDetachedFromWindow() {
             active = false;
-            attached.remove(this);
             removeCallbacks(refresh);
             scheduled = false;
             lastRefresh = 0;

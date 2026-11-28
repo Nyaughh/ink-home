@@ -47,6 +47,7 @@ final class SettingsScreen implements Screen {
     }
 
     static void open(MainActivity host, String sub) {
+        if (HOME.equals(sub)) { host.editHome(); return; }
         host.sub = sub;
         host.render();
     }
@@ -96,7 +97,6 @@ final class SettingsScreen implements Screen {
             category(host, g, DEVICE, freeSpace(host));
             category(host, g, ABOUT, host.getString(R.string.settings_ui_version, Updater.installedVersion(host)));
         } else switch (category) {
-            case HOME: new HomeSettings(host).rows(g); break;
             case APPEARANCE: appearance(host, g); break;
             case DISPLAY: display(host, g); break;
             case READING: reading(host, g); break;

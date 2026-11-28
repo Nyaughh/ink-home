@@ -19,11 +19,11 @@ A calm, reading-first home screen for e-ink Android tablets.
   justification, a full refresh every few pages, and your place kept across
   text changes. Or open books in NeoReader, KOReader or another app; their
   time still counts, and KOReader's progress shows too.
-- **Home** opens with your current book, Up next and favourite apps. In
-  **Settings › Home**, choose which sections to show and in what order. Put
-  favourites first, choose a row or list, set how many apps to show, and
-  adjust section density and borders. Optional sections include a clock,
-  calendar, reading goal, reading month and battery.
+- **Home** opens with your current book, Up next and favourite apps. Long-press
+  empty space or open **Settings › Home** to edit that screen. Pick a widget
+  to move it, resize it or try another appearance. The gallery also includes
+  a clock, calendar, reading goal, reading month and battery. Save the draft,
+  cancel it, or reset it to the original preset.
 - Add widgets from installed apps in **Settings › Home**. Android asks you to
   approve binding when needed. The redraw limit defaults to once a minute.
 - The dock keeps Settings at the left, today's reading in the middle and the

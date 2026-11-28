@@ -113,6 +113,7 @@ public class MainActivity extends Activity {
     Store store;
     Ink ink;
     HomeWidgetHost homeWidgets;
+    HomeEditor homeEditor;
     SheetHost sheets;
     final Handler ui = new Handler(Looper.getMainLooper());
     final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -175,6 +176,7 @@ public class MainActivity extends Activity {
         ink = new Ink(this, store.textScale(), store.uiScale());
 
         homeWidgets = new HomeWidgetHost(this);
+        homeEditor = new HomeEditor(this);
         ActivityWindow.applyOrientation(this, store);
         restoreNavigation(b);
         if (b == null && DotService.ACTION_SETTINGS.equals(getIntent().getAction())) {
@@ -320,6 +322,7 @@ public class MainActivity extends Activity {
         libCollection = state.getString("collection");
         libSearch = state.getString("search");
         sub = state.getString("subpage");
+        if (screen == Screen.SETTINGS && SettingsScreen.HOME.equals(sub)) sub = null;
         statsTab = state.getString("statsTab", statsTab);
         statsMonth.setTimeInMillis(state.getLong("statsMonth", statsMonth.getTimeInMillis()));
         Bundle positions = state.getBundle("pages");
@@ -347,6 +350,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        homeEditor.discard();
         sheets.close();
         refreshController.close();
         super.onDestroy();
@@ -392,6 +396,7 @@ public class MainActivity extends Activity {
             libSearch = null;
             libraryDetail = null;
             libCollection = null;
+            if (homeEditor.active()) homeEditor.discard();
             screen = Screen.APPS;
             sub = "switcher";
             render();
@@ -403,6 +408,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (panelOpen) dismissPanel();
+        else if (homeEditor.active()) homeEditor.cancel();
         else if (libSearch != null) { libSearch = null; hideKeyboard(); render(); }
         else if (libraryDetail != null && screen == Screen.LIBRARY) { libraryDetail = null; render(); }
         else if (libCollection != null) { libCollection = null; render(); }
@@ -578,7 +584,14 @@ public class MainActivity extends Activity {
 
     // ================================================================== navigation
 
+    void editHome() {
+        sub = null;
+        screen = Screen.HOME;
+        homeEditor.open();
+    }
+
     void go(Screen s) {
+        if (s != Screen.HOME && homeEditor.active()) homeEditor.discard();
         if (s != screen) {
             pages.clear();
             libSearch = null;
@@ -603,7 +616,7 @@ public class MainActivity extends Activity {
 
     void render() {
         String destination = screen + "/" + sub + "/" + libTab + "/" + libCollection + "/" + (libSearch != null);
-        if (renderedDestination != null && !destination.equals(renderedDestination) && store.subtleMotion()) {
+        if (renderedDestination != null && !destination.equals(renderedDestination) && store.subtleMotion() && !homeEditor.active()) {
             android.transition.TransitionManager.beginDelayedTransition(content,
                     new android.transition.Fade().setDuration(120));
         }
@@ -630,6 +643,10 @@ public class MainActivity extends Activity {
         dock.removeAllViews();
         dock.setPadding(ink.dp(8), 0, ink.dp(8), 0);
         int dockHeight = ink.dp(52) - ink.folio.rule;
+        if (homeEditor.active() && screen == Screen.HOME) {
+            dock.addView(homeEditor.toolbar(), new LinearLayout.LayoutParams(-1, dockHeight));
+            return;
+        }
         boolean inSettings = screen == Screen.SETTINGS;
         ImageView left = ink.icon(inSettings ? "home" : "settings", 24);
         left.setPadding(ink.dp(12), ink.dp(12), ink.dp(12), ink.dp(12));
@@ -988,6 +1005,7 @@ public class MainActivity extends Activity {
             libSearch = null;
             libraryDetail = null;
             libCollection = null;
+            if (homeEditor.active()) homeEditor.discard();
             screen = Screen.APPS;
             sub = "switcher";
             render();
@@ -1005,6 +1023,8 @@ public class MainActivity extends Activity {
     }
 
     void openSettingsPage(String page) {
+        if (SettingsScreen.HOME.equals(page)) { editHome(); return; }
+        if (homeEditor.active()) homeEditor.discard();
         pages.clear();
         libSearch = null;
         libCollection = null;
@@ -1189,44 +1209,6 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** The cover layout starts with the current book, or the newest book before reading begins. */
-    void homeCover(LinearLayout col, List<Library.Book> reading, boolean setupShown) {
-        Library.Book b = !reading.isEmpty() ? reading.get(0) : (books.isEmpty() ? null : newest().get(0));
-        if (b == null) {
-            col.addView(emptyHero());
-            return;
-        }
-        boolean expanded = ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.EXPANDED;
-        int heightU = Math.round(getResources().getConfiguration().screenHeightDp / ink.folio.uiScale);
-        boolean wide = expanded || (heightU < 500 && ink.folio.windowClass() == dev.inkhome.folio.core.WindowClass.MEDIUM);
-        int cw = expanded ? 168 : wide ? 104 : Math.min(setupShown ? 100 : 116,
-                Math.max(72, (heightU - 320) / 2));
-        View hero = homeBookHero(b, reading.isEmpty(), cw, false);
-        LinearLayout next = col;
-        if (wide) {
-            LinearLayout panes = ink.row();
-            panes.setGravity(Gravity.TOP);
-            panes.addView(hero, ink.weight(1));
-            next = ink.col();
-            next.setPadding(ink.dp(ink.folio.windowClass().gutter), 0, 0, 0);
-            panes.addView(next, new LinearLayout.LayoutParams(0, -1, 1));
-            col.addView(panes, new LinearLayout.LayoutParams(-1, 0, 1));
-            next.setTag("homeRight");
-        } else {
-            col.addView(hero);
-        }
-
-        // Every other book, the ones being read first, whichever app they're read in.
-        Set<Library.Book> ordered = new LinkedHashSet<>(reading);
-        ordered.addAll(newest());
-        ordered.remove(b);
-        List<Library.Book> rest = new ArrayList<>(ordered);
-        if (!rest.isEmpty()) {
-            next.addView(ink.hair(), ink.m(-1, ink.folio.rule, 0, wide ? 0 : 14, 0, 0));
-            next.addView(homeBookList(rest), new LinearLayout.LayoutParams(-1, 0, 1f));
-        }
-    }
-
     View homeBookHero(Library.Book b, boolean newestInLibrary, int cw, boolean wrapDetails) {
         int chh = Math.round(cw * 10f / 7);
         LinearLayout hero = ink.row();
@@ -1281,10 +1263,10 @@ public class MainActivity extends Activity {
     }
 
     /** Page whole rows in the space between the hero and favorites. */
-    private View homeBookList(List<Library.Book> list) {
+    View homeBookList(String key, List<Library.Book> list) {
         LinearLayout head = ink.row();
         head.addView(ink.text(getString(R.string.launcher_up_next), TypeScale.LABEL, ink.TEXT), ink.weight(1));
-        View listView = cells("home", head, list.size(), 0, 52, i -> homeBookRow(list.get(i)));
+        View listView = cells(key, head, list.size(), 0, 52, i -> homeBookRow(list.get(i)));
         listView.setTag("list");
         return listView;
     }
@@ -1306,14 +1288,14 @@ public class MainActivity extends Activity {
         return r;
     }
 
-    private View emptyHero() {
+    View emptyHero() {
         return dev.inkhome.folio.widget.EmptyState.create(ink.folio,
                 booksLoaded ? getString(R.string.launcher_no_book_yet) : getString(R.string.launcher_opening_your_library),
                 booksLoaded ? getString(R.string.launcher_empty_library_hint)
                         : getString(R.string.launcher_finding_books_on_this_tablet), getString(R.string.launcher_library), v -> go(Screen.LIBRARY));
     }
 
-    void homeShelf(LinearLayout col, List<Library.Book> reading) {
+    void homeShelf(LinearLayout col, List<Library.Book> reading, String key) {
         List<Library.Book> shelf = new ArrayList<>(reading);
         Set<String> onShelf = new HashSet<>();
         for (Library.Book book : reading) onShelf.add(book.path);
@@ -1324,15 +1306,12 @@ public class MainActivity extends Activity {
             col.addView(emptyHero());
             return;
         }
-        View grid = bookGrid("home", shelf);
+        View grid = bookGrid(key, shelf);
         grid.setTag("list");
         col.addView(grid, new LinearLayout.LayoutParams(-1, 0, 1));
     }
 
     void homeMinimal(LinearLayout col, List<Library.Book> reading) {
-        Date now = new Date();
-        TextView clock = ink.center(ink.text(timeText(now), TypeScale.DISPLAY, ink.TEXT));
-        col.addView(clock, new LinearLayout.LayoutParams(-1, -2));
         if (reading.isEmpty()) return;
         Library.Book b = reading.get(0);
         LinearLayout c = ink.col();
@@ -1346,46 +1325,6 @@ public class MainActivity extends Activity {
         c.setOnClickListener(v -> openBook(b));
         c.setOnLongClickListener(v -> { bookMenu(b); return true; });
         col.addView(c);
-    }
-
-    void homeFavorites(LinearLayout col) {
-        List<App> favs = favoriteApps();
-        LinearLayout right = col.findViewWithTag("homeRight");
-        if (right != null) col = right;
-        col.addView(new Structure(ink.folio).sectionHead(getString(R.string.launcher_favorites), false, null));
-        if (favs.isEmpty()) {
-            TextView h = ink.muted(getString(R.string.launcher_empty_favorites_hint), 14);
-            h.setPadding(0, ink.dp(14), 0, ink.dp(10));
-            col.addView(h);
-            return;
-        }
-        boolean icons = store.appIcons();
-        float width = getResources().getConfiguration().screenWidthDp / ink.folio.uiScale;
-        if (right != null) width = (width - ink.folio.windowClass().gutter) / 2;
-        int columns = ink.folio.windowClass().columns(width, 88);
-        float height = getResources().getConfiguration().screenHeightDp / ink.folio.uiScale;
-        int max = columns * (height >= 780 ? 2 : 1);
-        LinearLayout line = null;
-        for (int i = 0; i < Math.min(max, favs.size()); i++) {
-            if (i % columns == 0) {
-                line = ink.row();
-                line.setGravity(Gravity.TOP);
-                col.addView(line, ink.m(-1, -2, 0, 2, 0, 0));
-            }
-            App a = favs.get(i);
-            LinearLayout cell = ink.col();
-            cell.setGravity(Gravity.CENTER_HORIZONTAL);
-            cell.setPadding(ink.dp(2), 0, ink.dp(2), 0);
-            cell.setBackground(ink.pressable());
-            if (icons) cell.addView(appIcon(a, 40));
-            TextView t = ink.center(ink.oneLine(ink.text(displayLabel(a), TypeScale.APP_NAME, ink.TEXT)));
-            t.setPadding(0, icons ? ink.dp(8) : ink.dp(12), 0, icons ? 0 : ink.dp(12));
-            cell.addView(t, new LinearLayout.LayoutParams(-1, -2));
-            cell.setOnClickListener(v -> launch(a));
-            cell.setOnLongClickListener(v -> { appMenu(a); return true; });
-            line.addView(cell, ink.weight(1));
-        }
-        if (line != null) while (line.getChildCount() < columns) line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
     }
 
     /** Bordered card with a title and a muted explanation. */
@@ -1467,7 +1406,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    private View bookGrid(String pageKey, List<Library.Book> list) {
+    View bookGrid(String pageKey, List<Library.Book> list) {
         dev.inkhome.folio.core.WindowClass window = ink.folio.windowClass();
         float width = getResources().getConfiguration().screenWidthDp / ink.folio.uiScale;
         float available = width - 2 * window.margin;

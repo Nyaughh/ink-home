@@ -1,21 +1,12 @@
 <resources>
-    <string name="home_settings_summary">Sections, favorites and widgets</string>
-    <string name="home_settings_show">Show %1$s</string>
-    <string name="home_settings_earlier">Move %1$s up</string>
-    <string name="home_settings_later">Move %1$s down</string>
-    <string name="home_settings_remove">Remove %1$s</string>
+    <string name="home_settings_summary">Edit widgets and layout</string>
     <string name="home_settings_apps">Favorite apps</string>
     <string name="home_settings_goal">Reading goal</string>
     <string name="home_settings_month">Reading month</string>
     <string name="home_settings_battery">Battery</string>
-    <string name="home_settings_apps_layout">Favorite app layout</string>
-    <string-array name="home_settings_orientations">
-        <item>Horizontal</item>
-        <item>Vertical</item>
-    </string-array>
     <string name="home_settings_app_count">Favorite apps shown</string>
     <string name="home_settings_next_count">Up next books shown</string>
     <string name="home_settings_auto">Auto</string>
     <string name="home_settings_compact">Compact spacing</string>
-    <string name="home_settings_borders">Section borders</string>
+    <string name="home_settings_borders">Widget border</string>
 </resources>

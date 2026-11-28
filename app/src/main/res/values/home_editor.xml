@@ -1,0 +1,27 @@
+<resources>
+    <string name="editor_add">Add</string>
+    <string name="editor_reset">Reset</string>
+    <string name="editor_reset_title">Restore the preset layout?</string>
+    <string name="editor_reset_note">This replaces your draft. Choose Save to keep the preset or Cancel to return to your saved Home.</string>
+    <string name="editor_gallery">Add to Home</string>
+    <string name="editor_remove">Remove</string>
+    <string name="editor_move">Move</string>
+    <string name="editor_size">Resize</string>
+    <string name="editor_style">Style</string>
+    <string name="editor_replace">Choose a widget to replace</string>
+    <string name="editor_left">Left</string>
+    <string name="editor_right">Right</string>
+    <string name="editor_up">Up</string>
+    <string name="editor_down">Down</string>
+    <string name="editor_narrow">Narrower</string>
+    <string name="editor_wide">Wider</string>
+    <string name="editor_short">Shorter</string>
+    <string name="editor_tall">Taller</string>
+    <string name="editor_cell">Column %1$d, row %2$d</string>
+    <string name="editor_dims">%1$d &#215; %2$d</string>
+    <string name="editor_location">%1$s &#183; %2$s</string>
+    <string name="editor_no_space">No free space for this widget. Resize or remove a widget first.</string>
+    <string name="editor_restore">Restore %1$s</string>
+    <string name="editor_enabled">On</string>
+    <string name="editor_disabled">Off</string>
+</resources>

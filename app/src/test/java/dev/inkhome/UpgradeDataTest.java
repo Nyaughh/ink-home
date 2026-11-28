@@ -170,9 +170,9 @@ public class UpgradeDataTest {
     @Test public void legacyHomeReadsDefaultsWithoutWritingUntilEdited() {
         Map<String, Object> values = Map.of("homeLayout", "shelf", "pinned", "pkg.two\npkg.one");
         MainActivity activity = homeActivity(values);
-        HomeSections sections = HomeSections.load(activity);
-        assertTrue(sections.isDefault());
-        assertEquals(java.util.Set.of("current", "next", "apps"), sections.visible);
+        HomeLayout layout = HomeLayout.load(activity);
+        assertEquals(List.of("current", "apps"), types(layout));
+        assertEquals("shelf", layout.items.get(0).variant);
         verify(activity.getSharedPreferences("inkhome", Context.MODE_PRIVATE), never()).edit();
     }
 
@@ -192,37 +192,95 @@ public class UpgradeDataTest {
                 "homeGridV1", GRID, "moonLatitude", 21f, "moonLongitude", 78f,
                 "useHomePreset", false, "homeLayout", "shelf", "pinned", "pkg.two"));
         MainActivity activity = homeActivity(values);
-        HomeSections sections = HomeSections.load(activity);
-        assertFalse(sections.isDefault());
-        assertEquals(List.of("widget:91", "clock", "battery", "widget:92", "current",
-                "next", "apps", "calendar", "goal", "month"), sections.order);
-        assertEquals(java.util.Set.of("widget:91", "clock", "battery", "widget:92"), sections.visible);
-        assertEquals(java.util.Set.of("homeSectionsV1", "pinned", "homeLayout"), values.keySet());
-        assertEquals("shelf", values.get("homeLayout"));
+        HomeLayout layout = HomeLayout.load(activity);
+        assertEquals(List.of("android", "clock", "battery", "android"), types(layout));
+        assertEquals("91", layout.items.get(0).settings.get("widgetId"));
+        assertEquals("92", layout.items.get(3).settings.get("widgetId"));
+        assertEquals(java.util.Set.of("homeCanvasV1", "pinned", "homeLayout"), values.keySet());
         assertEquals("pkg.two", values.get("pinned"));
-        assertEquals(sections.order, HomeSections.load(activity).order);
-        assertEquals(sections.visible, HomeSections.load(activity).visible);
+        assertEquals("shelf", values.get("homeLayout"));
+        assertEquals(layout.items.get(0).key, HomeLayout.load(activity).items.get(0).key);
+        assertValid(layout);
+    }
+
+    private static List<String> types(HomeLayout layout) {
+        return layout.items.stream().map(item -> item.type).collect(java.util.stream.Collectors.toList());
+    }
+
+    private static void assertValid(HomeLayout layout) {
+        for (HomeLayout.Item item : layout.items) {
+            assertTrue(item.type, layout.fits(item, item.x, item.y, item.w, item.h));
+            assertTrue(item.type, HomeComponents.get(item.type).supports(item.w, item.h));
+        }
     }
 
     @Test public void inactiveGridKeepsAllocationsHiddenAndStyleEffective() {
         MainActivity activity = homeActivity(new java.util.HashMap<>(Map.of(
                 "homeGridV1", GRID, "useHomePreset", true, "homeLayout", "minimal")));
-        HomeSections sections = HomeSections.load(activity);
-        assertTrue(sections.isDefault());
-        assertTrue(sections.order.containsAll(List.of("widget:91", "widget:92")));
-        assertEquals(java.util.Set.of("current", "next", "apps"), sections.visible);
-        sections.visible.add("widget:92");
-        sections.borders = sections.compact = sections.verticalApps = true;
-        sections.appCount = 4;
-        sections.nextCount = 2;
-        sections.save(activity);
-        HomeSections restored = HomeSections.load(activity);
-        assertFalse(restored.isDefault());
-        assertEquals(sections.order, restored.order);
-        assertEquals(sections.visible, restored.visible);
-        assertTrue(restored.borders && restored.compact && restored.verticalApps);
-        assertEquals(4, restored.appCount);
-        assertEquals(2, restored.nextCount);
+        HomeLayout layout = HomeLayout.load(activity);
+        assertEquals(List.of("clock", "current", "apps"), types(layout));
+        assertEquals("minimal", layout.items.get(1).variant);
+        assertEquals(List.of(91, 92), layout.hiddenWidgetIds);
+        assertEquals(layout.hiddenWidgetIds, HomeLayout.load(activity).hiddenWidgetIds);
+    }
+
+    @Test public void customSectionsPreserveOrderOrientationAndIndependentSettings() {
+        String sections = """
+                {"order":["next","apps","widget:13","current","widget:11"],
+                 "visible":["next","apps","current","widget:11"],
+                 "compact":true,"borders":true,"verticalApps":true,"appCount":4,"nextCount":2}
+                """;
+        MainActivity activity = homeActivity(new java.util.HashMap<>(Map.of("homeSectionsV1", sections)));
+        HomeLayout layout = HomeLayout.load(activity);
+        assertEquals(List.of("next","apps","current","android"), types(layout));
+        assertEquals(List.of(13), layout.hiddenWidgetIds);
+        HomeLayout.Item apps = layout.items.get(1);
+        assertEquals("column", apps.variant);
+        assertEquals(Map.of("compact","true","borders","true","count","4"), apps.settings);
+        assertEquals("2", layout.items.get(0).settings.get("count"));
+        assertEquals("11", layout.items.get(3).settings.get("widgetId"));
+        assertValid(layout);
+        HomeLayout draft = layout.copy();
+        draft.items.get(1).settings.put("count","6");
+        draft.items.get(1).variant = "grid";
+        draft.hiddenWidgetIds.clear();
+        assertEquals("4", apps.settings.get("count"));
+        assertEquals(List.of(13), layout.hiddenWidgetIds);
+        draft.save(activity);
+        HomeLayout restored = HomeLayout.load(activity);
+        assertEquals("grid", restored.items.get(1).variant);
+        assertEquals("6", restored.items.get(1).settings.get("count"));
+        assertTrue(restored.hiddenWidgetIds.isEmpty());
+        assertValid(restored);
+    }
+
+    @Test public void presetFitsAndDraftCannotOverlapOrLeaveCanvas() {
+        HomeLayout layout = HomeLayout.preset(homeActivity(Map.of()));
+        assertEquals(List.of("current", "next", "apps"), types(layout));
+        assertValid(layout);
+        assertFalse(layout.fits(null, 0, 0, 1, 1));
+        assertFalse(layout.fits(null, 0, 0, 0, 1));
+        assertFalse(layout.fits(null, Integer.MAX_VALUE, 0, 1, 1));
+        assertFalse(layout.fits(null, 0, 0, 1, Integer.MAX_VALUE));
+    }
+
+    @Test public void emptyCanvasAndRepeatedComponentsRoundTrip() {
+        MainActivity activity = homeActivity(new java.util.HashMap<>());
+        HomeLayout layout = new HomeLayout();
+        layout.save(activity);
+        assertTrue(HomeLayout.load(activity).items.isEmpty());
+        layout.items.add(new HomeLayout.Item("clock", "default", 2, 4, 2, 2));
+        layout.items.add(new HomeLayout.Item("clock", "default", 1, 8, 1, 3));
+        layout.save(activity);
+        HomeLayout restored = HomeLayout.load(activity);
+        assertEquals(List.of("clock", "clock"), types(restored));
+        for (int i = 0; i < 2; i++) {
+            HomeLayout.Item before = layout.items.get(i), after = restored.items.get(i);
+            assertEquals(before.key, after.key);
+            assertArrayEquals(new int[]{before.x, before.y, before.w, before.h},
+                    new int[]{after.x, after.y, after.w, after.h});
+        }
+        assertNotEquals(restored.items.get(0).key, restored.items.get(1).key);
     }
 
     @Test public void exactAutomaticReadingGridRestoresClassicHome() throws Exception {
@@ -236,11 +294,13 @@ public class UpgradeDataTest {
                     .put("w", bounds[i][2]).put("h", bounds[i][3]));
         }
         org.json.JSONObject grid = new org.json.JSONObject().put("pages", 1).put("tiles", tiles);
-        assertTrue(HomeSections.load(homeActivity(new java.util.HashMap<>(Map.of(
-                "homeGridV1", grid.toString())))).isDefault());
+        assertEquals(List.of("current","next","apps"), types(HomeLayout.load(homeActivity(
+                new java.util.HashMap<>(Map.of("homeGridV1", grid.toString()))))));
         tiles.getJSONObject(0).put("w", 3);
-        assertFalse(HomeSections.load(homeActivity(new java.util.HashMap<>(Map.of(
-                "homeGridV1", grid.toString())))).isDefault());
+        HomeLayout custom = HomeLayout.load(homeActivity(new java.util.HashMap<>(Map.of(
+                "homeGridV1", grid.toString()))));
+        assertEquals(7, custom.items.size());
+        assertValid(custom);
     }
 
     @Test public void rebuildsTimeAndStreaksFromLegacyDayAndBookLogsWithoutUsageAccess() {

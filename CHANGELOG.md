@@ -5,7 +5,7 @@
 - Settings adds custom bindings for hardware keys, reader tap zones and swipes. Existing page controls keep their defaults on upgrade.
 - The quick panel checks device capabilities and connected audio outputs when opened.
 
-- Settings › Home lets you arrange sections on one Home screen, change borders and density, and choose the layout and count for favourite apps. Existing book layouts and data are preserved. Saved dev grids migrate to ordered sections, including hosted Android widgets.
+- Home gains a one-screen widget editor with live previews, discrete movement and resizing, component-specific variants and a resettable reading preset. Existing section settings and Android widget bindings migrate into the layout.
 - The Library adds measured cover grids and lists. Reading stats combine daily minutes, a week chart and a monthly calendar.
 - The Folio interface adapts to monochrome e-ink, colour e-ink and LCD/OLED. Display type, text size and interface size can be adjusted separately. LCD and OLED users can follow the system theme.
 - EPUB and TXT reading gains Literata, redesigned contents and text controls, and position-preserving pagination when layout or typography changes.

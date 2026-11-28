@@ -1,6 +1,5 @@
 package dev.inkhome;
 
-import android.content.Context;
 import android.content.SharedPreferences;
 
 import org.json.JSONArray;
@@ -14,7 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Ordered Home sections and their display options. */
+/** Reader for section-list and earlier grid preferences during canvas migration. */
 final class HomeSections {
     private static final String KEY = "homeSectionsV1";
     private static final String GRID = "homeGridV1";
@@ -46,8 +45,18 @@ final class HomeSections {
         return -1;
     }
 
-    static HomeSections load(MainActivity a) {
-        SharedPreferences prefs = a.getSharedPreferences("inkhome", Context.MODE_PRIVATE);
+    static boolean hasLegacyData(SharedPreferences prefs) {
+        if (prefs.contains(KEY)) return true;
+        for (String key : OLD_KEYS) if (prefs.contains(key)) return true;
+        return false;
+    }
+
+    static void clearLegacyData(SharedPreferences.Editor edit) {
+        edit.remove(KEY);
+        for (String key : OLD_KEYS) edit.remove(key);
+    }
+
+    static HomeSections loadLegacy(SharedPreferences prefs) {
         HomeSections sections = new HomeSections();
         String saved = prefs.getString(KEY, null);
         if (saved != null) {
@@ -64,12 +73,6 @@ final class HomeSections {
                 } catch (JSONException ignored) {
                     sections = new HomeSections();
                 }
-            }
-        }
-        for (String key : OLD_KEYS) {
-            if (prefs.contains(key)) {
-                sections.save(a);
-                break;
             }
         }
         return sections;
@@ -142,20 +145,5 @@ final class HomeSections {
             }
         }
         return true;
-    }
-
-    void save(MainActivity a) {
-        JSONObject data = new JSONObject();
-        try {
-            data.put("order", new JSONArray(order)).put("visible", new JSONArray(visible))
-                    .put("borders", borders).put("verticalApps", verticalApps).put("compact", compact)
-                    .put("appCount", appCount).put("nextCount", nextCount);
-        } catch (JSONException e) {
-            throw new IllegalStateException("Cannot encode Home sections", e);
-        }
-        SharedPreferences.Editor edit = a.getSharedPreferences("inkhome", Context.MODE_PRIVATE).edit();
-        edit.putString(KEY, data.toString());
-        for (String key : OLD_KEYS) edit.remove(key);
-        edit.apply();
     }
 }
