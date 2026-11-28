@@ -26,6 +26,11 @@
     <uses-permission android:name="android.permission.BIND_APPWIDGET" tools:ignore="ProtectedPermissions" />
 
     <queries>
+        <intent><action android:name="android.settings.panel.action.WIFI" /></intent>
+        <intent><action android:name="android.settings.WIFI_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.BLUETOOTH_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.DISPLAY_SETTINGS" /></intent>
+
         <intent>
             <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
         </intent>

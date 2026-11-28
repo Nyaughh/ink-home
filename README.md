@@ -40,9 +40,21 @@ A calm, reading-first home screen for e-ink Android tablets.
   navigation menu under the chevron. Tap the status strip for device controls.
 - Swipe sideways, press a page key or use the arrow buttons to move through
   paged lists. In Settings, text size and interface size can be adjusted separately.
+- In **Settings › Controls**, select an action and press a hardware key to bind
+  it. You can assign several inputs to one action or swap conflicting bindings.
+  Home and paged lists use the same key and swipe assignments for supported
+  actions. In the built-in reader,
+  choose the original tap layout, three columns, three rows, or five zones
+  with a separate top and bottom. Assign a tap or swipe to open contents,
+  skip a chapter or clean the screen. Reset to defaults restores the original
+  bindings and tap layout while keeping your page-key direction preference.
 - **Made for e-ink**: paged lists and hardware page keys, monochrome or colour covers, and adjustable refresh on compatible Onyx firmware. LCD and OLED devices default to scrolling and can follow the system theme.
 - **Status bar and quick panel**: clock, Wi-Fi, battery and notifications,
-  with only the controls the hardware has.
+  with controls selected for the device. Tap the strip or swipe down on it.
+  Volume follows connected media outputs. On Boox firmware that reports a
+  speaker even when none is fitted, Ink Home requires a separate speaker
+  capability or a connected output such as headphones. This can hide the
+  built-in volume control on some speaker-equipped Boox devices.
 - **Sleep screen and wallpaper**: generate a panel-sized picture from your current book or an image. Choose it in your device’s screensaver settings. Boox copies the image, so select it again after changing the artwork. Home can also show a faded wallpaper.
 - **Updates**: checks this repository's releases and installs new versions
   after asking.

@@ -90,8 +90,7 @@ final class SettingsScreen implements Screen {
                     : host.getString(R.string.settings_ui_allow_file_access));
             category(host, g, SHELL, host.getString(host.store.statusBar()
                     ? R.string.settings_ui_ink_home_status_strip : R.string.settings_ui_system_status_strip));
-            category(host, g, CONTROLS, host.getString(host.store.pageKeysReversed()
-                    ? R.string.settings_ui_reversed_page_buttons : R.string.settings_ui_normal_page_buttons));
+            category(host, g, CONTROLS, host.getString(R.string.controls_summary));
             category(host, g, DEVICE, freeSpace(host));
             category(host, g, ABOUT, host.getString(R.string.settings_ui_version, Updater.installedVersion(host)));
         } else switch (category) {
@@ -335,6 +334,7 @@ final class SettingsScreen implements Screen {
     }
 
     private void controls(MainActivity host, MainActivity.Rows g) {
+        new ControlBindingsScreen(host).rows(g);
         g.toggle(host.getString(R.string.settings_ui_lock_to_portrait), host.store.portraitLocked(), locked -> {
             host.store.setPortraitLocked(locked);
             ActivityWindow.applyOrientation(host, host.store);
@@ -353,7 +353,7 @@ final class SettingsScreen implements Screen {
             link(host, g, host.getString(R.string.settings_ui_wi_fi), "", Settings.ACTION_WIFI_SETTINGS);
         if (pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_BLUETOOTH))
             link(host, g, host.getString(R.string.settings_ui_bluetooth), "", Settings.ACTION_BLUETOOTH_SETTINGS);
-        if (DisplayProbe.capabilities(host).speaker)
+        if (DisplayProbe.capabilities(host).mediaVolume)
             link(host, g, host.getString(R.string.settings_ui_sound), "", Settings.ACTION_SOUND_SETTINGS);
         link(host, g, host.getString(R.string.settings_ui_date_and_time), "", Settings.ACTION_DATE_SETTINGS);
         link(host, g, host.getString(R.string.settings_ui_storage), freeSpace(host), Settings.ACTION_INTERNAL_STORAGE_SETTINGS);

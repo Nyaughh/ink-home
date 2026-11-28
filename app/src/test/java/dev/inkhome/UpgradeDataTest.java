@@ -46,6 +46,68 @@ public class UpgradeDataTest {
         assertFalse(new Store(legacyContext(Map.of("portraitLocked", false))).portraitLocked());
     }
 
+    @Test public void unchangedControlsOnUpgradeRespectExistingKeyOrderAndTouchZones() {
+        for (boolean reversed : new boolean[] {false, true}) {
+            Controls controls = new Store(legacyContext(Map.of("pageRev", reversed))).controls();
+            Controls.Action next = reversed ? Controls.Action.PREV_PAGE : Controls.Action.NEXT_PAGE;
+            Controls.Action prev = reversed ? Controls.Action.NEXT_PAGE : Controls.Action.PREV_PAGE;
+            for (Controls.Input input : Arrays.asList(Controls.Input.PAGE_DOWN,
+                    Controls.Input.VOLUME_DOWN, Controls.Input.DPAD_RIGHT)) {
+                assertEquals(next, controls.action(Controls.key(input.keyCode)));
+                assertFalse(controls.overridden(input));
+            }
+            for (Controls.Input input : Arrays.asList(Controls.Input.PAGE_UP,
+                    Controls.Input.VOLUME_UP, Controls.Input.DPAD_LEFT)) {
+                assertEquals(prev, controls.action(Controls.key(input.keyCode)));
+                assertFalse(controls.overridden(input));
+            }
+            assertEquals(Controls.Layout.CLASSIC, controls.layout());
+            assertEquals(Controls.Action.PREV_PAGE, controls.action(controls.tap(.1f, .1f)));
+            assertEquals(Controls.Action.MENU, controls.action(controls.tap(.5f, .5f)));
+            assertEquals(Controls.Action.NEXT_PAGE, controls.action(controls.tap(.5f, .1f)));
+            assertEquals(Controls.Action.NEXT_PAGE, controls.action(controls.tap(.3f, .5f)));
+            assertEquals(Controls.Action.NEXT_PAGE, controls.action(Controls.Input.SWIPE_LEFT));
+            assertEquals(Controls.Action.PREV_PAGE, controls.action(Controls.Input.SWIPE_RIGHT));
+            assertEquals(Controls.Action.NONE, controls.action(Controls.key(280)));
+        }
+    }
+
+    @Test public void restoresExplicitControlsAlongsideLegacyData() {
+        Store store = new Store(legacyContext(Map.of(
+                "pageRev", true, "rFont", 23, "controls.layout", "CROSS",
+                "controls.binding.PAGE_DOWN", "NONE", "controls.binding.KEY_280", "STRONG_CLEAN",
+                "controls.binding.TAP_TOP", "STRONG_CLEAN")));
+        Controls controls = store.controls();
+        assertEquals(23, store.readerFontSize());
+        assertEquals(Controls.Action.NONE, controls.action(Controls.Input.PAGE_DOWN));
+        assertEquals(Controls.Action.PREV_PAGE, controls.action(Controls.Input.VOLUME_DOWN));
+        assertEquals(Controls.Action.STRONG_CLEAN, controls.action(Controls.key(280)));
+        assertTrue(Arrays.asList(controls.inputs()).contains(Controls.key(280)));
+        assertEquals(Controls.Action.STRONG_CLEAN, controls.action(controls.tap(.5f, .1f)));
+        assertEquals(Controls.Input.TAP_BOTTOM, controls.tap(.5f, .9f));
+    }
+
+    @Test public void swapCommitsBothAssignmentsAndResetPreservesOtherPreferences() {
+        SharedPreferences prefs = mock(SharedPreferences.class);
+        SharedPreferences.Editor edit = mock(SharedPreferences.Editor.class, RETURNS_SELF);
+        when(prefs.edit()).thenReturn(edit);
+        Controls controls = new Controls(prefs);
+        controls.swap(Controls.Input.SWIPE_LEFT, Controls.Input.TAP_CENTER);
+        verify(edit).putString("controls.binding.SWIPE_LEFT", "MENU");
+        verify(edit).putString("controls.binding.TAP_CENTER", "NEXT_PAGE");
+        verify(edit).apply();
+
+        doReturn(Map.of("controls.binding.SWIPE_LEFT", "MENU",
+                "controls.binding.TAP_CENTER", "NEXT_PAGE", "controls.layout", "ROWS",
+                "pageRev", true, "readpos", "{}")).when(prefs).getAll();
+        controls.reset();
+        verify(edit).remove("controls.binding.SWIPE_LEFT");
+        verify(edit).remove("controls.binding.TAP_CENTER");
+        verify(edit).remove("controls.layout");
+        verify(edit, times(2)).apply();
+        verifyNoMoreInteractions(edit);
+    }
+
     @Test public void resumesLegacyBookAndReadsCollectionsAndSettings() {
         Context c = legacyContext(Map.ofEntries(
                 Map.entry("readpos", "{\"" + BOOK + "\":{\"c\":7,\"o\":2481,\"p\":0.625,\"t\":1716600000000}}"),

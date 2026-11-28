@@ -187,18 +187,53 @@ public class ReaderActivity extends Activity {
     /** Page keys turn pages. Boox delivers only the key-up for them, so act on that. */
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
-        int code = e.getKeyCode();
-        boolean next = code == KeyEvent.KEYCODE_PAGE_DOWN || code == KeyEvent.KEYCODE_VOLUME_DOWN || code == KeyEvent.KEYCODE_DPAD_RIGHT;
-        boolean prev = code == KeyEvent.KEYCODE_PAGE_UP || code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_DPAD_LEFT;
-        if (store.pageKeysReversed()) { boolean t = next; next = prev; prev = t; }
-        if (next || prev) {
-            if (e.getAction() == KeyEvent.ACTION_UP && !e.isCanceled()) {
-                if (textSheet != null) textSheet.pageScroll(next);
-                else if (menu == null) { if (next) nextPage(); else prevPage(); }
-            }
+        Controls.Action action = store.controls().keyAction(e.getKeyCode(), true);
+        if (action != Controls.Action.NONE) {
+            // Boox can deliver a key-up without a matching key-down.
+            if (e.getAction() == KeyEvent.ACTION_UP && !e.isCanceled()) runControl(action);
             return true;
         }
         return super.dispatchKeyEvent(e);
+    }
+
+    void runControl(Controls.Action action) {
+        switch (action) {
+            case NEXT_PAGE:
+            case PREV_PAGE:
+                boolean forward = action == Controls.Action.NEXT_PAGE;
+                if (textSheet != null) textSheet.pageScroll(forward);
+                else if (menu == null) { if (forward) nextPage(); else prevPage(); }
+                break;
+            case NEXT_CHAPTER:
+            case PREV_CHAPTER:
+                changeChapter(action == Controls.Action.NEXT_CHAPTER ? 1 : -1);
+                break;
+            case MENU:
+                showMenu();
+                break;
+            case CONTENTS:
+                if (book != null) showChapters();
+                break;
+            case STRONG_CLEAN:
+                refreshController.clean(true);
+                break;
+            case TOGGLE_PANEL:
+                startActivity(new Intent(this, MainActivity.class).setAction(ShellService.PANEL)
+                        .putExtra(MainActivity.READER_PANEL_TASK, getTaskId())
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void changeChapter(int direction) {
+        int target = chapter + direction;
+        if (book == null || target < 0 || target >= book.spine.size()) return;
+        chapter = target;
+        pendingOffset = 0;
+        hideMenu();
+        loadChapter();
     }
 
     // ================================================================== layout & paging
@@ -372,15 +407,16 @@ public class ReaderActivity extends Activity {
             if (e.getAction() == MotionEvent.ACTION_DOWN) { downX = e.getX(); downY = e.getY(); return true; }
             if (e.getAction() != MotionEvent.ACTION_UP) return true;
             float dx = e.getX() - downX, dy = e.getY() - downY;
+            Controls controls = store.controls();
+            Controls.Input input;
             if (Math.abs(dx) > ink.dp(48) && Math.abs(dx) > Math.abs(dy)) {
-                if (dx < 0) nextPage(); else prevPage();
-                return true;
+                input = dx < 0 ? Controls.Input.SWIPE_LEFT : Controls.Input.SWIPE_RIGHT;
+            } else {
+                Controls.Input vertical = dy < 0 ? Controls.Input.SWIPE_UP : Controls.Input.SWIPE_DOWN;
+                if (Math.abs(dy) > ink.dp(48) && controls.overridden(vertical)) input = vertical;
+                else input = controls.tap(e.getX() / getWidth(), e.getY() / getHeight());
             }
-            float x = e.getX(), y = e.getY(), w = getWidth(), h = getHeight();
-            boolean center = x > w * 0.3f && x < w * 0.7f && y > h * 0.2f && y < h * 0.8f;
-            if (center) showMenu();
-            else if (x < w * 0.3f) prevPage();
-            else nextPage();
+            runControl(controls.action(input));
             return true;
         }
     }
@@ -429,7 +465,7 @@ public class ReaderActivity extends Activity {
         bottom.setPadding(ink.dp(10), ink.dp(10), ink.dp(10), ink.dp(16));
 
         LinearLayout chapters = ink.row();
-        ImageView prev = barIcon("back", () -> { if (chapter > 0) { chapter--; pendingOffset = 0; hideMenu(); loadChapter(); } });
+        ImageView prev = barIcon("back", () -> changeChapter(-1));
         prev.setAlpha(chapter > 0 ? 1f : 0.3f);
         chapters.addView(prev);
         prev.setEnabled(chapter > 0);
@@ -442,7 +478,7 @@ public class ReaderActivity extends Activity {
         position.setGravity(Gravity.CENTER);
         description.addView(position);
         chapters.addView(description, ink.weight(1));
-        ImageView next = barIcon("chevron", () -> { if (chapter < book.spine.size() - 1) { chapter++; pendingOffset = 0; hideMenu(); loadChapter(); } });
+        ImageView next = barIcon("chevron", () -> changeChapter(1));
         next.setAlpha(chapter < book.spine.size() - 1 ? 1f : 0.3f);
         next.setEnabled(chapter < book.spine.size() - 1);
         next.setContentDescription(getString(R.string.reader_ui_next_chapter));

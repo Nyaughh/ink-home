@@ -16,10 +16,15 @@ import dev.inkhome.folio.widget.Tile;
 import dev.inkhome.folio.widget.Button;
 import dev.inkhome.folio.DisplayProbe;
 import dev.inkhome.folio.core.Capabilities;
+import android.media.AudioDeviceCallback;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
+import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -130,6 +135,8 @@ public class MainActivity extends Activity {
     final Map<String, Integer> pages = new HashMap<>();
     Runnable pageNext, pagePrev;
     private boolean panelOpen = false;
+    static final String READER_PANEL_TASK = "dev.inkhome.readerPanelTask";
+    private int readerPanelTask = -1;
 
     List<Library.Book> books = new ArrayList<>();
     boolean booksLoaded = false, loading = false;
@@ -203,6 +210,7 @@ public class MainActivity extends Activity {
         loadApps();
         if (!store.favoritesInitialised()) seedFavorites();
         if (b == null) handleShellAction(getIntent());
+        else readerPanelTask = b.getInt(READER_PANEL_TASK, -1);
     }
 
     @Override
@@ -241,6 +249,8 @@ public class MainActivity extends Activity {
         f.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
         f.addAction(WifiManager.RSSI_CHANGED_ACTION);
         registerReceiver(systemEvents, f);
+        AudioManager audio = getSystemService(AudioManager.class);
+        if (audio != null) audio.registerAudioDeviceCallback(panelAudioDevices, ui);
         IntentFilter pk = new IntentFilter();
         pk.addAction(Intent.ACTION_PACKAGE_ADDED);
         pk.addAction(Intent.ACTION_PACKAGE_REMOVED);
@@ -251,7 +261,12 @@ public class MainActivity extends Activity {
         if (libSearch == null) hideKeyboard();
 
         statusSignature = "";
+        int returnTask = readerPanelTask;
         render();
+        if (returnTask >= 0) {
+            readerPanelTask = returnTask;
+            openPanel();
+        }
         refreshData(launchedSomething ? 0 : 30_000);
         if (launchedSomething && store.cleanOnHome()) refreshController.cleanWhenIdle();
         if (store.autoUpdate() && System.currentTimeMillis() - store.lastUpdateCheck() > 12 * 3_600_000L) checkUpdates(false);
@@ -272,17 +287,19 @@ public class MainActivity extends Activity {
         }
         boolean menu = menuOpen;
         boolean panel = panelOpen;
+        int returnTask = readerPanelTask;
         ink = new Ink(this, store.textScale(), store.uiScale());
         updateSleepPicture(false);
         applySystemBar();
         render();
         if (menu) openMenu();
-        else if (panel) openPanel();
+        else if (panel) { readerPanelTask = returnTask; openPanel(); }
     }
 
     @Override
     protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
+        state.putInt(READER_PANEL_TASK, readerPanelTask);
         state.putString("screen", screen.name());
         state.putString("libraryTab", libTab);
         state.putString("libraryDetail", libraryDetail);
@@ -324,6 +341,8 @@ public class MainActivity extends Activity {
         super.onPause();
         Updater.onInstallFailure = null;
         refreshController.pause();
+        AudioManager audio = getSystemService(AudioManager.class);
+        if (audio != null) audio.unregisterAudioDeviceCallback(panelAudioDevices);
         try { unregisterReceiver(systemEvents); } catch (Exception ignored) { }
         try { unregisterReceiver(packageEvents); } catch (Exception ignored) { }
         Notifs.setListener(null);
@@ -339,6 +358,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        readerPanelTask = -1;
         if (handleShellAction(intent)) return;
         if (DotService.ACTION_SETTINGS.equals(intent.getAction())) {
             sheets.dismiss();
@@ -364,8 +384,9 @@ public class MainActivity extends Activity {
 
     private boolean handleShellAction(Intent intent) {
         if (ShellService.PANEL.equals(intent.getAction())) {
+            readerPanelTask = intent.getIntExtra(READER_PANEL_TASK, -1);
             sheets.dismiss();
-            content.post(this::openPanel);
+            content.post(() -> { if (!panelOpen || menuOpen) { closePanelSilently(); openPanel(); } });
             return true;
         }
         if (ShellService.SWITCHER.equals(intent.getAction())) {
@@ -384,7 +405,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (panelOpen) closePanel();
+        if (panelOpen) dismissPanel();
         else if (screen == Screen.HOME && !store.useHomePreset() && desktop.back()) return;
         else if (libSearch != null) { libSearch = null; hideKeyboard(); render(); }
         else if (libraryDetail != null && screen == Screen.LIBRARY) { libraryDetail = null; render(); }
@@ -397,17 +418,32 @@ public class MainActivity extends Activity {
     /** Page keys are handled here, before any list can swallow them. */
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
-        int code = e.getKeyCode();
-        boolean next = code == KeyEvent.KEYCODE_PAGE_DOWN || code == KeyEvent.KEYCODE_VOLUME_DOWN;
-        boolean prev = code == KeyEvent.KEYCODE_PAGE_UP || code == KeyEvent.KEYCODE_VOLUME_UP;
-        if (store.pageKeysReversed()) { boolean t = next; next = prev; prev = t; }
-        if ((next && pageNext != null) || (prev && pagePrev != null)) {
-            // Boox's firmware swallows the key-down of page keys, so act on key-up.
-            if (e.getAction() == KeyEvent.ACTION_UP && !e.isCanceled()) (next ? pageNext : pagePrev).run();
-            return true;
-        }
-        return super.dispatchKeyEvent(e);
+        Controls.Action action = store.controls().keyAction(e.getKeyCode(), false);
+        Runnable run = controlHandler(action);
+        if (run == null) return super.dispatchKeyEvent(e);
+        // Boox can deliver a key-up without a matching key-down.
+        if (e.getAction() == KeyEvent.ACTION_UP && !e.isCanceled()) run.run();
+        return true;
     }
+
+    Runnable controlHandler(Controls.Action action) {
+        switch (action) {
+            case NEXT_PAGE: return pageNext;
+            case PREV_PAGE: return pagePrev;
+            case MENU: return () -> { if (menuOpen) closePanel(); else openMenu(); };
+            case TOGGLE_PANEL: return this::togglePanel;
+            case STRONG_CLEAN: return this::cleanScreen;
+            default: return null;
+        }
+    }
+
+    private final AudioDeviceCallback panelAudioDevices = new AudioDeviceCallback() {
+        @Override public void onAudioDevicesAdded(AudioDeviceInfo[] added) { updatePanel(); }
+        @Override public void onAudioDevicesRemoved(AudioDeviceInfo[] removed) { updatePanel(); }
+        private void updatePanel() {
+            if (panelOpen && !menuOpen) openPanel();
+        }
+    };
 
     private final BroadcastReceiver systemEvents = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) {
@@ -586,6 +622,7 @@ public class MainActivity extends Activity {
         }
         renderedDestination = destination;
         coverPage = false;
+        readerPanelTask = -1;
         closePanelSilently();
         content.removeAllViews();
         content.setBackground(null);
@@ -634,6 +671,7 @@ public class MainActivity extends Activity {
 
     /** The chevron menu: every destination and the screen refresh, as a sheet above the bar. */
     private void openMenu() {
+        readerPanelTask = -1;
         closePanelSilently();
         refreshController.changed(overlay, Change.OVERLAY);
         panelOpen = true;
@@ -739,12 +777,56 @@ public class MainActivity extends Activity {
         statusSignature = sig;
 
         statusBar.removeAllViews();
-        statusBar.addView(new Structure(ink.folio).statusStrip(time, Math.max(0, notes),
-                wifi.connected ? wifi.level : -1, bat.percent, bat.charging, this::togglePanel),
-                new LinearLayout.LayoutParams(-1, -2));
+        View strip = new Structure(ink.folio).statusStrip(time, Math.max(0, notes),
+                wifi.connected ? wifi.level : -1, bat.percent, bat.charging, this::togglePanel);
+        strip.setOnTouchListener(new View.OnTouchListener() {
+            private float startX, startY;
+
+            @Override public boolean onTouch(View view, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startX = event.getRawX();
+                        startY = event.getRawY();
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        float dx = Math.abs(event.getRawX() - startX);
+                        float dy = event.getRawY() - startY;
+                        int slop = ViewConfiguration.get(MainActivity.this).getScaledTouchSlop();
+                        if (dy > slop && dy > dx) {
+                            if (!panelOpen) view.performClick();
+                        } else if (Math.abs(dy) <= slop && dx <= slop) {
+                            view.performClick();
+                        }
+                        return true;
+                    default:
+                        return true;
+                }
+            }
+        });
+        statusBar.addView(strip, new LinearLayout.LayoutParams(-1, -2));
     }
 
-    private void togglePanel() { if (panelOpen) closePanel(); else openPanel(); }
+    private void togglePanel() {
+        if (panelOpen) dismissPanel(); else openPanel();
+    }
+
+    private void dismissPanel() {
+        int returnTask = readerPanelTask;
+        closePanel();
+        if (returnTask < 0) return;
+        ActivityManager manager = getSystemService(ActivityManager.class);
+        for (ActivityManager.AppTask task : manager.getAppTasks()) {
+            try {
+                ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                if (info.taskId == returnTask && new ComponentName(this, ReaderActivity.class).equals(info.baseActivity)) {
+                    task.moveToFront();
+                    return;
+                }
+            } catch (IllegalArgumentException ignored) {
+                // The reader task may already have closed.
+            }
+        }
+    }
 
     private void showOverlay() {
         overlay.animate().cancel();
@@ -771,6 +853,7 @@ public class MainActivity extends Activity {
     }
 
     private void closePanel() {
+        readerPanelTask = -1;
         boolean wasMenu = menuOpen;
         closePanelSilently();
         if (wasMenu) renderDock();
@@ -783,7 +866,7 @@ public class MainActivity extends Activity {
         panelOpen = true;
         overlay.removeAllViews();
         showOverlay();
-        overlay.setOnClickListener(v -> closePanel());
+        overlay.setOnClickListener(v -> dismissPanel());
 
         LinearLayout p = ink.col();
         p.setBackgroundColor(ink.PAPER);
@@ -818,14 +901,14 @@ public class MainActivity extends Activity {
         int notes = Notifs.count();
         Capabilities caps = DisplayProbe.capabilities(this);
         List<View> tiles = new ArrayList<>();
-        if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_WIFI)) {
+        if (caps.wifi && (hasPanelSettings(Settings.Panel.ACTION_WIFI) || hasPanelSettings(Settings.ACTION_WIFI_SETTINGS))) {
             tiles.add(panelTile("wifi", getString(R.string.launcher_wi_fi), wifiState, wifi.connected, this::openWifi));
         }
-        if (caps.bluetooth) {
+        if (caps.bluetooth && hasPanelSettings(Settings.ACTION_BLUETOOTH_SETTINGS)) {
             tiles.add(panelTile("bluetooth", getString(R.string.launcher_bluetooth), getString(R.string.launcher_device_settings), false,
                     () -> panelSettings(Settings.ACTION_BLUETOOTH_SETTINGS)));
         }
-        tiles.add(panelTile("clean", getString(R.string.launcher_clean_screen), getString(R.string.service_ui_strong_clean), false, () -> {
+        if (ink.folio.displayClass.isEink()) tiles.add(panelTile("clean", getString(R.string.launcher_clean_screen), getString(R.string.service_ui_strong_clean), false, () -> {
             closePanel();
             ui.post(this::cleanScreen);
         }));
@@ -845,14 +928,14 @@ public class MainActivity extends Activity {
             tiles.add(panelTile("clean", getString(R.string.launcher_ink_dot), getString(enabled ? R.string.launcher_on : R.string.launcher_off), enabled,
                     () -> { DotService.setEnabled(this, !enabled); openPanel(); }));
         }
-        if (caps.frontlight) {
-            tiles.add(panelTile("light", getString(R.string.launcher_light), getString(R.string.launcher_display_settings), false,
-                    () -> panelSettings(Settings.ACTION_DISPLAY_SETTINGS)));
+        if (caps.frontlight && (DisplayProbe.hasOnyxLightDialog(this) || hasPanelSettings(Settings.ACTION_DISPLAY_SETTINGS))) {
+            tiles.add(panelTile("light", getString(caps.warmLight ? R.string.launcher_light_and_warmth : R.string.launcher_light), getString(R.string.launcher_display_settings), false,
+                    this::openPanelLight));
         }
         for (int i = 0; i < tiles.size(); i += 2) {
             addTiles(p, tiles.get(i), i + 1 < tiles.size() ? tiles.get(i + 1) : new View(this));
         }
-        if (caps.speaker) addPanelVolume(p);
+        if (caps.mediaVolume) addPanelVolume(p);
 
         List<Notifs.Item> list = Notifs.items();
         LinearLayout nh = ink.row();
@@ -950,9 +1033,24 @@ public class MainActivity extends Activity {
         return false;
     }
 
+    private boolean hasPanelSettings(String action) {
+        return new Intent(action).resolveActivity(getPackageManager()) != null;
+    }
+
+    private void openPanelLight() {
+        if (DisplayProbe.hasOnyxLightDialog(this)) {
+            closePanel();
+            try {
+                sendBroadcast(new Intent("action.show.brightness.dialog").setPackage("com.android.systemui"));
+                return;
+            } catch (SecurityException ignored) { }
+        }
+        panelSettings(Settings.ACTION_DISPLAY_SETTINGS);
+    }
+
     private void panelSettings(String action) {
         closePanel();
-        if (!start(new Intent(action).setPackage("com.android.settings"))) toast(getString(R.string.launcher_device_settings_unavailable));
+        if (!start(new Intent(action))) toast(getString(R.string.launcher_device_settings_unavailable));
     }
 
     private void addTiles(LinearLayout parent, View first, View second) {
@@ -975,16 +1073,18 @@ public class MainActivity extends Activity {
         if (audio == null || audio.isVolumeFixed()) return;
         int stream = AudioManager.STREAM_MUSIC;
         int max = audio.getStreamMaxVolume(stream);
-        if (max <= 0) return;
+        int min = audio.getStreamMinVolume(stream);
+        int range = max - min;
+        if (range <= 0) return;
         // A bounded number of stops keeps unusually fine-grained volume scales usable.
-        int stops = Math.min(10, max);
+        int stops = Math.min(10, range);
         String[] values = new String[stops + 1];
         for (int i = 0; i <= stops; i++) values[i] = getString(R.string.launcher_percent, Math.round(i * 100f / stops));
-        int selected = Math.round(stops * audio.getStreamVolume(stream) / (float) max);
+        int selected = Math.round(stops * (audio.getStreamVolume(stream) - min) / (float) range);
         panel.addView(ink.text(getString(R.string.launcher_volume), TypeScale.LABEL, ink.TEXT));
         panel.addView(new LevelBar(ink.folio, getString(R.string.launcher_volume), values, selected, index -> {
             try {
-                audio.setStreamVolume(stream, Math.round(index * max / (float) stops), 0);
+                audio.setStreamVolume(stream, min + Math.round(index * range / (float) stops), 0);
             } catch (SecurityException denied) {
                 panelSettings(Settings.ACTION_SOUND_SETTINGS);
             }
@@ -993,7 +1093,7 @@ public class MainActivity extends Activity {
 
     private void openWifi() {
         closePanel();
-        if (!start(new Intent(Settings.Panel.ACTION_WIFI).setPackage("com.android.settings")))
+        if (!start(new Intent(Settings.Panel.ACTION_WIFI)))
             panelSettings(Settings.ACTION_WIFI_SETTINGS);
     }
 
@@ -2196,9 +2296,16 @@ public class MainActivity extends Activity {
     }
 
     private View bindPageKeys(PageLayout layout) {
-        layout.setSwipeEnabled(store.swipePages());
         pageNext = layout::next;
         pagePrev = layout::previous;
+        Controls controls = store.controls();
+        layout.setSwipes(store.swipePages(),
+                controlHandler(controls.action(Controls.Input.SWIPE_LEFT)),
+                controlHandler(controls.action(Controls.Input.SWIPE_RIGHT)),
+                controls.overridden(Controls.Input.SWIPE_UP)
+                        ? controlHandler(controls.action(Controls.Input.SWIPE_UP)) : pageNext,
+                controls.overridden(Controls.Input.SWIPE_DOWN)
+                        ? controlHandler(controls.action(Controls.Input.SWIPE_DOWN)) : pagePrev);
         return layout;
     }
 

@@ -18,12 +18,16 @@ import java.util.Set;
 
 /** Everything Ink Home remembers, in one SharedPreferences file. */
 final class Store {
+    static final String PAGE_REVERSED = "pageRev";
     private final SharedPreferences p;
+    private final Controls controls;
+    Controls controls() { return controls; }
     private final Context context;
 
     Store(Context c) {
         context = c.getApplicationContext();
         p = c.getSharedPreferences("inkhome", Context.MODE_PRIVATE);
+        controls = new Controls(p);
     }
 
     boolean quiet() { return p.getBoolean("quiet", false); }
@@ -239,8 +243,8 @@ final class Store {
     boolean portraitLocked() { return p.getBoolean("portraitLocked", true); }
     void setPortraitLocked(boolean locked) { p.edit().putBoolean("portraitLocked", locked).apply(); }
 
-    boolean pageKeysReversed() { return p.getBoolean("pageRev", false); }
-    void setPageKeysReversed(boolean v) { p.edit().putBoolean("pageRev", v).apply(); }
+    boolean pageKeysReversed() { return p.getBoolean(PAGE_REVERSED, false); }
+    void setPageKeysReversed(boolean v) { p.edit().putBoolean(PAGE_REVERSED, v).apply(); }
 
     /** "off", "book" (current book, kept up to date) or "custom" (a picture the user chose). */
     String sleepMode() { return p.getString("sleepMode", "off"); }

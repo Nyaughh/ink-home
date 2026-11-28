@@ -424,8 +424,16 @@ final class HomeDesktop {
 
         private boolean isPageGesture(MotionEvent e) {
             float dx = e.getX() - downX;
-            return a.store.swipePages() && (dx < 0 ? page + 1 < layout.pages : page > 0)
-                    && Math.abs(dx) > a.ink.dp(48) && Math.abs(dx) > 2 * Math.abs(e.getY() - downY);
+            if (!a.store.swipePages() || Math.abs(dx) <= a.ink.dp(48)
+                    || Math.abs(dx) <= 2 * Math.abs(e.getY() - downY)) return false;
+            Controls.Action action = swipeAction(dx);
+            if (action == Controls.Action.NEXT_PAGE) return page + 1 < layout.pages;
+            if (action == Controls.Action.PREV_PAGE) return page > 0;
+            return a.controlHandler(action) != null;
+        }
+
+        private Controls.Action swipeAction(float dx) {
+            return a.store.controls().action(dx < 0 ? Controls.Input.SWIPE_LEFT : Controls.Input.SWIPE_RIGHT);
         }
 
         @Override public boolean onTouchEvent(MotionEvent e) {
@@ -434,8 +442,10 @@ final class HomeDesktop {
                 cancelLongPress();
             }
             if (!swipe) return super.onTouchEvent(e);
-            if (e.getActionMasked() == MotionEvent.ACTION_UP && isPageGesture(e))
-                page(e.getX() < downX ? 1 : -1);
+            if (e.getActionMasked() == MotionEvent.ACTION_UP && isPageGesture(e)) {
+                Runnable action = a.controlHandler(swipeAction(e.getX() - downX));
+                if (action != null) action.run();
+            }
             return true;
         }
     }

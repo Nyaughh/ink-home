@@ -126,6 +126,7 @@
     <string name="launcher_allow_access">Allow access</string>
     <string name="launcher_on">On</string>
     <string name="launcher_ink_dot">Ink dot</string>
+    <string name="launcher_light_and_warmth">Light and warmth</string>
     <string name="launcher_light">Light</string>
     <string name="launcher_display_settings">Display settings</string>
     <string name="launcher_notifications">Notifications</string>

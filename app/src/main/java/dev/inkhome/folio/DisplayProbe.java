@@ -1,6 +1,10 @@
 package dev.inkhome.folio;
 
+import android.bluetooth.BluetoothManager;
 import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
+import android.net.wifi.WifiManager;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -80,26 +84,83 @@ public final class DisplayProbe {
                 displayClass(context) == DisplayClass.EMISSIVE && mode == Configuration.UI_MODE_NIGHT_YES);
     }
 
+    private static Boolean onyxFlag(Context context, String name) {
+        try {
+            Class<?> controller = Class.forName("android.onyx.hardware.DeviceController");
+            return (Boolean) controller.getMethod(name, Context.class).invoke(null, context);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError unavailable) {
+            return null;
+        }
+    }
+
+    public static boolean hasOnyxLightDialog(Context context) {
+        try {
+            Class.forName("android.onyx.util.PhoneWindowHelper").getDeclaredMethod("openFrontLightDialog");
+            return Boolean.TRUE.equals(onyxFlag(context, "hasBrightness"));
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError unavailable) {
+            return false;
+        }
+    }
+
+    private static boolean hasMediaOutput(Context context, PackageManager pm) {
+        AudioManager audio = context.getSystemService(AudioManager.class);
+        if (audio == null || audio.isVolumeFixed()
+                || audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                <= audio.getStreamMinVolume(AudioManager.STREAM_MUSIC)) return false;
+        boolean builtIn = false;
+        for (AudioDeviceInfo output : audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            switch (output.getType()) {
+                case AudioDeviceInfo.TYPE_WIRED_HEADSET:
+                case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
+                case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP:
+                case AudioDeviceInfo.TYPE_USB_DEVICE:
+                case AudioDeviceInfo.TYPE_USB_HEADSET:
+                case AudioDeviceInfo.TYPE_USB_ACCESSORY:
+                case AudioDeviceInfo.TYPE_HDMI:
+                case AudioDeviceInfo.TYPE_HDMI_ARC:
+                case AudioDeviceInfo.TYPE_HDMI_EARC:
+                case AudioDeviceInfo.TYPE_LINE_ANALOG:
+                case AudioDeviceInfo.TYPE_LINE_DIGITAL:
+                case AudioDeviceInfo.TYPE_HEARING_AID:
+                case AudioDeviceInfo.TYPE_BLE_HEADSET:
+                case AudioDeviceInfo.TYPE_BLE_SPEAKER:
+                case AudioDeviceInfo.TYPE_BLE_BROADCAST:
+                    return true;
+                case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER:
+                    builtIn = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (!builtIn || !pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_OUTPUT)) return false;
+        // Some Onyx firmware publishes the generic Qualcomm speaker route even without
+        // a transducer. Its hasAudio() query also returns true unconditionally.
+        Boolean speaker = onyxFlag(context, "hasSpeaker");
+        if (speaker != null) return speaker;
+        if (onyxFlag(context, "hasAudio") != null) return false;
+        return !"onyx".equalsIgnoreCase(Build.MANUFACTURER) && !"boox".equalsIgnoreCase(Build.MANUFACTURER);
+    }
+
     public static Capabilities capabilities(Context context) {
         PackageManager pm = context.getPackageManager();
         boolean pages = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_PAGE_UP)
                 && KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_PAGE_DOWN);
-        boolean speaker = false;
-        AudioManager audio = context.getSystemService(AudioManager.class);
-        if (audio != null) {
-            for (AudioDeviceInfo device : audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
-                if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) speaker = true;
-            }
-        }
-        // Some readers expose frontlight channels in sysfs. Unknown channels stay unavailable.
-        boolean cold = new File("/sys/class/backlight/cold").isDirectory();
-        boolean warm = new File("/sys/class/backlight/warm").isDirectory();
+        Boolean front = onyxFlag(context, "hasBrightness");
+        Boolean colourTemperature = onyxFlag(context, "hasCTMBrightness");
+        boolean warm = colourTemperature != null ? colourTemperature : new File("/sys/class/backlight/warm/brightness").canRead();
+        boolean light = front != null ? front : warm || new File("/sys/class/backlight/cold/brightness").canRead();
         Configuration config = context.getResources().getConfiguration();
-        return new Capabilities(hasEpdControl(), supportsRegal(), pages, cold || warm, warm,
-                pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH),
-                hardwareClass() != DisplayClass.MONO_EINK, speaker,
+        BluetoothManager bluetooth = context.getSystemService(BluetoothManager.class);
+        SensorManager sensors = context.getSystemService(SensorManager.class);
+        return new Capabilities(hasEpdControl(), supportsRegal(), pages, light, light && warm,
+                pm.hasSystemFeature(PackageManager.FEATURE_WIFI) && context.getApplicationContext().getSystemService(WifiManager.class) != null,
+                pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH) && bluetooth != null && bluetooth.getAdapter() != null,
+                hardwareClass() != DisplayClass.MONO_EINK, hasMediaOutput(context, pm),
                 pm.hasSystemFeature(PackageManager.FEATURE_SCREEN_LANDSCAPE)
-                        && pm.hasSystemFeature(PackageManager.FEATURE_SCREEN_PORTRAIT),
+                        && pm.hasSystemFeature(PackageManager.FEATURE_SCREEN_PORTRAIT)
+                        && sensors != null && (sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
+                        || sensors.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) != null),
                 config.keyboard == Configuration.KEYBOARD_QWERTY);
     }
 }

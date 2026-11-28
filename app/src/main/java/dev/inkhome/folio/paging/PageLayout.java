@@ -30,8 +30,16 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
     private float downX, downY;
     private boolean swiping;
     private boolean swipeEnabled = true;
+    private Runnable swipeLeft = this::next, swipeRight = this::previous;
+    private Runnable swipeUp = this::next, swipeDown = this::previous;
 
-    public final void setSwipeEnabled(boolean enabled) { swipeEnabled = enabled; }
+    public final void setSwipes(boolean enabled, Runnable left, Runnable right, Runnable up, Runnable down) {
+        swipeEnabled = enabled;
+        swipeLeft = left;
+        swipeRight = right;
+        swipeUp = up;
+        swipeDown = down;
+    }
 
 
     PageLayout(Folio folio, LinearLayout header, int initialPage, IntConsumer remember, Runnable changed) {
@@ -167,7 +175,9 @@ public abstract class PageLayout extends LinearLayout implements ViewTreeObserve
         if (e.getActionMasked() == MotionEvent.ACTION_UP && (swiping || crossed(e))) {
             float dx = e.getX() - downX, dy = e.getY() - downY;
             if (crossed(e)) {
-                if ((Math.abs(dx) > Math.abs(dy) ? dx : dy) < 0) next(); else previous();
+                Runnable action = Math.abs(dx) > Math.abs(dy)
+                        ? (dx < 0 ? swipeLeft : swipeRight) : (dy < 0 ? swipeUp : swipeDown);
+                if (action != null) action.run();
             }
         }
         return true;

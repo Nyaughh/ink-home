@@ -130,6 +130,23 @@ final class SheetHost {
         present(title, ink.scroller(body), null, null, null);
     }
 
+    void captureKey(IntConsumer captured) {
+        Ink ink = style.get();
+        present(activity.getString(R.string.controls_capture), padded(ink.body(
+                activity.getString(R.string.controls_capture_hint))),
+                activity.getString(R.string.library_ui_cancel), this::dismiss, null);
+        Dialog capture = sheet;
+        if (capture == null) return;
+        capture.setOnKeyListener((dialog, code, event) -> {
+            if (code <= 0) return false;
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                dismiss();
+                captured.accept(code);
+            }
+            return true;
+        });
+    }
+
     void paged(String title, PagedList contents) {
         present(title, contents, null, null, null);
     }
@@ -199,13 +216,22 @@ final class SheetHost {
         }
         if (body instanceof ListView || body instanceof ScrollView || body instanceof PagedList) {
             d.setOnKeyListener((dialog, key, event) -> {
-                boolean next = key == KeyEvent.KEYCODE_PAGE_DOWN || key == KeyEvent.KEYCODE_VOLUME_DOWN
-                        || (body instanceof PagedList && key == KeyEvent.KEYCODE_DPAD_RIGHT);
-                boolean prev = key == KeyEvent.KEYCODE_PAGE_UP || key == KeyEvent.KEYCODE_VOLUME_UP
-                        || (body instanceof PagedList && key == KeyEvent.KEYCODE_DPAD_LEFT);
-                if (!next && !prev) return false;
+                Controls.Action binding = settings.controls().keyAction(key, body instanceof PagedList);
+                if (binding == Controls.Action.NONE) return false;
+                if (binding != Controls.Action.NEXT_PAGE && binding != Controls.Action.PREV_PAGE) {
+                    Runnable handler;
+                    if (activity instanceof MainActivity) handler = ((MainActivity) activity).controlHandler(binding);
+                    else if (activity instanceof ReaderActivity) handler = () -> ((ReaderActivity) activity).runControl(binding);
+                    else return false;
+                    if (handler == null) return false;
+                    if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                        if (binding != Controls.Action.STRONG_CLEAN) dismiss();
+                        handler.run();
+                    }
+                    return true;
+                }
                 if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
-                    boolean forward = settings.pageKeysReversed() ? prev : next;
+                    boolean forward = binding == Controls.Action.NEXT_PAGE;
                     if (body instanceof PagedList) {
                         PagedList list = (PagedList) body;
                         if (forward) list.next(); else list.previous();
