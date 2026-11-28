@@ -119,7 +119,6 @@
     </string-array>
     <string name="launcher_bluetooth">Bluetooth</string>
     <string name="launcher_device_settings">Device settings</string>
-    <string name="launcher_gentle_refresh">Gentle refresh</string>
     <string name="launcher_rotation">Rotation</string>
     <string name="launcher_portrait">Portrait</string>
     <string name="launcher_follow_system">Follow system</string>
@@ -207,7 +206,6 @@
     <string name="launcher_update_install_permission">Allow Ink Home to install updates, then tap Install again</string>
     <string name="launcher_update_checksum_error">The download didn\'t match its checksum, so it wasn\'t installed</string>
     <string name="launcher_update_failed_try_again_later">Update failed. Try again later.</string>
-    <string name="launcher_screen_redrawn">Redrew the window. Strong clean is in Display &amp; refresh.</string>
     <string name="launcher_clock_12_pattern">h:mm</string>
 
     <!-- Library and search -->
@@ -328,6 +326,7 @@
     <string name="settings_ui_on">On</string>
     <string name="settings_ui_quiet">Quiet</string>
     <string name="settings_ui_requires_notification_access">Requires notification access</string>
+    <string name="settings_ui_dot_gestures">Tap to clean, drag to move, hold for options</string>
     <string name="settings_ui_show_ink_dot">Show Ink dot</string>
     <string name="settings_ui_size">Size</string>
     <string name="settings_ui_tuck_against_the_edge">Tuck against the edge</string>
@@ -652,8 +651,6 @@
     <string name="service_ui_done">Done</string>
     <string name="service_ui_enter_a_name">Enter a name</string>
     <string name="service_ui_finish_later">Finish later</string>
-    <string name="service_ui_gentle_refresh">Gentle refresh</string>
-    <string name="service_ui_gentle_refresh_unavailable">Gentle refresh unavailable</string>
     <string name="service_ui_hide_dot">Hide dot</string>
     <string name="service_ui_hide_in_this_app">Hide in this app</string>
     <string name="service_ui_ink_dot">Ink dot</string>

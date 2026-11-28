@@ -52,9 +52,9 @@ accounts, tracking or ads, and only goes online to check for its own updates.
 
 ## Screen refresh and the Ink dot
 
-On e-ink, **Clean screen** in the dock menu and control panel requests a gentle grey update. Pressing Home while already on Home uses the same action. If the firmware cannot take the request, Ink Home redraws its window. For persistent ghosting, choose **Settings › Display & refresh › Strong clean now**. This requests a flashing full refresh and falls back to a black-and-white flash inside Ink Home.
+On compatible Boox devices, **Clean screen** requests a flashing full refresh (GC 98). The dock menu, control panel, Home key while already on Home, and **Settings › Display & refresh › Strong clean now** use the same action. Automatic cleans at the configured page interval also request GC 98. When the native request is unavailable on e-ink, a manual clean flashes Ink Home’s window black and white.
 
-The optional Ink dot provides a gentle refresh over other apps. Enable display-over-other-apps access for the standalone dot. Tap the dot to refresh, or hold it for **Strong clean** and positioning options. If gentle refresh is unavailable, the dot shows a notice. The display firmware determines how much of the panel a request refreshes.
+The optional Ink dot provides the same full clean over other apps. Enable display-over-other-apps access for the standalone dot. Tap it to clean, drag it to any spot inside the screen, or hold it to open its menu. The dot remembers its position after a restart or reboot. Choose **Tuck to edge** in the menu to park it at the side. If the native request is unavailable, the dot briefly flashes a full-screen overlay.
 
 The optional Ink Shell accessibility service adds a floating clock with panel shortcuts. It receives window-change events and uses the foreground app’s package name for per-app dot settings. Its Android service declaration disables access to window contents. The launcher works with Shell turned off.
 

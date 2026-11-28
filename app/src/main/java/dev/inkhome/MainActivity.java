@@ -825,7 +825,7 @@ public class MainActivity extends Activity {
             tiles.add(panelTile("bluetooth", getString(R.string.launcher_bluetooth), getString(R.string.launcher_device_settings), false,
                     () -> panelSettings(Settings.ACTION_BLUETOOTH_SETTINGS)));
         }
-        tiles.add(panelTile("clean", getString(R.string.launcher_clean_screen), getString(R.string.launcher_gentle_refresh), false, () -> {
+        tiles.add(panelTile("clean", getString(R.string.launcher_clean_screen), getString(R.string.service_ui_strong_clean), false, () -> {
             closePanel();
             ui.post(this::cleanScreen);
         }));
@@ -2237,16 +2237,7 @@ public class MainActivity extends Activity {
 
     // ================================================================== e-ink
 
-    private void cleanScreen() {
-        View window = getWindow().getDecorView();
-        if (!ink.folio.displayClass.isEink()) return;
-        if (!dev.inkhome.folio.epd.Epd.requestGentleRefresh(window)) {
-            window.invalidate();
-            toast(getString(R.string.launcher_screen_redrawn));
-        }
-    }
-
-    void strongClean() {
+    void cleanScreen() {
         refreshController.clean(true);
     }
 

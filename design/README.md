@@ -333,16 +333,16 @@ The Ink dot inside another app, and its long-press menu (approved mockup file `u
 
 **Placement**
 
-- It snaps to the left or right edge, 6 u in, at any height. Default: right edge, 58% of the way down, where a thumb rests on a 6 inch reader.
+- The dot starts near an edge and can be placed anywhere within the usable screen.
 - The position is remembered per rotation.
-- It keeps clear of the status strip, the dock or Ink bar, and the keyboard (it moves up while the keyboard is showing).
+- Its touch target stays inside the screen bounds after a drag, rotation or resize.
 - Per app it can **Show**, **Tuck** or **Hide**. Defaults: Tuck in the built-in reader, in apps that count as reading (the existing list in Settings › Reading) and on Ink Home's own screens, so it never covers text or controls; Show everywhere else. The per-app choice needs Shell level; with the overlay permission alone the choice is global.
 - Hidden on the sleep screen and in full-screen video.
 
 **Moving and hiding**
 
-- *Press and move* picks it up. On e-ink it does not follow the finger, because a dragged shape leaves a trail of ghosts: it turns inverse when picked up and reappears at the nearest edge where the finger lifts. Two small updates in all.
-- *Push it off its edge* to tuck it. *Pull the tab inward* to bring the dot back.
+- *Drag* picks up the dot and moves it with the finger. Releasing saves its position.
+- Choose *Tuck to edge* in the menu to park it at the nearest side. Drag the tab to bring the dot back.
 - *Hide* from its menu ("Hide here", "Tuck to edge"), turn it off in Settings › System shell › Ink dot, or toggle it from a control panel tile.
 
 **Tap and hold**

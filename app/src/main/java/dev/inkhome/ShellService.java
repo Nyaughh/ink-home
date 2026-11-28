@@ -21,7 +21,6 @@ import android.content.pm.PackageManager;
 import android.provider.Settings;
 import android.view.MotionEvent;
 import dev.inkhome.folio.widget.Button;
-import dev.inkhome.folio.epd.Epd;
 
 import dev.inkhome.folio.Folio;
 import dev.inkhome.folio.Type;
@@ -146,10 +145,8 @@ public final class ShellService extends AccessibilityService {
             action(f, rows, getString(R.string.service_ui_wi_fi), () -> systemSettings(Settings.ACTION_WIFI_SETTINGS));
         if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH))
             action(f, rows, getString(R.string.service_ui_bluetooth), () -> systemSettings(Settings.ACTION_BLUETOOTH_SETTINGS));
-        if (f.displayClass.isEink()) action(f, rows, getString(R.string.service_ui_gentle_refresh), () -> {
-            if (!Epd.requestGentleRefresh(panel))
-                dot.showNotice(getString(R.string.service_ui_gentle_refresh_unavailable));
-        });
+        if (f.displayClass.isEink()) action(f, rows, getString(R.string.service_ui_strong_clean),
+                () -> dot.clean(panel));
         action(f, rows, getString(R.string.service_ui_switcher), () -> open(this, SWITCHER));
         action(f, rows, getString(R.string.service_ui_all_ink_home_controls), () -> open(this, PANEL));
         action(f, rows, getString(R.string.service_ui_close), () -> {});

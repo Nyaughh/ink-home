@@ -8,10 +8,12 @@ import android.view.ViewConfiguration;
 import dev.inkhome.folio.Folio;
 import dev.inkhome.folio.Glyph;
 
-/** Updates the picked-up state once and moves the window only when released. */
+/** A tap cleans, a hold opens options, and dragging tracks the pointer. */
 final class InkDot extends View {
     interface Actions {
-        void drop(float x, float y, float dx);
+        void beginDrag();
+        void move(float dx, float dy);
+        void endDrag(boolean save);
         void options();
         void clean();
     }
@@ -83,26 +85,39 @@ final class InkDot extends View {
                 postDelayed(hold, 400);
                 return true;
             case MotionEvent.ACTION_MOVE:
-                if (!held && !dragged && Math.hypot(x-downX, y-downY) > slop) {
-                    removeCallbacks(hold);
-                    dragged = true;
-                    invalidate();
-                }
+                track(x, y);
                 return true;
             case MotionEvent.ACTION_UP:
                 removeCallbacks(hold);
-                if (dragged) actions.drop(x, y, x-downX);
+                track(x, y);
+                if (dragged) actions.endDrag(true);
                 else if (!held) performClick();
                 dragged = false;
                 invalidate();
                 return true;
+            case MotionEvent.ACTION_POINTER_DOWN:
             case MotionEvent.ACTION_CANCEL:
                 removeCallbacks(hold);
+                if (dragged) actions.endDrag(false);
+                held = true;
                 dragged = false;
                 invalidate();
                 return true;
             default: return true;
         }
+    }
+
+    private void track(float x, float y) {
+        if (held) return;
+        float dx = x - downX, dy = y - downY;
+        if (!dragged) {
+            if (Math.hypot(dx, dy) <= slop) return;
+            removeCallbacks(hold);
+            dragged = true;
+            actions.beginDrag();
+            invalidate();
+        }
+        actions.move(dx, dy);
     }
 
     @Override protected void onDetachedFromWindow() {

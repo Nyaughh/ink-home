@@ -212,7 +212,7 @@ final class SettingsScreen implements Screen {
         int[] intervals = {0, 1, 4, 8, 16};
         if (host.ink.folio.displayClass.isEink()) {
             g.add(host.getString(R.string.settings_ui_strong_clean_now),
-                    host.getString(R.string.settings_ui_flashes_the_screen), host::strongClean);
+                    host.getString(R.string.settings_ui_flashes_the_screen), host::cleanScreen);
         }
         String refreshLabel = host.getString(R.string.settings_ui_full_refresh_in_the_reader);
         g.control(refreshLabel, new Stepper(host.ink.folio, refreshLabel,
@@ -294,7 +294,7 @@ final class SettingsScreen implements Screen {
         g.add(host.getString(R.string.settings_ui_hidden_apps), String.valueOf(host.store.hidden().size()), () -> open(host, "hidden"));
         if (host.apps.stream().anyMatch(MainActivity::booxShellApp)) category(host, g, BOOX,
                 host.getString(R.string.settings_ui_choose_which_apps_to_show));
-        if (DotService.available(host)) category(host, g, DOT, host.getString(dotOn(host) ? R.string.settings_ui_on : R.string.settings_ui_off));
+        if (DotService.available(host)) category(host, g, DOT, host.getString(dotOn(host) ? R.string.settings_ui_dot_gestures : R.string.settings_ui_off));
         if (Notifs.count() >= 0) {
             g.toggle(host.getString(R.string.settings_ui_quiet), host.store.quiet(), enabled -> { host.changeQuiet(enabled); host.render(); });
         } else g.add(host.getString(R.string.settings_ui_quiet), host.getString(R.string.settings_ui_requires_notification_access),
