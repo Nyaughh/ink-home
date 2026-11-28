@@ -100,12 +100,10 @@ public final class Structure {
         inlineGlyph(row, wifi < 0 ? "wifi-off" : "wifi", wifi);
         row.addView(text(f.context.getString(R.string.reader_ui_percent, battery), META));
         inlineGlyph(row, charging ? "battery-charging" : "battery", battery);
-        if (editHome == null) inlineGlyph(row, "tune", -1);
-        else {
-            FrameLayout edit = new FrameLayout(f.context);
-            edit.addView(glyph("grid", -1, false), new FrameLayout.LayoutParams(f.u(18), f.u(18), Gravity.CENTER));
-            action(edit, f.context.getString(R.string.home_edit_layout), editHome);
-            row.addView(edit, f.u(44), f.u(Tokens.Bar.STATUS));
+        ImageView last = inlineGlyph(row, editHome == null ? "tune" : "grid", -1);
+        if (editHome != null) {
+            last.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+            action(last, f.context.getString(R.string.home_edit_layout), editHome);
         }
         strip.addView(row);
         rule(strip, false);
@@ -117,10 +115,12 @@ public final class Structure {
         return strip;
     }
 
-    private void inlineGlyph(LinearLayout row, String name, int level) {
+    private ImageView inlineGlyph(LinearLayout row, String name, int level) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(f.u(18), f.u(18));
         lp.setMargins(f.u(4), 0, f.u(4), 0);
-        row.addView(glyph(name, level, false), lp);
+        ImageView image = glyph(name, level, false);
+        row.addView(image, lp);
+        return image;
     }
 
     public String[] menuLabels() {
