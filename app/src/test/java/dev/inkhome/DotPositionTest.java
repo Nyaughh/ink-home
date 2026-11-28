@@ -31,7 +31,7 @@ public class DotPositionTest {
         });
     }
 
-    @Test public void restoresBothAxesIndependentlyForEachRotation() {
+    @Test public void restoresNearestSideAndReleaseHeightForEachRotation() {
         Map<String, Object> stored = new HashMap<>();
         SharedPreferences prefs = preferences(stored);
         new DotPosition(100, 600).save(prefs, 0, 400, 800);
@@ -40,9 +40,9 @@ public class DotPositionTest {
         SharedPreferences reopened = preferences(new HashMap<>(stored));
         DotPosition portrait = DotPosition.load(reopened, 0, 400, 800, false);
         DotPosition landscape = DotPosition.load(reopened, 1, 800, 400, false);
-        assertEquals(100, portrait.x);
+        assertEquals(0, portrait.x);
         assertEquals(600, portrait.y);
-        assertEquals(600, landscape.x);
+        assertEquals(800, landscape.x);
         assertEquals(100, landscape.y);
     }
 
@@ -55,11 +55,24 @@ public class DotPositionTest {
 
         new DotPosition(300, 500).save(prefs, 2, 400, 882);
         DotPosition moved = DotPosition.load(prefs, 2, 400, 882, false);
-        assertEquals(300, moved.x);
+        assertEquals(400, moved.x);
         assertEquals(500, moved.y);
     }
 
-    @Test public void restoresInteriorPositionAfterResize() {
+    @Test public void docksPreviouslySavedInteriorPositionsOnLoad() {
+        SharedPreferences prefs = preferences(new HashMap<>(Map.of(
+                "refreshEdgeX0", .49f, "refreshEdgeY0", .75f,
+                "refreshEdgeX1", .51f, "refreshEdgeY1", .25f)));
+        DotPosition left = DotPosition.load(prefs, 0, 600, 800, false);
+        DotPosition right = DotPosition.load(prefs, 1, 800, 600, true);
+        assertEquals(0, left.x);
+        assertEquals(600, left.y);
+        assertEquals(800, right.x);
+        assertEquals(150, right.y);
+        assertEquals(600, DotPosition.nearestSide(300, 600));
+    }
+
+    @Test public void restoresInteriorHeightAfterResize() {
         float saved = DotPosition.fraction(314, 800);
         assertEquals(314, DotPosition.pixel(saved, 800));
         assertEquals(157, DotPosition.pixel(saved, 400));

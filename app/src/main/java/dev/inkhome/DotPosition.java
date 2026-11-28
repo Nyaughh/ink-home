@@ -12,7 +12,7 @@ final class DotPosition {
     }
 
     void save(SharedPreferences prefs, int rotation, int maxX, int maxY) {
-        prefs.edit().putFloat("refreshEdgeX" + rotation, fraction(x, maxX))
+        prefs.edit().putFloat("refreshEdgeX" + rotation, fraction(nearestSide(x, maxX), maxX))
                 .putFloat("refreshEdgeY" + rotation, fraction(y, maxY)).apply();
     }
 
@@ -21,7 +21,11 @@ final class DotPosition {
         // The old freeX/freeY and edgeHeight keys describe the circular control.
         float x = prefs.getFloat("refreshEdgeX" + rotation, defaultLeft ? 0f : 1f);
         float y = prefs.getFloat("refreshEdgeY" + rotation, .5f);
-        return new DotPosition(pixel(x, maxX), pixel(y, maxY));
+        return new DotPosition(nearestSide(pixel(x, maxX), maxX), pixel(y, maxY));
+    }
+
+    static int nearestSide(int x, int maxX) {
+        return x < maxX / 2f ? 0 : maxX;
     }
 
     static int clamp(int offset, int travel) {

@@ -331,8 +331,8 @@ Refresh edge is a slim rectangular tab that can float over other apps. Its ink-a
 
 **Moving and hiding**
 
-- *Drag* picks up the tab and moves it with the finger. Releasing saves its position.
-- Choose *Tuck to edge* in the menu to park it at the nearest side. Drag the tab to bring the tab back.
+- *Drag* picks up the tab and moves it with the finger. Releasing docks the rectangular tab to the nearest side and saves its height and side.
+- Choose *Tuck to edge* in the menu to park it at the nearest side. Use the menu to restore its full width.
 - *Hide* from its menu ("Hide here", "Tuck to edge"), turn it off in Settings › System shell › Refresh edge, or toggle it from a control panel tile.
 
 **Tap and hold**
