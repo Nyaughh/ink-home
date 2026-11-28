@@ -63,9 +63,17 @@ final class FavoriteAppsTile extends HomeTiles {
         TextView sample = label("Ag", TypeScale.APP_NAME, 1);
         sample.measure(0, 0);
         int labelHeight = sample.getMeasuredHeight();
-        boolean names = !icons || (vertical ? availableWidth >= size + ink.dp(48) && rowBudget >= labelHeight
-                : availableWidth / columns >= ink.dp(54) && remaining >= size + gap + labelHeight);
-        int rowHeight = vertical ? Math.max(icons ? size : 0, names ? labelHeight : 0)
+        // Reserve a line for the caption before sizing icons in a wide row.
+        // Very shallow rows can put the name beside its icon instead.
+        int cellWidth = availableWidth / columns;
+        int iconRoom = remaining - labelHeight - gap;
+        boolean stackedNames = !vertical && cellWidth >= ink.dp(54) && iconRoom >= ink.dp(16);
+        if (icons && stackedNames) size = Math.min(size, iconRoom);
+        boolean inline = vertical || !stackedNames && icons && rowBudget >= labelHeight
+                && cellWidth >= ink.dp(72);
+        if (inline && !vertical) size = Math.min(size, cellWidth - ink.dp(48) - gap);
+        boolean names = !icons || stackedNames || inline && cellWidth >= size + ink.dp(48) && rowBudget >= labelHeight;
+        int rowHeight = inline ? Math.max(icons ? size : 0, names ? labelHeight : 0)
                 : (icons ? size : 0) + (names ? labelHeight : 0) + (icons && names ? gap : 0);
         rowHeight = Math.max(1, Math.min(rowBudget, Math.max(ink.dp(48), rowHeight + ink.dp(2))));
         int rows = naturalHeight() ? (requested > 0 ? requested : "grid".equals(item.variant) ? 2 : 1)
@@ -82,20 +90,20 @@ final class FavoriteAppsTile extends HomeTiles {
                     continue;
                 }
                 MainActivity.App app = apps.get(i);
-                LinearLayout cell = vertical ? ink.row() : ink.col();
-                cell.setGravity(vertical ? Gravity.CENTER_VERTICAL : Gravity.CENTER);
+                LinearLayout cell = inline ? ink.row() : ink.col();
+                cell.setGravity(inline ? Gravity.CENTER_VERTICAL : Gravity.CENTER);
                 cell.setBackground(ink.pressable());
                 cell.setContentDescription(a.displayLabel(app));
                 if (icons) {
                     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
-                    if (names && vertical) lp.setMarginEnd(gap);
-                    if (names && !vertical) lp.bottomMargin = gap;
+                    if (names && inline) lp.setMarginEnd(gap);
+                    if (names && !inline) lp.bottomMargin = gap;
                     cell.addView(a.appIcon(app, compact ? 28 : 40), lp);
                 }
                 if (names) {
                     TextView name = label(a.displayLabel(app), TypeScale.APP_NAME, 1);
-                    if (!vertical) name.setGravity(Gravity.CENTER);
-                    if (vertical) cell.addView(name, ink.weight(1));
+                    if (!inline) name.setGravity(Gravity.CENTER);
+                    if (inline) cell.addView(name, ink.weight(1));
                     else cell.addView(name, -1, -2);
                 }
                 row.addView(cell, new LinearLayout.LayoutParams(0, -1, 1));

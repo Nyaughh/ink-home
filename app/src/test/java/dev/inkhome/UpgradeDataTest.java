@@ -292,6 +292,25 @@ public class UpgradeDataTest {
         assertTrue(HomeLayout.load(activity).items.get(2).settings.isEmpty());
     }
 
+    @Test public void oldCanvasKeepsUnframedAndFramedWidgetsWhenGlobalBordersAreEnabled() {
+        Map<String, Object> values = new java.util.HashMap<>(Map.of("widgetBorders", true,
+                "homeCanvasV1", """
+                {"items":[{"type":"apps","x":0,"y":0,"w":4,"h":2},
+                          {"type":"clock","x":0,"y":2,"w":2,"h":2,"settings":{"borders":"true"}}]}
+                """));
+        MainActivity activity = homeActivity(values);
+        activity.store = new Store(legacyContext(values));
+        HomeLayout layout = HomeLayout.load(activity);
+        assertFalse(HomeComponent.hasBorder(activity, layout.items.get(0)));
+        assertTrue(HomeComponent.hasBorder(activity, layout.items.get(1)));
+        layout.save(activity);
+        layout = HomeLayout.load(activity);
+        assertFalse(HomeComponent.hasBorder(activity, layout.items.get(0)));
+        layout.items.get(0).settings.remove("borders");
+        layout.save(activity);
+        assertTrue(HomeComponent.hasBorder(activity, HomeLayout.load(activity).items.get(0)));
+    }
+
     @Test public void firstCanvasWithoutDimensionsRetainsLegacyGoalAcrossSave() {
         Map<String, Object> values = new java.util.HashMap<>();
         values.put("homeCanvasV1", """

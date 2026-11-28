@@ -43,8 +43,11 @@ final class DataWidgets {
     }
 
     static ImageView icon(Folio f, String name, int color) {
+        return icon(f, new Glyph(name), color);
+    }
+
+    static ImageView icon(Folio f, Glyph glyph, int color) {
         ImageView image = new ImageView(f.context);
-        Glyph glyph = new Glyph(name);
         glyph.setTint(color);
         image.setImageDrawable(glyph);
         image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);

@@ -4,6 +4,7 @@
 
 - Settings adds custom bindings for hardware keys, reader tap zones and swipes. Existing page controls keep their defaults on upgrade.
 - The quick panel checks device capabilities and connected audio outputs when opened.
+- Wide Favourite apps widgets reserve room for app names. Older Home layouts retain their border choices, and widget previews have padding inside the frame. The Wi-Fi quick tile shows the connected signal level.
 
 - Drag and snap Home widgets to move or resize them. The settings drawer offers cell sizes, styles and per-widget options. The grouped widget picker follows the pages preference and includes a square reading-goal ring. Settings › Home grid controls the grid size and default widget borders.
 - Home gains a one-screen widget editor with live previews, discrete movement and resizing, component-specific variants and a resettable reading preset. Existing section settings and Android widget bindings migrate into the layout.

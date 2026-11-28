@@ -912,7 +912,9 @@ public class MainActivity extends Activity {
         Capabilities caps = DisplayProbe.capabilities(this);
         List<View> tiles = new ArrayList<>();
         if (caps.wifi && (hasPanelSettings(Settings.Panel.ACTION_WIFI) || hasPanelSettings(Settings.ACTION_WIFI_SETTINGS))) {
-            tiles.add(panelTile("wifi", getString(R.string.launcher_wi_fi), wifiState, wifi.connected, this::openWifi));
+            Icons signal = new Icons("wifi", wifi.connected ? wifi.level : -1);
+            tiles.add(new Tile(ink.folio, signal, getString(R.string.launcher_wi_fi), wifiState,
+                    wifi.connected, v -> openWifi()));
         }
         if (caps.bluetooth && hasPanelSettings(Settings.ACTION_BLUETOOTH_SETTINGS)) {
             tiles.add(panelTile("bluetooth", getString(R.string.launcher_bluetooth), getString(R.string.launcher_device_settings), false,

@@ -5,6 +5,7 @@ import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import dev.inkhome.folio.Folio;
+import dev.inkhome.folio.Glyph;
 import dev.inkhome.folio.core.TypeScale;
 
 public final class Tile extends LinearLayout {
@@ -13,6 +14,10 @@ public final class Tile extends LinearLayout {
     private final TextView title, state;
 
     public Tile(Folio f, String glyph, String name, String value, boolean active, OnClickListener action) {
+        this(f, new Glyph(glyph), name, value, active, action);
+    }
+
+    public Tile(Folio f, Glyph glyph, String name, String value, boolean active, OnClickListener action) {
         super(f.context);
         this.folio = f;
         this.name = name;

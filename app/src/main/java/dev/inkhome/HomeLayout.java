@@ -384,8 +384,10 @@ final class HomeLayout {
         String saved = prefs.getString(KEY, null);
         if (saved != null) {
             try {
-                HomeLayout layout = read(new JSONObject(saved));
+                JSONObject document = new JSONObject(saved);
+                HomeLayout layout = read(document);
                 layout.restoreOriginalPresetSizing(host, prefs.getString("homeLayout", "cover"));
+                if (!document.has("cols")) layout.preserveLegacyBorders();
                 return layout;
             } catch (JSONException ignored) {
                 return preset(host);
@@ -399,8 +401,16 @@ final class HomeLayout {
             int widget = HomeSections.widgetId(id);
             if (widget > 0 && !sections.visible.contains(id)) layout.hiddenWidgetIds.add(widget);
         }
-        if (HomeSections.hasLegacyData(prefs)) layout.save(host);
+        if (HomeSections.hasLegacyData(prefs)) {
+            layout.preserveLegacyBorders();
+            layout.save(host);
+        }
         return layout;
+    }
+
+    /** Before the global preference existed, an omitted border setting meant off. */
+    private void preserveLegacyBorders() {
+        for (Item item : items) item.settings.putIfAbsent("borders", "false");
     }
 
     /** A first-generation canvas could already contain the untouched reading preset. */

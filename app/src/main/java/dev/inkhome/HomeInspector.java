@@ -308,13 +308,15 @@ final class HomeInspector extends LinearLayout {
         int height = Math.max(1, grid.rowSpan(item.y, item.h));
         FrameLayout frame = new FrameLayout(host) {
             @Override protected void onMeasure(int widthSpec, int heightSpec) {
-                int available = Math.min(width, MeasureSpec.getSize(widthSpec));
+                int inset = host.ink.dp(6);
+                int padding = 2 * inset;
+                int available = Math.max(0, Math.min(width, MeasureSpec.getSize(widthSpec) - padding));
                 float scale = available / (float) width;
-                if (maxHeight > 0) scale = Math.min(scale, maxHeight / (float) height);
+                if (maxHeight > 0) scale = Math.min(scale, Math.max(0, maxHeight - padding) / (float) height);
                 if (MeasureSpec.getMode(heightSpec) != MeasureSpec.UNSPECIFIED)
-                    scale = Math.min(scale, MeasureSpec.getSize(heightSpec) / (float) height);
-                int w = resolveSize(Math.round(width * scale), widthSpec);
-                int h = resolveSize(Math.round(height * scale), heightSpec);
+                    scale = Math.min(scale, Math.max(0, MeasureSpec.getSize(heightSpec) - padding) / (float) height);
+                int w = resolveSize(Math.round(width * scale) + padding, widthSpec);
+                int h = resolveSize(Math.round(height * scale) + padding, heightSpec);
                 setMeasuredDimension(w, h);
                 getChildAt(1).measure(MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY),
                         MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY));
