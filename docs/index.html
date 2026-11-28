@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ink Home</title>
+<title>Ink Home · A reading-first Android launcher</title>
 <meta name="description" content="A calm, reading-first home screen for e-ink Android tablets.">
 <style>
   :root {
@@ -23,7 +23,7 @@
     font: 17px/1.6 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 760px; margin: 0 auto; padding: 72px 20px 48px; }
+  main { max-width: 940px; margin: 0 auto; padding: 72px 20px 48px; }
   h1, h2 { font-family: inherit; font-weight: 700; letter-spacing: -0.01em; }
   h1 { font-size: 52px; line-height: 1.05; margin: 0 0 14px; }
   h2 { font-size: 26px; margin: 0 0 14px; }
@@ -37,9 +37,14 @@
   }
   .button.ghost { background: transparent; color: var(--ink); }
   .meta { color: var(--faint); font-size: 14px; }
-  hr { border: 0; border-top: 1px solid var(--rule); margin: 56px 0; }
+  hr { border: 0; border-top: 1px solid var(--rule); margin: clamp(48px, 7vw, 76px) 0; }
 
-  .shots { max-width: 390px; margin: 40px auto 0; }
+  .hero, .layout { display: grid; align-items: center; gap: clamp(36px, 6vw, 72px); }
+  .hero { grid-template-columns: 1fr minmax(250px, 350px); }
+  .layout { grid-template-columns: minmax(230px, 310px) 1fr; }
+  .layout p { max-width: 43ch; }
+  .release { margin-bottom: 16px; }
+  main > p, ol.steps { max-width: 75ch; }
   figure { margin: 0; }
   .device {
     background: var(--bezel); border-radius: 22px; padding: 18px 14px 34px;
@@ -48,8 +53,8 @@
   .device img { display: block; width: 100%; height: auto; border-radius: 2px; background: #fff; }
   figcaption { color: var(--grey); font-size: 14px; margin-top: 10px; text-align: center; }
 
-  .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 26px 36px; }
-  .features h3 { font-size: 17px; margin: 0 0 4px; }
+  .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px 52px; }
+  .features h3 { font-size: 17px; margin: 0 0 8px; }
   .features p { color: var(--grey); font-size: 15.5px; margin: 0; }
 
   ol.steps { padding-left: 20px; margin: 0; }
@@ -57,47 +62,67 @@
   code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 14px; }
   pre { background: #e9e7e1; border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 10px 0 16px; }
   .note { color: var(--grey); font-size: 15px; }
-  footer { max-width: 760px; margin: 0 auto; padding: 0 20px 56px; color: var(--faint); font-size: 14px; display: flex; gap: 18px; flex-wrap: wrap; }
+  footer { max-width: 940px; margin: 0 auto; padding: 0 20px 56px; color: var(--faint); font-size: 14px; display: flex; gap: 18px; flex-wrap: wrap; }
   footer a { color: var(--grey); }
 
   @media (max-width: 600px) {
     main { padding-top: 48px; }
     h1 { font-size: 40px; }
     .lede { font-size: 19px; }
-    .shots { gap: 14px; }
+    .hero, .layout { grid-template-columns: 1fr; gap: 32px; }
+    figure { width: min(100%, 330px); margin-inline: auto; }
+    .layout figure { grid-row: 2; }
     .device { border-radius: 16px; padding: 10px 8px 22px; }
-    .features { grid-template-columns: 1fr; gap: 20px; }
+    .features { grid-template-columns: 1fr; gap: 28px; }
   }
 </style>
 </head>
 <body>
 <main>
-  <h1>Ink Home</h1>
-  <p class="lede">A calm, reading-first home screen for e-ink Android tablets.</p>
-  <div class="actions">
-    <a class="button" href="https://github.com/Nyaughh/ink-home/releases/latest/download/ink-home.apk">Download for Android</a>
-    <a class="button ghost" href="https://github.com/Nyaughh/ink-home">Source on GitHub</a>
-  </div>
-  <p class="meta">Android 11 or newer Â· built on a 6â€³ Boox Â· about 220&nbsp;KB Â· updates itself</p>
-
-  <div class="shots">
-    <figure><div class="device"><img src="shots/phase4-home-c69.png" alt="The Home screen with the current book, Up next list, favourite apps and navigation dock" width="758" height="1024"></div><figcaption>Boox C69 device capture from Phase 4 of the 2.0 redesign.</figcaption></figure>
-  </div>
+  <header class="hero">
+    <div>
+      <p class="meta release">Version 2.0.0</p>
+      <h1>Ink Home</h1>
+      <p class="lede">A reading-first Android home screen. Pick up your current book, browse your shelves or see how much you’ve read today.</p>
+      <div class="actions">
+        <a class="button" href="https://github.com/Nyaughh/ink-home/releases/latest/download/ink-home.apk">Download for Android</a>
+        <a class="button ghost" href="https://github.com/Nyaughh/ink-home">Source on GitHub</a>
+      </div>
+      <p class="meta">Android 11 or newer</p>
+    </div>
+    <figure>
+      <div class="device"><img src="shots/folio-home-c69.png" alt="Ink Home showing a book cover, reading progress and the next book on the shelf" width="758" height="1024"></div>
+      <figcaption>Home on the Boox C69</figcaption>
+    </figure>
+  </header>
 
   <hr>
 
-  <h2>What it does</h2>
+  <section class="layout" aria-labelledby="layout-heading">
+    <figure>
+      <div class="device"><img src="shots/folio-picker-c69.png" alt="Home widget picker with previews grouped by widget" width="758" height="1024" loading="lazy"></div>
+      <figcaption>The Home widget picker</figcaption>
+    </figure>
+    <div>
+      <h2 id="layout-heading">Arrange your Home</h2>
+      <p>Open <strong>Edit Home layout</strong> from the quick panel. Drag a widget into place or pull its corner to resize it. Save when the layout feels right.</p>
+      <p>The picker groups previews by widget. Give your current book a shelf, keep a square calendar by your favourite apps or add a ring that fills as you read toward your daily goal.</p>
+      <p>In <strong>Settings › Home grid</strong>, step the number of rows and columns up or down and choose a default border. Each widget can have its own border setting.</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <h2>Reading with Folio</h2>
   <div class="features">
-    <div><h3>Your Home</h3><p>See your current book, Up next and favourite apps. Open Settings › Home to move, resize and preview widgets on your Home screen.</p></div>
-    <div><h3>A real library</h3><p>Covers pulled from EPUB, PDF and CBZ files. Reading, All, Finished and Collections, with search, sort and filters.</p></div>
-    <div><h3>Reading time</h3><p>Minutes per day and per book, streaks, a weekly chart and a monthly calendar. A daily goal is there if you want one.</p></div>
-    <div><h3>A built-in reader</h3><p>Read EPUB and TXT with tap zones, swipes or page keys. In Settings › Controls, bind your own inputs to turn a page, skip a chapter or open contents. Or use NeoReader, KOReader or another app.</p></div>
-    <div><h3>Made for e-ink</h3><p>Turn pages with hardware keys or the on-screen arrows. Clean screen and periodic page cleans request a flashing full refresh on compatible Boox firmware.</p></div>
-    <div><h3>Its own status bar</h3><p>Clock, Wi-Fi, battery and notifications, plus a quick panel with only what your tablet's hardware has.</p></div>
-    <div><h3>Sleep screen and wallpaper</h3><p>Generate sleep artwork sized to your panel, then select it in your device’s screensaver settings. On Boox, select the image again after changing it.</p></div>
-    <div><h3>Refresh edge</h3><p>Tap the tucked tab at the side of the screen for a full clean over any app. Hold it for the menu or drag it to a comfortable height. Drag it across the screen to switch sides. It tucks against the nearest edge when you let go.</p></div>
-    <div><h3>Display choices</h3><p>Choose monochrome e-ink, colour e-ink or LCD/OLED in Display &amp; refresh. On LCD and OLED, lists default to scrolling and the theme can follow Android.</p></div>
-    <div><h3>Small and private</h3><p>No accounts, no tracking, no ads. It only goes online to check for its own updates.</p></div>
+    <div><h3>A layout for your screen</h3><p>Folio adapts to monochrome e-ink, colour e-ink and LCD or OLED. Adjust text and interface sizes separately. LCD and OLED can follow Android’s theme and scroll through lists.</p></div>
+    <div><h3>Your library, including SD cards</h3><p>Browse covers in a grid or switch to a list. Ink Home finds books on internal storage and mounted SD cards. Search your shelves or filter them to the books you’re reading.</p></div>
+    <div><h3>A built-in EPUB and TXT reader</h3><p>Read in Literata, jump to a chapter from contents or adjust the type size and margins without losing your place. Prefer KOReader? Ink Home grants it access to the book you open.</p></div>
+    <div><h3>Reading time</h3><p>See today’s minutes against your goal, compare days on the weekly chart or look back over a month of reading on the calendar.</p></div>
+    <div><h3>Your page controls</h3><p>In Settings › Controls, assign hardware keys, reader tap zones and swipes to actions such as turning a page, skipping a chapter or opening contents.</p></div>
+    <div><h3>A hardware-aware quick panel</h3><p>Tap the status strip for device controls. The panel checks your tablet’s capabilities and connected audio outputs each time you open it.</p></div>
+    <div><h3>Refresh edge</h3><p>Tap the tab for a full screen clean on compatible Boox devices, even over another app. Hold for its menu or drag it to either edge. It remembers where you put it in each rotation.</p></div>
+    <div><h3>Sleep artwork</h3><p>Turn your current book cover into artwork sized to your panel. Select it in your device’s screensaver settings. On Boox, select it again when the artwork changes.</p></div>
   </div>
 
   <hr>
@@ -117,7 +142,7 @@ adb shell cmd package set-home-activity dev.inkhome/.MainActivity</pre>
   <hr>
 
   <h2>Updates</h2>
-  <p>Ink Home checks this project's releases about twice a day when you're on Wi-Fi. When there's a new version it asks first, downloads it, checks the SHA-256 when the release includes a checksum, and hands it to Android to install. Android only accepts it if it's signed by the same key as the version you have. You can turn the check off in Settings â€º Updates.</p>
+  <p>Ink Home has no accounts, tracking or ads. It checks this project's releases about twice a day when you're on Wi-Fi. When there's a new version it asks first, downloads it, checks the SHA-256 when the release includes a checksum, and hands it to Android to install. Android only accepts it if it's signed by the same key as the version you have. You can turn the check off in Settings › Updates.</p>
 
   <hr>
 
